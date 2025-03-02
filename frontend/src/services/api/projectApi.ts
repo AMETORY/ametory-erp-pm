@@ -1,0 +1,51 @@
+import { customFetch } from "./baseApi";
+import { ProjectModel } from "../../models/project";
+import { PaginationRequest } from "../../objects/pagination";
+
+export const createProject = async (project: ProjectModel) => {
+  return await customFetch("api/v1/project/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(project),
+  });
+};
+
+export const getProjects = async (req: PaginationRequest) => {
+  const queryParams = new URLSearchParams();
+  queryParams.set("page", String(req.page));
+  queryParams.set("size", String(req.size));
+  if (req.search) queryParams.set("search", req.search);
+  return await customFetch(`api/v1/project/list?${queryParams}`, {
+    method: "GET",
+  });
+};
+
+export const getProject = async (id: string) => {
+  return await customFetch(`api/v1/project/${id}`, {
+    method: "GET",
+  });
+};
+export const getProjectTemplates = async () => {
+  return await customFetch(`api/v1/project/templates`, {
+    method: "GET",
+  });
+};
+
+export const updateProject = async (id: string, project: ProjectModel) => {
+  return await customFetch(`api/v1/project/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(project),
+  });
+};
+
+export const deleteProject = async (id: string) => {
+  return await customFetch(`api/v1/project/${id}`, {
+    method: "DELETE",
+  });
+};
+
