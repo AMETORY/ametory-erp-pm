@@ -2,7 +2,7 @@ package routes
 
 import (
 	"ametory-pm/config"
-	"ametory-pm/services"
+	"ametory-pm/services/app"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,10 +15,10 @@ import (
 
 func SetupWSRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	r.GET("/ws/:channelId", func(c *gin.Context) {
-		services.WS.HandleRequest(c.Writer, c.Request)
+		erpContext.AppService.(*app.AppService).Websocket.HandleRequest(c.Writer, c.Request)
 	})
 
-	services.WS.HandleConnect(func(s *melody.Session) {
+	erpContext.AppService.(*app.AppService).Websocket.HandleConnect(func(s *melody.Session) {
 		userID, err := parseToken(s.Request.URL.Query().Get("token"))
 		if err != nil {
 			s.Close()
@@ -29,17 +29,17 @@ func SetupWSRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 			"sender_id": *userID,
 		}
 		b, _ := json.Marshal(msg)
-		services.WS.BroadcastFilter(b, func(q *melody.Session) bool {
+		erpContext.AppService.(*app.AppService).Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
 			return q.Request.URL.Path == s.Request.URL.Path
 		})
 		fmt.Println("Connected", s.Request.URL.Path)
 	})
-	services.WS.HandleDisconnect(func(s *melody.Session) {
+	erpContext.AppService.(*app.AppService).Websocket.HandleDisconnect(func(s *melody.Session) {
 		fmt.Println("Disconnected", s.Request.URL.Path)
 	})
 
-	services.WS.HandleMessage(func(s *melody.Session, msg []byte) {
-		services.WS.BroadcastFilter(msg, func(q *melody.Session) bool {
+	erpContext.AppService.(*app.AppService).Websocket.HandleMessage(func(s *melody.Session, msg []byte) {
+		erpContext.AppService.(*app.AppService).Websocket.BroadcastFilter(msg, func(q *melody.Session) bool {
 			return q.Request.URL.Path == s.Request.URL.Path
 		})
 	})

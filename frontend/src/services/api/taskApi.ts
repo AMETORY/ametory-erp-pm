@@ -21,6 +21,18 @@ export const getTask = async (id: string) => {
     method: "GET",
   });
 };
+export const moveTask = async (projectId: string, id: string, data: any) => {
+  return await customFetch(`api/v1/project/${projectId}/task/${id}/move`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+export const rearrangeTask = async (projectId: string, data: any) => {
+  return await customFetch(`api/v1/project/${projectId}/task/rearrange`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
 
 export const updateTask = async (id: string, task: any) => {
   return await customFetch(`api/v1/task/${id}`, {

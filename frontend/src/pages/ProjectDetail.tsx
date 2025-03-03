@@ -37,6 +37,7 @@ import { ProjectModel } from "../models/project";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import ProjectHeader from "../components/ProjectHeader";
+import { moveTask, rearrangeTask } from "../services/api/taskApi";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -66,7 +67,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
 
   useEffect(() => {
     // if (profile?.id != null && profile?.id == wsMsg?.sender_id) {
-      // console.log("wsMsg", wsMsg);
+    // console.log("wsMsg", wsMsg);
     // }
   }, [wsMsg, profile]);
 
@@ -105,7 +106,6 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           (column) => column.id === over?.data.current?.sortable?.containerId
         );
 
-        // console.log(activeColumn, overColumn);
         if (activeColumn && overColumn) {
           const activeIndex = (activeColumn.tasks ?? []).findIndex(
             (item) => item.id === id
@@ -123,6 +123,17 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
             activeColumn,
             ...columns.slice(columns.indexOf(activeColumn) + 1),
           ]);
+          if (overColumn.id != activeColumn.id) {
+            moveTask(projectId!, item!.id!, {
+              column_id: overColumn.id,
+              source_column_id: activeColumn.id,
+              order_number:
+                overColumn.tasks?.findIndex((over) => over.id == item?.id) ??
+                0 + 1,
+            }).catch(console.error);
+          } else {
+            rearrangeTask(projectId!, activeColumn).catch(console.error)
+          }
         }
       } else {
         const activeIndex = columns.findIndex((item) => item.id == id);

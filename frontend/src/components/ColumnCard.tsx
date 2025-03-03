@@ -1,4 +1,4 @@
-import { useContext, useEffect, type FC } from "react";
+import { useContext, useEffect, useState, type FC } from "react";
 import { ColumnModel } from "../models/column";
 import {
   SortableContext,
@@ -29,9 +29,9 @@ const ColumnCard: FC<ColumnCardProps> = ({
   onSelectTask,
 }) => {
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
-      useContext(WebsocketContext);
-    const { profile, setProfile } = useContext(ProfileContext);
-    
+    useContext(WebsocketContext);
+  const { profile, setProfile } = useContext(ProfileContext);
+  const [tasks, setTasks] = useState<TaskModel[]>([]);
   const {
     isOver,
     setNodeRef,
@@ -44,27 +44,25 @@ const ColumnCard: FC<ColumnCardProps> = ({
     id: column.id as UniqueIdentifier,
   });
 
-  useEffect(() => {
+  const getAllTasks = () => {
     getTasks(projectId, column.id as string).then((resp: any) => {
-      
-      columns.map((col) => {
-        if (col.id === column.id) {
-          col.tasks = resp.data.items;
-        }
-      })
-
-      // console.log(columns);
-      onChange([...columns]);
-    })
+      setTasks(resp.data.items);
+      column.tasks = resp.data.items;
+    });
+  }
+  useEffect(() => {
+    getAllTasks()
   }, []);
 
-    useEffect(() => {
-      // if (profile?.id != null && profile?.id == wsMsg?.sender_id) {
-      if (wsMsg.column_id == column.id) {
-        console.log("wsMsg", wsMsg);
-      }
-      // }
-    }, [wsMsg, profile]);
+  useEffect(() => {
+    if (!wsMsg) return
+    if (!column.id) return
+    // if (profile?.id != null && profile?.id == wsMsg?.sender_id) {
+    if (wsMsg.column_id == column.id || wsMsg.source_column_id == column.id) {
+      getAllTasks()
+    }
+    // }
+  }, [wsMsg, profile]);
 
   return (
     <div
@@ -112,7 +110,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
               name: `Item ${totalItem + 1}`,
               column_id: column.id,
             });
-            onChange([...columns]);
+            // onChange([...columns]);
           }}
         />
       </SortableContext>
