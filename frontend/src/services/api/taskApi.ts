@@ -16,8 +16,8 @@ export const getTasks = async (projectId: string, columnId: string) => {
   });
 };
 
-export const getTask = async (id: string) => {
-  return await customFetch(`api/v1/task/${id}`, {
+export const getTask = async (projectId: string, id: string) => {
+  return await customFetch(`api/v1/project/${projectId}/task/${id}/detail`, {
     method: "GET",
   });
 };
@@ -34,8 +34,8 @@ export const rearrangeTask = async (projectId: string, data: any) => {
   });
 };
 
-export const updateTask = async (id: string, task: any) => {
-  return await customFetch(`api/v1/task/${id}`, {
+export const updateTask = async (projectId: string, id: string, task: any) => {
+  return await customFetch(`api/v1/project/${projectId}/task/${id}/update`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

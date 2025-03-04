@@ -38,6 +38,7 @@ import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import ProjectHeader from "../components/ProjectHeader";
 import { moveTask, rearrangeTask } from "../services/api/taskApi";
+import TaskDetail from "../components/TaskDetail";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -66,9 +67,9 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
   );
 
   useEffect(() => {
-    // if (profile?.id != null && profile?.id == wsMsg?.sender_id) {
-    // console.log("wsMsg", wsMsg);
-    // }
+    if (wsMsg?.project_id != projectId) {
+      // console.log("wsMsg", wsMsg);
+    }
   }, [wsMsg, profile]);
 
   useEffect(() => {
@@ -132,7 +133,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                 0 + 1,
             }).catch(console.error);
           } else {
-            rearrangeTask(projectId!, activeColumn).catch(console.error)
+            rearrangeTask(projectId!, activeColumn).catch(console.error);
           }
         }
       } else {
@@ -207,6 +208,16 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                     column={column}
                     columns={columns}
                     onChange={setColumns}
+                    onChangeColumn={(val) => {
+                      setColumns([
+                        ...columns.map((c) => {
+                          if (c.id === val.id) {
+                            return val;
+                          }
+                          return c;
+                        }),
+                      ]);
+                  }}
                     onSelectTask={(val) => {
                       setActiveTask(val);
                       // console.log(val);
@@ -246,6 +257,16 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                   column={activeColumn}
                   columns={columns}
                   onChange={setColumns}
+                  onChangeColumn={(val) => {
+                    setColumns([
+                      ...columns.map((c) => {
+                        if (c.id === val.id) {
+                          return val;
+                        }
+                        return c;
+                      }),
+                    ]);
+                  }}
                   onSelectTask={(val) => {}}
                 />
               ) : (
@@ -261,15 +282,22 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           </SortableContext>
         </DndContext>
       </div>
-      <Drawer
-        style={{ width: 1000 }}
-        open={activeTask !== undefined}
-        onClose={() => setActiveTask(undefined)}
-        position="right"
-      >
-        <Drawer.Header titleIcon={BsListTask} title={activeTask?.name} />
-        <Drawer.Items className="pt-4">{activeTask?.name}</Drawer.Items>
-      </Drawer>
+      {activeTask && (
+        <Drawer
+          style={{ width: 1000 }}
+          open={activeTask !== undefined}
+          onClose={() => setActiveTask(undefined)}
+          position="right"
+        >
+          <Drawer.Header titleIcon={BsListTask} title={activeTask?.name} />
+          <Drawer.Items
+            className="pt-4  "
+            style={{ height: "calc(100vh - 70px)" }}
+          >
+            <TaskDetail task={activeTask} />
+          </Drawer.Items>
+        </Drawer>
+      )}
     </AdminLayout>
   );
 };

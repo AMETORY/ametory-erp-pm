@@ -23,10 +23,12 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		projectGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:delete"}), projectHandler.DeleteProjectHandler)
 		taskGroup := projectGroup.Group("/:id/task")
 		{
+			taskGroup.GET("/:taskId/detail", taskHandler.GetTaskDetailHandler)
 			taskGroup.PUT("/rearrange", taskHandler.RearrangeTaskHandler)
 			taskGroup.GET("/list", taskHandler.GetTasksHandler)
 			taskGroup.POST("/create", taskHandler.CreateTaskHandler)
 			taskGroup.PUT("/:taskId/move", taskHandler.MoveTaskHandler)
+			taskGroup.PUT("/:taskId/update", taskHandler.UpdateTaskHandler)
 			// taskGroup.GET("/:id", taskHandler.GetTaskHandler)
 			// taskGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:task:update"}), taskHandler.UpdateTaskHandler)
 			// taskGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:task:delete"}), taskHandler.DeleteTaskHandler)

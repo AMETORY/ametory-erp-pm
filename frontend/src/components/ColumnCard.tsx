@@ -18,6 +18,7 @@ interface ColumnCardProps {
   column: ColumnModel;
   columns: ColumnModel[];
   onChange: (columns: ColumnModel[]) => void;
+  onChangeColumn: (column: ColumnModel) => void;
   onSelectTask: (task: TaskModel) => void;
 }
 
@@ -26,6 +27,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
   column,
   columns,
   onChange,
+  onChangeColumn,
   onSelectTask,
 }) => {
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
@@ -48,6 +50,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
     getTasks(projectId, column.id as string).then((resp: any) => {
       setTasks(resp.data.items);
       column.tasks = resp.data.items;
+      onChangeColumn(column)
     });
   }
   useEffect(() => {

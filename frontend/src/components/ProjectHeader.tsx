@@ -1,13 +1,20 @@
 import type { FC } from "react";
+import { useState } from "react";
 import { ProjectModel } from "../models/project";
-import { Avatar, Button } from "flowbite-react";
+import { Avatar, Button, Modal } from "flowbite-react";
 import { initial } from "../utils/helper";
+import MemberSelectModal from "./MemberSelectModal";
 
 interface ProjectHeaderProps {
   project: ProjectModel;
 }
 
 const ProjectHeader: FC<ProjectHeaderProps> = ({ project }) => {
+  const [showModal, setShowModal] = useState(false);
+
+  const openModal = () => setShowModal(true);
+  const closeModal = () => setShowModal(false);
+
   return (
     <div className="h-[80px] flex flex-row justify-between p-4">
       <div>
@@ -33,9 +40,24 @@ const ProjectHeader: FC<ProjectHeaderProps> = ({ project }) => {
             />
           )}
         </Avatar.Group>
-        <Button outline>+ Member</Button>
+        <Button onClick={openModal} outline>+ Member</Button>
+        <Modal
+          show={showModal}
+          onClose={closeModal}
+        >
+          <Modal.Header>
+            Add Member
+          </Modal.Header>
+          <Modal.Body>
+            <MemberSelectModal
+              project={project}
+              // onClose={closeModal}
+            />
+          </Modal.Body>
+        </Modal>
       </div>
     </div>
   );
 };
 export default ProjectHeader;
+
