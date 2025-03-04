@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"ametory-pm/services/app"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/olahol/melody.v1"
 )
 
 type ProjectHandler struct {
@@ -35,7 +38,8 @@ func NewProjectHandler(ctx *context.ERPContext) *ProjectHandler {
 }
 
 func (h *ProjectHandler) GetProjectsHandler(c *gin.Context) {
-	projects, err := h.pmService.ProjectService.GetProjects(*c.Request, c.Query("search"))
+	memberID := c.MustGet("memberID").(string)
+	projects, err := h.pmService.ProjectService.GetProjects(*c.Request, c.Query("search"), &memberID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -48,8 +52,9 @@ func (h *ProjectHandler) GetTemplatesHandler(c *gin.Context) {
 }
 
 func (h *ProjectHandler) GetProjectHandler(c *gin.Context) {
+	memberID := c.MustGet("memberID").(string)
 	id := c.Param("id")
-	project, err := h.pmService.ProjectService.GetProjectByID(id)
+	project, err := h.pmService.ProjectService.GetProjectByID(id, &memberID)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
@@ -73,14 +78,17 @@ func (h *ProjectHandler) CreateProjectHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	var member models.MemberModel
+	h.ctx.DB.Where("user_id = ? and company_id = ?", c.MustGet("userID").(string), c.Request.Header.Get("ID-Company")).Find(&member)
 	companyID := c.MustGet("companyID").(string)
-	member := c.MustGet("member").(models.MemberModel)
+	userID := c.MustGet("userID").(string)
 	project := models.ProjectModel{
 		Name:        input.Name,
 		Description: input.Description,
 		Deadline:    input.Deadline,
 		Status:      input.Status,
 		CompanyID:   &companyID,
+		CreatedByID: &userID,
 	}
 	if err := h.pmService.ProjectService.CreateProject(&project); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -100,11 +108,10 @@ func (h *ProjectHandler) CreateProjectHandler(c *gin.Context) {
 		}
 	}
 
-	err := h.ctx.DB.Model(&project).Association("Members").Append(&member)
-	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
+	h.ctx.DB.Table("project_members").Create(map[string]interface{}{
+		"project_model_id": project.ID,
+		"member_model_id":  member.ID,
+	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Project created successfully", "project": project})
 }
@@ -125,7 +132,7 @@ func (h *ProjectHandler) UpdateProjectHandler(c *gin.Context) {
 
 func (h *ProjectHandler) DeleteProjectHandler(c *gin.Context) {
 	id := c.Param("id")
-	_, err := h.pmService.ProjectService.GetProjectByID(id)
+	_, err := h.pmService.ProjectService.GetProjectByID(id, nil)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
@@ -135,4 +142,42 @@ func (h *ProjectHandler) DeleteProjectHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Project deleted successfully"})
+}
+
+func (h *ProjectHandler) AddMemberHandler(c *gin.Context) {
+	var input struct {
+		MemberID string `json:"member_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	projectId := c.Param("id")
+	err := h.pmService.ProjectService.AddMemberToProject(projectId, input.MemberID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"message":    "Member added to project successfully",
+		"project_id": projectId,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return q.Request.URL.Path == url
+	})
+	c.JSON(200, gin.H{"message": "Member added to project successfully"})
+}
+func (h *ProjectHandler) GetMembersHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	members, err := h.pmService.ProjectService.GetMembersByProjectID(projectId)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": members})
 }

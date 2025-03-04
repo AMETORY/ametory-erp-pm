@@ -27,6 +27,18 @@ export const getProject = async (id: string) => {
     method: "GET",
   });
 };
+export const getProjectMembers = async (id: string) => {
+  return await customFetch(`api/v1/project/${id}/members`, {
+    method: "GET",
+  });
+};
+export const getProjectAddMember = async (id: string, data: any) => {
+  return await customFetch(`api/v1/project/${id}/add-member`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
 export const getProjectTemplates = async () => {
   return await customFetch(`api/v1/project/templates`, {
     method: "GET",

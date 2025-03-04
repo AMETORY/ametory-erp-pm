@@ -58,6 +58,7 @@ func AuthMiddleware(ctx *context.ERPContext, checkCompany bool) gin.HandlerFunc 
 		ctx.DB.Where("user_id = ? and company_id = ?", token.Claims.(*jwt.StandardClaims).Id, c.Request.Header.Get("ID-Company")).Find(&member)
 		c.Set("user", user)
 		c.Set("member", member)
+		c.Set("memberID", member.ID)
 		c.Next()
 	}
 }

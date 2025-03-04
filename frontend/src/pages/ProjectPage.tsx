@@ -51,8 +51,9 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
       });
       getAllProjects();
       setShowModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating project:", error);
+      alert(error.message);
     } finally {
       setLoading(false);
     }
@@ -145,6 +146,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
                   <Avatar.Group>
                     {project?.members?.map((member) => (
                       <Avatar
+                      key={member.id}
                         size="xs"
                         img={member?.user?.profile_picture?.url}
                         rounded
@@ -295,23 +297,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
                   <option value="Pending">Pending</option>
                 </select>
               </div>
-              <div className="mb-4">
-                <label
-                  htmlFor="assignedMember"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-                >
-                  Assigned Member
-                </label>
-                <input
-                  type="text"
-                  id="assignedMember"
-                  name="assignedMember"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="Assigned Member"
-                  onChange={(e) => {}}
-                  required
-                />
-              </div>
+              
               <div className="mb-4">
                 <label
                   htmlFor="assignedMember"

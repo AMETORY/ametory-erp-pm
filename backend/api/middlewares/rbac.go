@@ -22,7 +22,7 @@ func RbacUserMiddleware(erpContext *context.ERPContext, permissions []string) gi
 		}
 		ok, err := rbacSrv.CheckPermission(userID.(string), permissions)
 		if !ok {
-			c.JSON(403, gin.H{"message": "Forbidden", "error": err.Error()})
+			c.JSON(403, gin.H{"message": err.Error(), "error": err.Error()})
 			c.Abort()
 			return
 		}

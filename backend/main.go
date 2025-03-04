@@ -58,7 +58,13 @@ func main() {
 		},
 		ExposeHeaders: []string{"Content-Length", "Content-Disposition", "Content-Description"},
 	}))
-	erpContext := context.NewERPContext(db, nil, &ctx, true)
+
+	skipMigration := true
+
+	if os.Getenv("MIGRATION") != "" {
+		skipMigration = false
+	}
+	erpContext := context.NewERPContext(db, nil, &ctx, skipMigration)
 	authService := auth.NewAuthService(erpContext)
 	erpContext.AuthService = authService
 

@@ -67,10 +67,23 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
   );
 
   useEffect(() => {
-    if (wsMsg?.project_id != projectId) {
-      // console.log("wsMsg", wsMsg);
+    if (!projectId) return;
+    if (wsMsg?.project_id == projectId) {
+      if (wsMsg.command == "RELOAD") {
+        getProject(projectId).then((resp: any) => {
+          setProject(resp.data);
+          setColumns(
+            resp.data.columns.map((column: any) => {
+              return {
+                ...column,
+                tasks: column.tasks ?? [],
+              };
+            })
+          );
+        });
+      }
     }
-  }, [wsMsg, profile]);
+  }, [wsMsg, profile, projectId]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -217,7 +230,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                           return c;
                         }),
                       ]);
-                  }}
+                    }}
                     onSelectTask={(val) => {
                       setActiveTask(val);
                       // console.log(val);

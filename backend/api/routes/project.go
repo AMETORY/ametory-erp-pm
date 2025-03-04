@@ -19,6 +19,8 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		projectGroup.GET("/templates", projectHandler.GetTemplatesHandler)
 		projectGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:create"}), projectHandler.CreateProjectHandler)
 		projectGroup.GET("/:id", projectHandler.GetProjectHandler)
+		projectGroup.GET("/:id/members", projectHandler.GetMembersHandler)
+		projectGroup.POST("/:id/add-member", projectHandler.AddMemberHandler)
 		projectGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:update"}), projectHandler.UpdateProjectHandler)
 		projectGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:delete"}), projectHandler.DeleteProjectHandler)
 		taskGroup := projectGroup.Group("/:id/task")

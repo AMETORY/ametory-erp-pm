@@ -26,6 +26,7 @@ export const verifyEmail = async (token: string) => {
     method: "GET",
   });
 };
+
 export const getProfile = async () => {
   return await customFetch(`api/v1/auth/profile`, {
     method: "GET",

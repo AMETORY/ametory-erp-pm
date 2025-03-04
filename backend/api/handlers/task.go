@@ -73,7 +73,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 	}
 	projectId := c.Param("id")
 	taskId := c.Param("taskId")
-	_, err := h.pmService.ProjectService.GetProjectByID(projectId)
+	_, err := h.pmService.ProjectService.GetProjectByID(projectId, nil)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
@@ -115,7 +115,7 @@ func (h *TaskHandler) RearrangeTaskHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := h.pmService.ProjectService.GetProjectByID(projectId)
+	_, err := h.pmService.ProjectService.GetProjectByID(projectId, nil)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
@@ -192,7 +192,7 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	_, err := h.pmService.ProjectService.GetProjectByID(projectId)
+	_, err := h.pmService.ProjectService.GetProjectByID(projectId, nil)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return

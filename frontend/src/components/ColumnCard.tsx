@@ -104,13 +104,10 @@ const ColumnCard: FC<ColumnCardProps> = ({
             for (const element of columns) {
               totalItem += (element.tasks ?? []).length;
             }
-            (column.tasks ?? []).push({
-              id: `item-${totalItem + 1}`,
-              name: `Item ${totalItem + 1}`,
-            });
+         
             // console.log("add item",[...columns]);
             createTask(projectId, {
-              name: `Item ${totalItem + 1}`,
+              name: `Task #${totalItem + 1}`,
               column_id: column.id,
             });
             // onChange([...columns]);

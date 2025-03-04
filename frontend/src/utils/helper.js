@@ -23,3 +23,10 @@ export const initial = (str) => {
     return str.split(' ').map(word => word.charAt(0).toUpperCase()).join('');
 };
 
+
+
+export const isEmailFormatValid = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+

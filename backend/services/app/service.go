@@ -89,6 +89,32 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 	a.ctx.DB.Where("name in (?)", permissionNames).Find(&permissions)
 	roles = append(roles, models.RoleModel{Name: "ADMIN", Permissions: permissions, CompanyID: &companyID})
 
+	services = map[string][]map[string][]string{
+		"contact": {
+			{"customer": cruds},
+		},
+		"project_management": {
+			{"project": []string{"read"}},
+			{"member": append([]string{"read"}, "invite")},
+			{"task": cruds},
+		},
+	}
+	permissionNames = []string{}
+	for service, modules := range services {
+		for _, module := range modules {
+			for key, actions := range module {
+				for _, action := range actions {
+					permissionNames = append(permissionNames, service+":"+key+":"+action)
+				}
+			}
+		}
+	}
+
+	permissions = []models.PermissionModel{}
+
+	a.ctx.DB.Where("name in (?)", permissionNames).Find(&permissions)
+	roles = append(roles, models.RoleModel{Name: "MEMBER", Permissions: permissions, CompanyID: &companyID})
+
 	for i, v := range roles {
 		a.ctx.DB.Create(&v)
 		roles[i] = v
