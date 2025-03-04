@@ -86,7 +86,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 
 	task.ColumnID = &input.ColumnID
 	task.OrderNumber = input.OrderNumber
-	err = h.ctx.DB.Save(&task).Error
+	err = h.ctx.DB.Omit("Assignee").Save(&task).Error
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

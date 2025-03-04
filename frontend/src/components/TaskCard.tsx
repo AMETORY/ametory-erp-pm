@@ -1,5 +1,7 @@
 import { useEffect, type FC } from "react";
 import { TaskModel } from "../models/task";
+import { Avatar } from "flowbite-react";
+import { initial } from "../utils/helper";
 
 interface TaskCardProps {
   task: TaskModel;
@@ -18,7 +20,11 @@ const TaskCard: FC<TaskCardProps> = ({ task, isdragged = false, onClick }) => {
       }}
       onClick={() => onClick(task)}
     >
-      {task?.name}
+      <div className="flex items-center justify-between">
+        {task?.name}
+        <Avatar rounded img={task?.assignee?.user?.profile_picture?.url} alt="Avatar" size="xs" placeholderInitials={initial(task?.assignee?.user?.full_name)}/>
+      </div>
+
     </div>
   );
 };

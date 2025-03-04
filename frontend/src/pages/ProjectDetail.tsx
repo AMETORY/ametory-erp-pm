@@ -31,7 +31,7 @@ import { ColumnModel } from "../models/column";
 import ColumnCard from "../components/ColumnCard";
 import { Drawer } from "flowbite-react";
 import { BsListTask } from "react-icons/bs";
-import { getProject } from "../services/api/projectApi";
+import { addNewColumn, getProject, rearrangeColumns } from "../services/api/projectApi";
 import { useParams } from "react-router-dom";
 import { ProjectModel } from "../models/project";
 import { WebsocketContext } from "../contexts/WebsocketContext";
@@ -39,6 +39,7 @@ import { ProfileContext } from "../contexts/ProfileContext";
 import ProjectHeader from "../components/ProjectHeader";
 import { moveTask, rearrangeTask } from "../services/api/taskApi";
 import TaskDetail from "../components/TaskDetail";
+import { generateUUID } from "../utils/helper";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -68,8 +69,9 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
 
   useEffect(() => {
     if (!projectId) return;
-    if (wsMsg?.project_id == projectId) {
+    if (wsMsg?.project_id == projectId && wsMsg?.sender_id != profile?.id) {
       if (wsMsg.command == "RELOAD") {
+        setColumns([]);
         getProject(projectId).then((resp: any) => {
           setProject(resp.data);
           setColumns(
@@ -152,8 +154,8 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
       } else {
         const activeIndex = columns.findIndex((item) => item.id == id);
         const overIndex = columns.findIndex((item) => item.id == over?.id);
-        console.log(activeIndex, overIndex);
-        if (
+        // console.log(activeIndex, overIndex);
+        if (  
           activeIndex !== -1 &&
           overIndex !== -1 &&
           activeIndex !== overIndex
@@ -161,6 +163,11 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           const movedColumn = columns.splice(activeIndex, 1)[0];
           columns.splice(overIndex, 0, movedColumn);
           setColumns([...columns]);
+
+          // console.log(movedColumn);
+          rearrangeColumns(projectId!, {
+            columns: [...columns]
+          }).catch(console.error);
         }
       }
     }
@@ -245,18 +252,20 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                 <div
                   className="border p-4 rounded-lg text-center cursor-pointer hover:bg-gray-50 transform w-full"
                   onClick={() => {
+                    let data = {
+                      id: generateUUID(),
+                      name: "New Column",
+                      order: columns.length + 1,
+                      color: `hsl(${Math.floor(
+                        Math.random() * 360
+                      )}, 100%, 90%)`,
+                      tasks: [],
+                    }
                     setColumns([
                       ...columns,
-                      {
-                        id: `column${columns.length + 1}`,
-                        name: "New Column",
-                        order: columns.length,
-                        color: `hsl(${Math.floor(
-                          Math.random() * 360
-                        )}, 100%, 90%)`,
-                        tasks: [],
-                      },
+                      data,
                     ]);
+                    addNewColumn(projectId!, data);
                   }}
                 >
                   Add New Column
@@ -295,7 +304,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           </SortableContext>
         </DndContext>
       </div>
-      {activeTask && (
+      {activeTask && project && (
         <Drawer
           style={{ width: 1000 }}
           open={activeTask !== undefined}
@@ -307,7 +316,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
             className="pt-4  "
             style={{ height: "calc(100vh - 70px)" }}
           >
-            <TaskDetail task={activeTask} />
+            <TaskDetail task={activeTask} project={project} />
           </Drawer.Items>
         </Drawer>
       )}

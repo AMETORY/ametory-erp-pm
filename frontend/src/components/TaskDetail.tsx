@@ -5,12 +5,14 @@ import { getTask, updateTask } from "../services/api/taskApi";
 import { Editor } from "@tinymce/tinymce-react";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { debounce } from "../utils/helper";
+import { ProjectModel } from "../models/project";
 
 interface TaskDetailProps {
   task: TaskModel;
+  project: ProjectModel;
 }
 
-const TaskDetail: FC<TaskDetailProps> = ({ task }) => {
+const TaskDetail: FC<TaskDetailProps> = ({ task, project }) => {
   const [mounted, setMounted] = useState(false);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
@@ -72,8 +74,8 @@ const TaskDetail: FC<TaskDetailProps> = ({ task }) => {
         <table className="w-full">
           <tbody>
             <tr>
-              <td className="px-2 w-1/4"> Date</td>
-              <td className="px-2 w-1/4">
+              <td className="px-2 py-1 w-1/4"> Date</td>
+              <td className="px-2 py-1 w-1/4">
                 <Datepicker
                 className="!border-0"
                   value={activeTask?.start_date!}
@@ -83,15 +85,27 @@ const TaskDetail: FC<TaskDetailProps> = ({ task }) => {
                   }}
                 />
               </td>
-              <td className="px-2 w-1/4"> Assigned To</td>
-              <td className="px-2 w-1/4">
-                
+              <td className="px-2 py-1 w-1/4"> Assigned To</td>
+              <td className="px-2 py-1 w-1/4">
+                <select
+                  className="w-full rounded-lg border-gray-200 bg-gray-50"
+                  value={activeTask?.assignee_id!}
+                  onChange={(el) => {
+                    setIsEditted(true);
+                    setActiveTask({ ...activeTask, assignee_id: el.target.value });
+                  }}
+                >
+                  <option value={""}>Select</option>
+                  {(project?.members??[]).map((member) => (
+                    <option key={member.id} value={member.id}>{member.user?.full_name}</option>
+                  ))}
+                </select>
               </td>
             </tr>
             <tr>
           
-              <td className="px-2 w-1/4"> Date Line</td>
-              <td className="px-2 w-1/4">
+              <td className="px-2 py-1 w-1/4"> Date Line</td>
+              <td className="px-2 py-1 w-1/4">
                 <Datepicker
                 className="!border-0"
                   value={activeTask?.end_date!}
@@ -101,8 +115,8 @@ const TaskDetail: FC<TaskDetailProps> = ({ task }) => {
                   }}
                 />
               </td>
-              <td className="px-2 w-1/4"> Watcher</td>
-              <td className="px-2 w-1/4">
+              <td className="px-2 py-1 w-1/4"> Watcher</td>
+              <td className="px-2 py-1 w-1/4">
                
               </td>
             </tr>

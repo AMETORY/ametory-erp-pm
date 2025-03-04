@@ -39,6 +39,19 @@ export const getProjectAddMember = async (id: string, data: any) => {
   });
 };
 
+export const addNewColumn = async (id: string, data: any) => {
+  return await customFetch(`api/v1/project/${id}/add-column`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+export const rearrangeColumns = async (id: string, data: any) => {
+  return await customFetch(`api/v1/project/${id}/rearrange-columns`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+
 export const getProjectTemplates = async () => {
   return await customFetch(`api/v1/project/templates`, {
     method: "GET",

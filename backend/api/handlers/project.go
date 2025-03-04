@@ -12,6 +12,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
+	"gorm.io/gorm/clause"
 )
 
 type ProjectHandler struct {
@@ -171,6 +172,64 @@ func (h *ProjectHandler) AddMemberHandler(c *gin.Context) {
 		return q.Request.URL.Path == url
 	})
 	c.JSON(200, gin.H{"message": "Member added to project successfully"})
+}
+func (h *ProjectHandler) AddNewColumnHandler(c *gin.Context) {
+	projectId := c.Param("id")
+
+	var input models.ColumnModel
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	input.ProjectID = projectId
+
+	err := h.pmService.ProjectService.CreateColumn(&input)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	msg := gin.H{
+		"message":    "add column to project successfully",
+		"project_id": projectId,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return q.Request.URL.Path == url
+	})
+	c.JSON(200, gin.H{"message": "add column to project successfully"})
+}
+
+func (h *ProjectHandler) RearrangeColumnsHandler(c *gin.Context) {
+	var input struct {
+		Columns []models.ColumnModel `json:"columns" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	projectId := c.Param("id")
+
+	for i, v := range input.Columns {
+		v.Order = i + 1
+		h.ctx.DB.Omit(clause.Associations).Save(&v)
+	}
+
+	msg := gin.H{
+		"message":    "Column rearrange successfully",
+		"project_id": projectId,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return q.Request.URL.Path == url
+	})
+	c.JSON(200, gin.H{"message": "Column rearrange successfully"})
 }
 func (h *ProjectHandler) GetMembersHandler(c *gin.Context) {
 	projectId := c.Param("id")
