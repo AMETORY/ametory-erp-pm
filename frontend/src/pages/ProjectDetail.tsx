@@ -215,7 +215,14 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
 
   return (
     <AdminLayout>
-      {project && <ProjectHeader project={project} />}
+      {project && (
+        <ProjectHeader
+          project={project}
+          onChange={(val) => {
+            setProject(val);
+          }}
+        />
+      )}
       <div className="p-4 h-full overflow-x-scroll unselected">
         <DndContext
           onDragEnd={handleDragEnd}

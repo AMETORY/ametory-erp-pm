@@ -34,6 +34,14 @@ export const rearrangeTask = async (projectId: string, data: any) => {
   });
 };
 
+
+export const addComment = async (projectId: string,id: string,  data: any) => {
+  return await customFetch(`api/v1/project/${projectId}/task/${id}/comment`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
 export const updateTask = async (projectId: string, id: string, task: any) => {
   return await customFetch(`api/v1/project/${projectId}/task/${id}/update`, {
     method: "PUT",

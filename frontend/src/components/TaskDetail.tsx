@@ -22,12 +22,15 @@ import { RiFullscreenFill } from "react-icons/ri";
 import Select, { InputActionMeta } from "react-select";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProjectModel } from "../models/project";
-import { TaskModel } from "../models/task";
-import { getTask, updateTask } from "../services/api/taskApi";
+import { TaskCommentModel, TaskModel } from "../models/task";
+import { addComment, getTask, updateTask } from "../services/api/taskApi";
 import { initial } from "../utils/helper";
 import { BsActivity } from "react-icons/bs";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
 import { ProfileContext } from "../contexts/ProfileContext";
+import { MentionsInput, Mention } from "react-mentions";
+import { parseMentions } from "../utils/helper-ui";
+import Moment from "react-moment";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -42,6 +45,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
 }) => {
   const { profile, setProfile } = useContext(ProfileContext);
   const tabsRef = useRef<TabsRef>(null);
+
   const [activeTab, setActiveTab] = useState(0);
   const [mounted, setMounted] = useState(false);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
@@ -52,6 +56,31 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const [watchers, setWatchers] = useState<
     { label: string; value: string; avatar: ReactNode }[]
   >([]);
+  const [comments, setComments] = useState<TaskCommentModel[]>([]);
+  const [emojis, setEmojis] = useState([]);
+
+  useEffect(() => {
+    fetch(
+      "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
+    )
+      .then((response) => {
+        return response.json();
+      })
+      .then((jsonData) => {
+        setEmojis(jsonData.emojis);
+      });
+  }, []);
+  const neverMatchingRegex = /($a)/;
+  const queryEmojis = (query: any, callback: (emojis: any) => void) => {
+    if (query.length === 0) return;
+
+    const matches = emojis
+      .filter((emoji: any) => {
+        return emoji.name.indexOf(query.toLowerCase()) > -1;
+      })
+      .slice(0, 10);
+    return matches.map(({ emoji }) => ({ id: emoji }));
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -71,7 +100,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   }, [task, mounted]);
 
   useEffect(() => {
-    if (wsMsg?.project_id != task.project_id) {
+    if (wsMsg?.project_id == task.project_id) {
       //   console.log("wsMsg", wsMsg);
       if (wsMsg.task_id == task.id) {
         getDetail(task.id!);
@@ -83,6 +112,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
     setActiveTask({
       ...activeTask,
       description: e.target.getContent(),
+      comments: [],
     });
     setIsEditted(true);
   };
@@ -91,6 +121,44 @@ const TaskDetail: FC<TaskDetailProps> = ({
     getTask(task.project_id!, id)
       .then((resp: any) => setActiveTask(resp.data))
       .catch(toast.error);
+  };
+
+  const emojiStyle = {
+    control: {
+      fontSize: 16,
+      lineHeight: 1.2,
+      minHeight: 63,
+    },
+
+    highlighter: {
+      padding: 9,
+      border: "1px solid transparent",
+    },
+
+    input: {
+      fontSize: 16,
+      lineHeight: 1.2,
+      padding: 9,
+      border: "1px solid silver",
+      borderRadius: 10,
+    },
+
+    suggestions: {
+      list: {
+        backgroundColor: "white",
+        border: "1px solid rgba(0,0,0,0.15)",
+        fontSize: 16,
+      },
+
+      item: {
+        padding: "5px 15px",
+        borderBottom: "1px solid rgba(0,0,0,0.15)",
+
+        "&focused": {
+          backgroundColor: "#cee4e5",
+        },
+      },
+    },
   };
 
   useEffect(() => {
@@ -115,7 +183,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   }, [activeTask]);
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 space-y-2 overflow-y-auto">
         <div className="flex flex-row items-center justify-between">
           <input
             className="border-0 py-2 text-2xl font-semibold focus:border-0 focus:outline-none w-full"
@@ -235,7 +303,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
           apiKey={process.env.REACT_APP_TINY_MCE_KEY}
           init={{
             plugins:
-              "anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount textcolor colorpicker",
+              "anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount ",
             toolbar:
               "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat",
           }}
@@ -246,7 +314,10 @@ const TaskDetail: FC<TaskDetailProps> = ({
           aria-label="Default tabs"
           variant="default"
           ref={tabsRef}
-          onActiveTabChange={(tab) => setActiveTab(tab)}
+          onActiveTabChange={(tab) => {
+            setActiveTab(tab);
+            // console.log(tab);
+          }}
         >
           <Tabs.Item active title="Add Comments" icon={GoComment}>
             <div className="flex flex-row gap-4 items-start">
@@ -258,8 +329,10 @@ const TaskDetail: FC<TaskDetailProps> = ({
                 size="md"
               />
               <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">{profile?.full_name}</h3>
-                <Editor
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  {profile?.full_name}
+                </h3>
+                {/* <Editor
                   apiKey={process.env.REACT_APP_TINY_MCE_KEY}
                   init={{
                     plugins:
@@ -272,12 +345,49 @@ const TaskDetail: FC<TaskDetailProps> = ({
                   onChange={(e: any) => {
                     setComment(e.target.getContent());
                   }}
-                />
+                /> */}
+                <MentionsInput
+                  value={comment}
+                  onChange={(val) => {
+                    setComment(val.target.value);
+                  }}
+                  style={emojiStyle}
+                  placeholder={"Press ':' for emojis, mention people using '@'"}
+                  autoFocus
+                >
+                  <Mention
+                    trigger="@"
+                    data={(project?.members ?? []).map((member) => ({
+                      id: member.id!,
+                      display: member.user?.full_name!,
+                    }))}
+                    style={{
+                      backgroundColor: "#cee4e5",
+                    }}
+                    appendSpaceOnAdd
+                  />
+                  <Mention
+                    trigger=":"
+                    markup="__id__"
+                    regex={neverMatchingRegex}
+                    data={queryEmojis}
+                  />
+                </MentionsInput>
                 <div className="flex justify-end mt-4">
                   <Button
                     className="w-32"
                     onClick={() => {
                       if (comment) {
+                        addComment(project!.id!, task.id!, {
+                          comment,
+                        })
+                          .catch(toast.error)
+                          .then(() => {
+                            setComment("");
+
+                            toast.success("Comment added successfully");
+                            tabsRef.current?.setActiveTab(1);
+                          });
                       }
                     }}
                   >
@@ -288,24 +398,78 @@ const TaskDetail: FC<TaskDetailProps> = ({
             </div>
           </Tabs.Item>
           <Tabs.Item title="Comments" icon={GoCommentDiscussion}>
-            This is{" "}
-            <span className="font-medium text-gray-800 dark:text-white">
-              Profile tab's associated content
-            </span>
-            . Clicking another tab will toggle the visibility of this one for
-            the next. The tab JavaScript swaps classes to control the content
-            visibility and styling.
+            <div className="space-y-2">
+              {(activeTask?.comments ?? []).map((comment) => (
+                <div
+                  key={comment.id}
+                  className={`flex items-start gap-2 p-2  dark:bg-gray-800 ${
+                    profile?.id == comment?.member?.user_id
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  {profile?.id != comment?.member?.user_id && (
+                    <Avatar
+                      rounded
+                      img={comment.member?.user?.profile_picture?.url}
+                      alt="Avatar"
+                      size="sm"
+                      placeholderInitials={initial(
+                        comment.member?.user?.full_name
+                      )}
+                      className="py-2"
+                    />
+                  )}
+
+                  <div className="flex flex-col rounded bg-gray-100 p-2 min-w-[300px] ">
+                    <div className="flex justify-between items-end">
+                      <span className="font-medium text-gray-800 dark:text-white">
+                        {comment.member?.user?.full_name}
+                      </span>
+                      <Moment fromNow className="text-xs">
+                        {comment?.published_at}
+                      </Moment>
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {parseMentions(comment.comment ?? "", (type, id) => {
+                        // console.log(type, id);
+                      })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-center">
+                <Button
+                  color="gray"
+                  onClick={() => {
+                    tabsRef.current?.setActiveTab(0);
+                  }}
+                >
+                  Add New Comment
+                </Button>
+              </div>
+            </div>
           </Tabs.Item>
           <Tabs.Item title="Activity" icon={BsActivity}>
-            This is{" "}
-            <span className="font-medium text-gray-800 dark:text-white">
-              Dashboard tab's associated content
-            </span>
-            . Clicking another tab will toggle the visibility of this one for
-            the next. The tab JavaScript swaps classes to control the content
-            visibility and styling.
+            <ul className="space-y-4">
+              {activeTask?.activities?.map((activity) => (
+                <li
+                  key={activity.id}
+                  className="p-2 bg-gray-100 px-4 py-2 w-fit rounded-lg"
+                >
+                  <span className="text-gray-600 dark:text-gray-300 hover:font-semibold">
+                    {activity.member?.user?.full_name}
+                  </span>{" "}
+                  <strong>
+                    {activity.activity_type?.replaceAll("_", " ")}
+                  </strong>{" "}
+                  at <Moment fromNow>{activity.activity_date}</Moment>
+                </li>
+              ))}
+            </ul>
           </Tabs.Item>
         </Tabs>
+        
       </div>
       {isEditted && (
         <div className="bg-red border-t pt-2 flex flex-row justify-end gap-2">

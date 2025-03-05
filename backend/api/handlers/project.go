@@ -128,6 +128,19 @@ func (h *ProjectHandler) UpdateProjectHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	msg := gin.H{
+		"message":    "Project updated successfully",
+		"project_id": id,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return q.Request.URL.Path == url
+	})
+	h.pmService.ProjectService.AddActivity(id, c.MustGet("memberID").(string), nil, nil, "UPDATE_PROJECT", nil)
 	c.JSON(200, gin.H{"message": "Project updated successfully", "project": project})
 }
 
@@ -171,6 +184,8 @@ func (h *ProjectHandler) AddMemberHandler(c *gin.Context) {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
 		return q.Request.URL.Path == url
 	})
+
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), nil, nil, "ADD_MEMBER", nil)
 	c.JSON(200, gin.H{"message": "Member added to project successfully"})
 }
 func (h *ProjectHandler) AddNewColumnHandler(c *gin.Context) {
@@ -200,6 +215,7 @@ func (h *ProjectHandler) AddNewColumnHandler(c *gin.Context) {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
 		return q.Request.URL.Path == url
 	})
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), nil, nil, "ADD_COLUMN", nil)
 	c.JSON(200, gin.H{"message": "add column to project successfully"})
 }
 
@@ -228,6 +244,7 @@ func (h *ProjectHandler) UpdateColumnHandler(c *gin.Context) {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
 		return q.Request.URL.Path == url
 	})
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &input.ID, nil, "UPDATE_COLUMN", nil)
 	c.JSON(200, gin.H{"message": "Column updated successfully"})
 }
 
@@ -257,6 +274,7 @@ func (h *ProjectHandler) RearrangeColumnsHandler(c *gin.Context) {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
 		return q.Request.URL.Path == url
 	})
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), nil, nil, "REARRANGE_COLUMN", nil)
 	c.JSON(200, gin.H{"message": "Column rearrange successfully"})
 }
 func (h *ProjectHandler) GetMembersHandler(c *gin.Context) {

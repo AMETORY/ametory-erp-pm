@@ -23,3 +23,19 @@ export interface Industry {
     columns: IndustryColumn[];
 }
 
+
+
+export interface ProjectActivityModel {
+    id?: string;
+    project_id?: string;
+    project?: ProjectModel;
+    member_id?: string;
+    member?: MemberModel;
+    activity_type?: string;
+    notes?: string;
+    column_id?: string;
+    column?: ColumnModel;
+    task_id?: string;
+    task?: TaskModel;
+    activity_date?: Date;
+}

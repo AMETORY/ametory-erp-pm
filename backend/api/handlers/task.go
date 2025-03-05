@@ -105,6 +105,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 		return q.Request.URL.Path == url
 	})
 
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &input.ColumnID, &taskId, "MOVE_TASK", nil)
 	c.JSON(200, gin.H{"message": "Task moved successfully"})
 }
 
@@ -142,6 +143,7 @@ func (h *TaskHandler) RearrangeTaskHandler(c *gin.Context) {
 		return q.Request.URL.Path == url
 	})
 
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &input.ID, nil, "REARRANGE_TASK", nil)
 	c.JSON(200, gin.H{"message": "Task rearrange successfully"})
 
 }
@@ -182,6 +184,7 @@ func (h *TaskHandler) CreateTaskHandler(c *gin.Context) {
 		return q.Request.URL.Path == url
 	})
 
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), input.ColumnID, &input.ID, "CREATE_TASK", nil)
 	c.JSON(200, gin.H{"message": "Task created successfully"})
 }
 
@@ -221,10 +224,11 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 	h.ctx.DB.Model(&task).Association("Watchers").Append(watchers)
 	// utils.LogJson(input.Watchers)
 	msg := gin.H{
-		"task_id":   taskId,
-		"message":   "Task updated successfully",
-		"column_id": task.ColumnID,
-		"sender_id": c.MustGet("userID").(string),
+		"task_id":    taskId,
+		"message":    "Task updated successfully",
+		"column_id":  task.ColumnID,
+		"project_id": task.ProjectID,
+		"sender_id":  c.MustGet("userID").(string),
 	}
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
@@ -232,5 +236,48 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		return q.Request.URL.Path == url
 	})
 
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), task.ColumnID, &taskId, "UPDATE_TASK", nil)
 	c.JSON(200, gin.H{"message": "Task updated successfully"})
+}
+
+func (h *TaskHandler) AddCommentHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	taskId := c.Param("taskId")
+	var input struct {
+		Comment string `json:"comment" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	task, err := h.pmService.TaskService.GetTaskByID(taskId)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	memberID := c.MustGet("member").(models.MemberModel).ID
+	comment := models.TaskCommentModel{Comment: input.Comment, MemberID: &memberID}
+	err = h.pmService.TaskService.CreateComment(taskId, &comment, true)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"task_id":    task.ID,
+		"message":    "Comment added successfully",
+		"comment_id": comment.ID,
+		"project_id": projectId,
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return q.Request.URL.Path == url
+	})
+
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), task.ColumnID, &taskId, "ADD_COMMENT", &input.Comment)
+
+	c.JSON(200, gin.H{"message": "Comment added successfully"})
 }

@@ -1,7 +1,7 @@
 import { ColumnModel } from "./column";
 import { FileModel } from "./file";
 import { MemberModel } from "./member";
-import { ProjectModel } from "./project";
+import { ProjectActivityModel, ProjectModel } from "./project";
 
 export interface TaskModel {
   id?: string;
@@ -27,4 +27,17 @@ export interface TaskModel {
   files?: FileModel[];
   cover?: FileModel;
   watchers?: MemberModel[];
+  comments?: TaskCommentModel[];
+  activities?: ProjectActivityModel[];
 }
+
+export interface TaskCommentModel {
+  id?: string;
+  task_id?: string;
+  member_id?: string;
+  member?: MemberModel;
+  comment?: string;
+  status?: string;
+  published_at?: Date;
+}
+
