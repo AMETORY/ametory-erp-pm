@@ -21,6 +21,7 @@ import { LoadingContext } from "../contexts/LoadingContext";
 import Moment from "react-moment";
 import { PaginationResponse } from "../objects/pagination";
 import { getPagination, initial } from "../utils/helper";
+import toast from "react-hot-toast";
 
 interface ProjectPageProps {}
 
@@ -52,7 +53,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
       getAllProjects();
       setShowModal(false);
     } catch (error: any) {
-      console.error("Error creating project:", error);
+      toast.error("Error creating project:", error);
       alert(error.message);
     } finally {
       setLoading(false);
@@ -66,7 +67,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
         setIndustries(response.data);
       })
       .catch((error) => {
-        console.error("Error fetching industries:", error);
+        toast.error("Error fetching industries:", error);
       });
     return () => {};
   }, []);
@@ -78,7 +79,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
       setProjects(resp.data.items);
       setPagination(getPagination(resp.data));
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      toast.error(`${error}`);
     } finally {
       setLoading(false);
     }
@@ -146,7 +147,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
                   <Avatar.Group>
                     {project?.members?.map((member) => (
                       <Avatar
-                      key={member.id}
+                        key={member.id}
                         size="xs"
                         img={member?.user?.profile_picture?.url}
                         rounded
@@ -297,7 +298,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
                   <option value="Pending">Pending</option>
                 </select>
               </div>
-              
+
               <div className="mb-4">
                 <label
                   htmlFor="assignedMember"

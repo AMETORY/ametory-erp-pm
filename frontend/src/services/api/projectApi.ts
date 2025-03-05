@@ -52,6 +52,13 @@ export const rearrangeColumns = async (id: string, data: any) => {
   });
 };
 
+
+export const updateColumn = async (id: string, data: any) => {
+  return await customFetch(`api/v1/project/${id}/update-column`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
 export const getProjectTemplates = async () => {
   return await customFetch(`api/v1/project/templates`, {
     method: "GET",

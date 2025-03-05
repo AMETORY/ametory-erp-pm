@@ -203,6 +203,34 @@ func (h *ProjectHandler) AddNewColumnHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "add column to project successfully"})
 }
 
+func (h *ProjectHandler) UpdateColumnHandler(c *gin.Context) {
+	projectId := c.Param("id")
+
+	var input models.ColumnModel
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.pmService.ProjectService.UpdateColumn(input.ID, &input); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"message":    "Column updated successfully",
+		"project_id": projectId,
+		"column_id":  input.ID,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return q.Request.URL.Path == url
+	})
+	c.JSON(200, gin.H{"message": "Column updated successfully"})
+}
+
 func (h *ProjectHandler) RearrangeColumnsHandler(c *gin.Context) {
 	var input struct {
 		Columns []models.ColumnModel `json:"columns" binding:"required"`

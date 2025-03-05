@@ -11,6 +11,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
+	"gorm.io/gorm/clause"
 )
 
 type TaskHandler struct {
@@ -203,12 +204,22 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		return
 	}
 
-	err = h.ctx.DB.Save(&input).Error
+	err = h.ctx.DB.Omit(clause.Associations).Save(&input).Error
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
+	h.ctx.DB.Model(&task).Association("Watchers").Clear()
+	var watchers []models.MemberModel
+
+	ids := []string{}
+	for _, v := range input.Watchers {
+		ids = append(ids, v.ID)
+	}
+	h.ctx.DB.Find(&watchers, "id in (?)", ids)
+	h.ctx.DB.Model(&task).Association("Watchers").Append(watchers)
+	// utils.LogJson(input.Watchers)
 	msg := gin.H{
 		"task_id":   taskId,
 		"message":   "Task updated successfully",

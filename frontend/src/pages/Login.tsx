@@ -7,6 +7,7 @@ import { LOCAL_STORAGE_TOKEN } from "../utils/constants";
 import Logo from "../components/logo";
 import { processLogin } from "../services/api/authApi";
 import { LoadingContext } from "../contexts/LoadingContext";
+import toast, { Toaster } from "react-hot-toast";
 
 interface LoginProps {}
 
@@ -26,10 +27,10 @@ const Login: FC<LoginProps> = ({}) => {
         password,
       });
 
-      await asyncStorage.setItem(LOCAL_STORAGE_TOKEN,resp.token);
+      await asyncStorage.setItem(LOCAL_STORAGE_TOKEN, resp.token);
       window.location.reload();
     } catch (error) {
-      alert(error);
+      toast.error(`${error}`);
     } finally {
       setLoading(false);
     }
@@ -45,6 +46,7 @@ const Login: FC<LoginProps> = ({}) => {
         backgroundPosition: "center",
       }}
     >
+      <Toaster position="bottom-left" reverseOrder={false} />
       <section className="w-full px-10">
         <div
           className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0 "

@@ -7,6 +7,7 @@ import { LOCAL_STORAGE_TOKEN } from "../utils/constants";
 import Logo from "../components/logo";
 import { processRegister } from "../services/api/authApi";
 import { LoadingContext } from "../contexts/LoadingContext";
+import toast, { Toaster } from "react-hot-toast";
 
 interface RegistrationProps {}
 
@@ -34,8 +35,7 @@ const Registration: FC<RegistrationProps> = ({}) => {
       alert(resp?.message);
       navigate("/login");
     } catch (error) {
-        console.log(error)
-      alert(error);
+      toast.error(`${error}`);
     } finally {
       setLoading(false);
     }
@@ -51,6 +51,7 @@ const Registration: FC<RegistrationProps> = ({}) => {
         backgroundPosition: "center",
       }}
     >
+      <Toaster position="bottom-left" reverseOrder={false} />
       <section className="w-full px-10">
         <div
           className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0 "
@@ -139,7 +140,7 @@ const Registration: FC<RegistrationProps> = ({}) => {
                   />
                 </div>
 
-                <Button type="submit" className="w-full" >
+                <Button type="submit" className="w-full">
                   Sign in
                 </Button>
               </form>

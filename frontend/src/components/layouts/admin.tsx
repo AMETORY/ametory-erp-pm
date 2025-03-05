@@ -23,6 +23,9 @@ import {
 } from "../../utils/constants";
 import { WebsocketContext } from "../../contexts/WebsocketContext";
 import { ProfileContext } from "../../contexts/ProfileContext";
+import { Toaster } from "react-hot-toast";
+import Loading from "../Loading";
+import { LoadingContext } from "../../contexts/LoadingContext";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -30,7 +33,9 @@ interface AdminLayoutProps {
 
 const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
   const { profile, setProfile } = useContext(ProfileContext);
-  const {isWsConnected, setWsConnected, wsMsg, setWsMsg} = useContext(WebsocketContext);
+  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+    useContext(WebsocketContext);
+  const { loading, setLoading } = useContext(LoadingContext);
   const [socketUrl, setSocketUrl] = useState(``);
   const { collapsed, setCollapsed } = useContext(CollapsedContext);
   const { companyID, setCompanyID } = useContext(CompanyIDContext);
@@ -90,6 +95,8 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
   };
   return (
     <div className="w-screen h-screen  flex flex-col">
+      {loading && <Loading />}
+      <Toaster position="bottom-left" reverseOrder={false} />
       <Topnav />
       <div className="flex flex-row flex-1">
         {companyID && (

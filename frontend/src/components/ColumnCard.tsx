@@ -12,6 +12,10 @@ import { TaskModel } from "../models/task";
 import { createTask, getTasks } from "../services/api/taskApi";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
+import { updateColumn } from "../services/api/projectApi";
+import { BsPencil } from "react-icons/bs";
+import { Button, Label, Modal, TextInput } from "flowbite-react";
+import toast from "react-hot-toast";
 
 interface ColumnCardProps {
   projectId: string;
@@ -34,6 +38,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
     useContext(WebsocketContext);
   const { profile, setProfile } = useContext(ProfileContext);
   const [tasks, setTasks] = useState<TaskModel[]>([]);
+  const [showModal, setShowModal] = useState(false);
   const {
     isOver,
     setNodeRef,
@@ -50,19 +55,19 @@ const ColumnCard: FC<ColumnCardProps> = ({
     getTasks(projectId, column.id as string).then((resp: any) => {
       setTasks(resp.data.items);
       column.tasks = resp.data.items;
-      onChangeColumn(column)
+      onChangeColumn(column);
     });
-  }
+  };
   useEffect(() => {
-    getAllTasks()
+    getAllTasks();
   }, []);
 
   useEffect(() => {
-    if (!wsMsg) return
-    if (!column.id) return
+    if (!wsMsg) return;
+    if (!column.id) return;
     // if (profile?.id != null && profile?.id == wsMsg?.sender_id) {
     if (wsMsg.column_id == column.id || wsMsg.source_column_id == column.id) {
-      getAllTasks()
+      getAllTasks();
     }
     // }
   }, [wsMsg, profile]);
@@ -80,11 +85,41 @@ const ColumnCard: FC<ColumnCardProps> = ({
       }}
     >
       <div className="flex flex-row justify-between group/item">
-        <h2 className="text-xl font-bold mb-2 text-gray-600 hover:text-black">
-          {column.icon && <span className="text-sm mr-2"> {column.icon}</span>}{" "}
-          {column.name}
-        </h2>
-        <RiDragMoveFill {...listeners} className="" />
+        <div className="flex flex-1 items-center">
+          {column.icon && (
+            <h2 className="text-xl font-bold mb-2 text-gray-600 hover:text-black">
+              <span className="text-sm mr-2"> {column.icon}</span>
+            </h2>
+          )}
+          <input
+            className="text-xl font-bold mb-2 text-gray-600 hover:text-black bg-transparent border-0 focus:ring-0 focus:outline-none rounded-lg m-0 p-0"
+            type="text"
+            value={column.name}
+            onChange={(e) =>
+              onChangeColumn({ ...column, name: e.target.value })
+            }
+            onKeyUp={(e) => {
+              if (e.key === "Enter") {
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            onBlur={(e) => {
+              updateColumn(projectId!, {
+                ...column,
+              });
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <BsPencil
+            className="group/edit invisible group-hover/item:visible text-gray-600"
+            onClick={() => setShowModal(true)}
+          />
+          <RiDragMoveFill
+            {...listeners}
+            className="group/edit invisible group-hover/item:visible"
+          />
+        </div>
       </div>
       <SortableContext
         id={column.id!}
@@ -104,7 +139,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
             for (const element of columns) {
               totalItem += (element.tasks ?? []).length;
             }
-         
+
             // console.log("add item",[...columns]);
             createTask(projectId, {
               name: `Task #${totalItem + 1}`,
@@ -114,6 +149,66 @@ const ColumnCard: FC<ColumnCardProps> = ({
           }}
         />
       </SortableContext>
+      <Modal show={showModal} onClose={() => setShowModal(false)}>
+        <Modal.Header>Edit Column</Modal.Header>
+        <Modal.Body className="space-y-6">
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="icon" value=" Icon" />
+            </div>
+            <TextInput
+              id="icon"
+              value={column.icon}
+              onChange={(e) =>
+                onChangeColumn({ ...column, icon: e.target.value })
+              }
+              placeholder=" Icon"
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="name" value="Name" />
+            </div>
+            <TextInput
+              id="name"
+              value={column.name}
+              onChange={(e) =>
+                onChangeColumn({ ...column, name: e.target.value })
+              }
+              placeholder="Name"
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="color" value="Color" />
+            </div>
+            <input
+              id="color"
+              type="color"
+              value={column.color}
+              onChange={(e) =>
+                onChangeColumn({ ...column, color: e.target.value })
+              }
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="flex justify-end">
+          <Button
+            onClick={() => {
+              updateColumn(projectId!, {
+                ...column,
+              })
+                .then(() => setShowModal(false))
+                .catch(toast.error);
+            }}
+          >
+            Save
+          </Button>
+          <Button color="gray" onClick={() => setShowModal(false)}>
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

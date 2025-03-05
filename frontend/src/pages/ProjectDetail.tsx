@@ -31,7 +31,11 @@ import { ColumnModel } from "../models/column";
 import ColumnCard from "../components/ColumnCard";
 import { Drawer } from "flowbite-react";
 import { BsListTask } from "react-icons/bs";
-import { addNewColumn, getProject, rearrangeColumns } from "../services/api/projectApi";
+import {
+  addNewColumn,
+  getProject,
+  rearrangeColumns,
+} from "../services/api/projectApi";
 import { useParams } from "react-router-dom";
 import { ProjectModel } from "../models/project";
 import { WebsocketContext } from "../contexts/WebsocketContext";
@@ -40,6 +44,7 @@ import ProjectHeader from "../components/ProjectHeader";
 import { moveTask, rearrangeTask } from "../services/api/taskApi";
 import TaskDetail from "../components/TaskDetail";
 import { generateUUID } from "../utils/helper";
+import toast, { Toaster } from "react-hot-toast";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -55,6 +60,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
   const [activeTask, setActiveTask] = useState<TaskModel>();
   const [project, setProject] = useState<ProjectModel>();
   const [columns, setColumns] = useState<ColumnModel[]>([]);
+  const [isTaskFullScreen, setIsTaskFullScreen] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -71,7 +77,6 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
     if (!projectId) return;
     if (wsMsg?.project_id == projectId && wsMsg?.sender_id != profile?.id) {
       if (wsMsg.command == "RELOAD") {
-        setColumns([]);
         getProject(projectId).then((resp: any) => {
           setProject(resp.data);
           setColumns(
@@ -146,28 +151,33 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
               order_number:
                 overColumn.tasks?.findIndex((over) => over.id == item?.id) ??
                 0 + 1,
-            }).catch(console.error);
+            }).catch(toast.error);
           } else {
-            rearrangeTask(projectId!, activeColumn).catch(console.error);
+            rearrangeTask(projectId!, activeColumn).catch(toast.error);
           }
         }
       } else {
         const activeIndex = columns.findIndex((item) => item.id == id);
         const overIndex = columns.findIndex((item) => item.id == over?.id);
         // console.log(activeIndex, overIndex);
-        if (  
+        if (
           activeIndex !== -1 &&
           overIndex !== -1 &&
           activeIndex !== overIndex
         ) {
+          let columnsBefore = [...columns];
           const movedColumn = columns.splice(activeIndex, 1)[0];
           columns.splice(overIndex, 0, movedColumn);
           setColumns([...columns]);
 
           // console.log(movedColumn);
           rearrangeColumns(projectId!, {
-            columns: [...columns]
-          }).catch(console.error);
+            columns: [...columns],
+          }).catch((err) => {
+            // console.error(err);
+            toast.error(err.message || err.error);
+            setColumns(columnsBefore);
+          });
         }
       }
     }
@@ -260,11 +270,8 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                         Math.random() * 360
                       )}, 100%, 90%)`,
                       tasks: [],
-                    }
-                    setColumns([
-                      ...columns,
-                      data,
-                    ]);
+                    };
+                    setColumns([...columns, data]);
                     addNewColumn(projectId!, data);
                   }}
                 >
@@ -306,7 +313,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
       </div>
       {activeTask && project && (
         <Drawer
-          style={{ width: 1000 }}
+          style={{ width: !isTaskFullScreen ? "1000px" : "100%" }}
           open={activeTask !== undefined}
           onClose={() => setActiveTask(undefined)}
           position="right"
@@ -316,7 +323,11 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
             className="pt-4  "
             style={{ height: "calc(100vh - 70px)" }}
           >
-            <TaskDetail task={activeTask} project={project} />
+            <TaskDetail
+              task={activeTask}
+              project={project}
+              onSwitchFullscreen={() => setIsTaskFullScreen((val) => !val)}
+            />
           </Drawer.Items>
         </Drawer>
       )}

@@ -37,6 +37,25 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
       setCompanyID(id);
     });
   }, []);
+  useEffect(() => {
+    window.addEventListener('error', e => {
+        if (e.message.includes('ResizeObserver loop')) {
+            const resizeObserverErrDiv = document.getElementById(
+                'webpack-dev-server-client-overlay-div'
+            );
+            const resizeObserverErr = document.getElementById(
+                'webpack-dev-server-client-overlay'
+            );
+            if (resizeObserverErr) {
+                resizeObserverErr.setAttribute('style', 'display: none');
+            }
+            if (resizeObserverErrDiv) {
+                resizeObserverErrDiv.setAttribute('style', 'display: none');
+            }
+            console.error(e.message)
+        }
+    });
+  }, []);
   return (
     <LoadingContext.Provider value={{ loading, setLoading }}>
       <CollapsedContext.Provider value={{ collapsed, setCollapsed }}>

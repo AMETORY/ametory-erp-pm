@@ -6,6 +6,7 @@ import { HiMiniMagnifyingGlass } from "react-icons/hi2";
 import { getMembers, inviteMember } from "../services/api/commonApi";
 import { MemberModel } from "../models/member";
 import { getProjectAddMember, getProjectMembers } from "../services/api/projectApi";
+import toast from "react-hot-toast";
 
 interface MemberSelectModalProps {
   project: ProjectModel;
@@ -26,7 +27,7 @@ const MemberSelectModal: FC<MemberSelectModalProps> = ({ project, onInvite }) =>
       .then((res: any) => {
         setMembers(res.data.items);
       })
-      .catch(console.error);
+      .catch(toast.error);
 
       getAllMembers()
   }, [page, size, search]);
@@ -53,7 +54,7 @@ const MemberSelectModal: FC<MemberSelectModalProps> = ({ project, onInvite }) =>
     getProjectMembers(project?.id!) .then((res: any) => {
       setExistingMembers(res.data);
     })
-    .catch(console.error);
+    .catch(toast.error);
   }
   return (
     <div className="flex gap-4">
@@ -86,7 +87,7 @@ const MemberSelectModal: FC<MemberSelectModalProps> = ({ project, onInvite }) =>
                 .then(() => {
                   getAllMembers();
                 })
-                .catch(console.error)
+                .catch(toast.error)
               }}
             >
               {renderUser(member)}

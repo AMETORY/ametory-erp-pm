@@ -1,26 +1,24 @@
 package middlewares
 
 import (
-	"github.com/AMETORY/ametory-erp-modules/auth"
+	"fmt"
+	"strings"
+
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
 )
 
 func RbacUserMiddleware(erpContext *context.ERPContext, permissions []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exists := c.Get("userID")
-		if !exists {
-			c.JSON(401, gin.H{"message": "Unauthorized"})
-			c.Abort()
-			return
-		}
-		rbacSrv, ok := erpContext.RBACService.(*auth.RBACService)
-		if !ok {
-			c.JSON(500, gin.H{"message": "RBAC service is not available"})
-			c.Abort()
-			return
-		}
-		ok, err := rbacSrv.CheckPermission(userID.(string), permissions)
+		member := c.MustGet("member").(models.MemberModel)
+
+		erpContext.DB.Preload("Role.Permissions").Find(&member)
+
+		user := c.MustGet("user").(models.UserModel)
+		user.Roles = []models.RoleModel{*member.Role}
+
+		ok, err := CheckPermission(user, permissions)
 		if !ok {
 			c.JSON(403, gin.H{"message": err.Error(), "error": err.Error()})
 			c.Abort()
@@ -29,4 +27,24 @@ func RbacUserMiddleware(erpContext *context.ERPContext, permissions []string) gi
 
 		c.Next()
 	}
+}
+
+func CheckPermission(user models.UserModel, permissionNames []string) (bool, error) {
+
+	// Periksa izin
+	for _, roleName := range permissionNames {
+		for _, role := range user.Roles {
+			if role.IsSuperAdmin {
+				return true, nil
+			}
+
+			for _, permission := range role.Permissions {
+				if permission.Name == roleName {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, fmt.Errorf("permissions %s not found", strings.Join(permissionNames, ", "))
 }

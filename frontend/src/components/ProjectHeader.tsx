@@ -6,6 +6,7 @@ import { initial } from "../utils/helper";
 import MemberSelectModal from "./MemberSelectModal";
 import { getRoles, inviteMember } from "../services/api/commonApi";
 import { RoleModel } from "../models/role";
+import toast from "react-hot-toast";
 
 interface ProjectHeaderProps {
   project: ProjectModel;
@@ -159,7 +160,7 @@ const ProjectHeader: FC<ProjectHeaderProps> = ({ project }) => {
                 .then((res: any) => {
                   setInviteModal(false);
                 })
-                .catch(console.error)
+                .catch(toast.error)
                 // setInviteModal(false);
               }}
             >
