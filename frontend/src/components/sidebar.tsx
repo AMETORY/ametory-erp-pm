@@ -1,6 +1,6 @@
 import { useContext, type FC } from "react";
 import { AiOutlineDashboard } from "react-icons/ai";
-import { BsKanban } from "react-icons/bs";
+import { BsKanban, BsPeople } from "react-icons/bs";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
 import { SlPeople } from "react-icons/sl";
 import { asyncStorage } from "../utils/async_storage";
@@ -89,15 +89,18 @@ const Sidebar: FC<SidebarProps> = ({}) => {
           <a
             href="#"
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            onClick={handleNavigation("/member")}
           >
-            <Tooltip content="Users">
-              <SlPeople />
+            <Tooltip content="Member">
+              <BsPeople />
             </Tooltip>
             {!collapsed && (
-              <span className="flex-1 ms-3 whitespace-nowrap">Users</span>
+              <span className="flex-1 ms-3 whitespace-nowrap">Member</span>
             )}
+           
           </a>
         </li>
+       
       </ul>
       <div
         className="flex flex-row gap-2 items-center cursor-pointer hover:font-bold px-2"

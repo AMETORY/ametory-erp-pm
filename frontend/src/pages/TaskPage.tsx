@@ -214,7 +214,6 @@ const TaskPage: FC<TaskPageProps> = ({}) => {
       </Table>
       <Pagination
       className="mt-4"
-        layout="navigation"
         currentPage={mode == "my" ? page : pageWatched}
         totalPages={
           mode == "my"

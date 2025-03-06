@@ -7,6 +7,7 @@ import {
   Datepicker,
   Drawer,
   Modal,
+  Pagination,
   Table,
 } from "flowbite-react";
 import { useContext, useEffect, useState } from "react";
@@ -31,7 +32,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
   const { loading, setLoading } = useContext(LoadingContext);
   const [projects, setProjects] = useState<ProjectModel[]>([]);
   const [page, setPage] = useState(1);
-  const [size, setsize] = useState(10);
+  const [size, setsize] = useState(20);
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [project, setProject] = useState<ProjectModel | null>(null);
@@ -194,7 +195,15 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
             ))}
           </Table.Body>
         </Table>
-
+        <Pagination
+          className="mt-4"
+          currentPage={page}
+          totalPages={pagination?.total_pages ?? 0}
+          onPageChange={(val) => {
+            setPage(val);
+          }}
+          showIcons
+        />
         <Modal
           show={showModal}
           onClose={() => {
@@ -339,7 +348,6 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
           </Modal.Body>
         </Modal>
       </div>
-      
     </AdminLayout>
   );
 };

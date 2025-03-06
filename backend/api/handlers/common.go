@@ -86,6 +86,25 @@ func (h *CommonHandler) GetRolesHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"data": roles})
 }
 
+func (h *CommonHandler) InvitedHandler(c *gin.Context) {
+	members, err := h.pmService.MemberService.GetInvitedMembers(*c.Request, c.Query("search"))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": members})
+}
+
+func (h *CommonHandler) DeleteInvitedHandler(c *gin.Context) {
+	invitationID := c.Param("id")
+	err := h.pmService.MemberService.DeleteInvitation(invitationID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Invitation deleted successfully"})
+}
+
 func (h *CommonHandler) InviteMemberHandler(c *gin.Context) {
 	var input struct {
 		FullName  string  `json:"full_name"`
@@ -102,6 +121,7 @@ func (h *CommonHandler) InviteMemberHandler(c *gin.Context) {
 	data.FullName = input.FullName
 	data.RoleID = input.RoleID
 	data.ProjectID = input.ProjectID
+	data.Email = input.Email
 
 	var user models.UserModel
 	var link = ""

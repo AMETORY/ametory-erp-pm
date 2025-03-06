@@ -4,6 +4,7 @@ import Home from "../pages/Home";
 import ProjectDetail from "../pages/ProjectDetail";
 import ProjectPage from "../pages/ProjectPage";
 import TaskPage from "../pages/TaskPage";
+import MemberPage from "../pages/MemberPage";
 
 interface PrivateRouteProps {}
 
@@ -13,6 +14,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/" element={<Home />} />
       <Route path="/project" element={<ProjectPage />} />
       <Route path="/task" element={<TaskPage />} />
+      <Route path="/member" element={<MemberPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

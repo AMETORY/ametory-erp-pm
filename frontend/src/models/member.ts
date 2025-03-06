@@ -15,3 +15,19 @@ export interface MemberModel {
     team?: TeamModel;
 }
 
+
+
+export interface MemberInvitationModel {
+    id: string;
+    company_id: string;
+    user_id: string;
+    user: UserModel;
+    full_name: string;
+    role_id: string;
+    role: RoleModel;
+    inviter_id: string;
+    inviter: UserModel;
+    expired_at: string;
+    email: string;
+}
+
