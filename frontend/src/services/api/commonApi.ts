@@ -36,7 +36,7 @@ export const getInvitedMembers = async (req: PaginationRequest) => {
 };
 export const deleteInvitation = async (id: string) => {
   return await customFetch(`api/v1/invited/${id}`, {
-    method: "DELETEber",
+    method: "DELETE",
   });
 };
 
