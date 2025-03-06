@@ -13,6 +13,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
 	"github.com/gin-contrib/cors"
@@ -77,6 +78,9 @@ func main() {
 	rbacSrv := auth.NewRBACService(erpContext)
 	erpContext.RBACService = rbacSrv
 
+	messageSrv := message.NewMessageService(erpContext)
+	erpContext.MessageService = messageSrv
+
 	appService := app.NewAppService(erpContext, cfg, redisClient, websocket)
 	erpContext.AppService = appService
 
@@ -96,6 +100,7 @@ func main() {
 	routes.SetupWSRoutes(v1, erpContext)
 	routes.SetupAuthRoutes(v1, erpContext)
 	routes.SetupProjectRoutes(v1, erpContext)
+	routes.SetInboxRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

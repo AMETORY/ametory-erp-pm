@@ -45,7 +45,7 @@ func (h *ProjectHandler) GetProjectsHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": projects})
+	c.JSON(200, gin.H{"data": projects, "message": "Projects retrieved successfully"})
 }
 func (h *ProjectHandler) GetTemplatesHandler(c *gin.Context) {
 
