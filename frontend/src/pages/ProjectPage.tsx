@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Datepicker,
+  Drawer,
   Modal,
   Table,
 } from "flowbite-react";
@@ -338,6 +339,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
           </Modal.Body>
         </Modal>
       </div>
+      
     </AdminLayout>
   );
 };

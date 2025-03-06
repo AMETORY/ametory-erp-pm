@@ -1,3 +1,4 @@
+import { PaginationRequest } from "../../objects/pagination";
 import { customFetch } from "./baseApi";
 
 export const createTask = async (projectId: string, task: any) => {
@@ -11,7 +12,28 @@ export const createTask = async (projectId: string, task: any) => {
 };
 
 export const getTasks = async (projectId: string, columnId: string) => {
-  return await customFetch(`api/v1/project/${projectId}/task/list?column_id=${columnId}`, {
+  return await customFetch(
+    `api/v1/project/${projectId}/task/list?column_id=${columnId}`,
+    {
+      method: "GET",
+    }
+  );
+};
+export const getMyTasks = async (req: PaginationRequest) => {
+  const queryParams = new URLSearchParams();
+  queryParams.set("page", String(req.page));
+  queryParams.set("size", String(req.size));
+  if (req.search) queryParams.set("search", req.search);
+  return await customFetch(`api/v1/task/my?${queryParams}`, {
+    method: "GET",
+  });
+};
+export const getMyWatchedTasks = async (req: PaginationRequest) => {
+  const queryParams = new URLSearchParams();
+  queryParams.set("page", String(req.page));
+  queryParams.set("size", String(req.size));
+  if (req.search) queryParams.set("search", req.search);
+  return await customFetch(`api/v1/task/watched?${queryParams}`, {
     method: "GET",
   });
 };
@@ -34,8 +56,7 @@ export const rearrangeTask = async (projectId: string, data: any) => {
   });
 };
 
-
-export const addComment = async (projectId: string,id: string,  data: any) => {
+export const addComment = async (projectId: string, id: string, data: any) => {
   return await customFetch(`api/v1/project/${projectId}/task/${id}/comment`, {
     method: "POST",
     body: JSON.stringify(data),

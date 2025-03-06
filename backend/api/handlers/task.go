@@ -281,3 +281,20 @@ func (h *TaskHandler) AddCommentHandler(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Comment added successfully"})
 }
+
+func (h *TaskHandler) MyTaskHandler(c *gin.Context) {
+	tasks, err := h.pmService.TaskService.GetMyTask(*c.Request, c.Query("search"), c.MustGet("memberID").(string))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": tasks, "message": "My Tasks retrieved successfully"})
+}
+func (h *TaskHandler) WatchedTaskHandler(c *gin.Context) {
+	tasks, err := h.pmService.TaskService.GetWatchedTask(*c.Request, c.Query("search"), c.MustGet("memberID").(string))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": tasks, "message": "My Tasks retrieved successfully"})
+}

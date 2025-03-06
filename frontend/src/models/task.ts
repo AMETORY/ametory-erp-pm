@@ -29,6 +29,7 @@ export interface TaskModel {
   watchers?: MemberModel[];
   comments?: TaskCommentModel[];
   activities?: ProjectActivityModel[];
+  comment_count?: number
 }
 
 export interface TaskCommentModel {

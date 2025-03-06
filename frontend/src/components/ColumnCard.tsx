@@ -144,6 +144,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
             createTask(projectId, {
               name: `Task #${totalItem + 1}`,
               column_id: column.id,
+              order_number: (column.tasks ?? []).length +1,
             });
             // onChange([...columns]);
           }}

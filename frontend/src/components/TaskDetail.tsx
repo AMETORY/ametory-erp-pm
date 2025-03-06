@@ -318,6 +318,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
             setActiveTab(tab);
             // console.log(tab);
           }}
+          className="mt-4"
         >
           <Tabs.Item active title="Add Comments" icon={GoComment}>
             <div className="flex flex-row gap-4 items-start">
@@ -397,7 +398,16 @@ const TaskDetail: FC<TaskDetailProps> = ({
               </div>
             </div>
           </Tabs.Item>
-          <Tabs.Item title="Comments" icon={GoCommentDiscussion}>
+          <Tabs.Item title={<div className="flex flex-row gap-1">
+            {(task?.comment_count ?? 0) > 0 && (
+            <div className=" flex-row flex gap-2 items-center">
+              {((task?.comment_count ?? 0) < 100 ? (task?.comment_count ?? 0) : "+99")}
+              
+            </div>
+
+          )}
+           Comments
+          </div>} icon={GoCommentDiscussion}>
             <div className="space-y-2">
               {(activeTask?.comments ?? []).map((comment) => (
                 <div

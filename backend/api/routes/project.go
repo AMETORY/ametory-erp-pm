@@ -26,19 +26,26 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		projectGroup.PUT("/:id/add-column", projectHandler.AddNewColumnHandler)
 		projectGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:update"}), projectHandler.UpdateProjectHandler)
 		projectGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:delete"}), projectHandler.DeleteProjectHandler)
-		taskGroup := projectGroup.Group("/:id/task")
+		projectTaskGroup := projectGroup.Group("/:id/task")
 		{
-			taskGroup.GET("/:taskId/detail", taskHandler.GetTaskDetailHandler)
-			taskGroup.PUT("/rearrange", taskHandler.RearrangeTaskHandler)
-			taskGroup.GET("/list", taskHandler.GetTasksHandler)
-			taskGroup.POST("/create", taskHandler.CreateTaskHandler)
-			taskGroup.PUT("/:taskId/move", taskHandler.MoveTaskHandler)
-			taskGroup.PUT("/:taskId/update", taskHandler.UpdateTaskHandler)
-			taskGroup.POST("/:taskId/comment", taskHandler.AddCommentHandler)
+			projectTaskGroup.GET("/:taskId/detail", taskHandler.GetTaskDetailHandler)
+			projectTaskGroup.PUT("/rearrange", taskHandler.RearrangeTaskHandler)
+			projectTaskGroup.GET("/list", taskHandler.GetTasksHandler)
+			projectTaskGroup.POST("/create", taskHandler.CreateTaskHandler)
+			projectTaskGroup.PUT("/:taskId/move", taskHandler.MoveTaskHandler)
+			projectTaskGroup.PUT("/:taskId/update", taskHandler.UpdateTaskHandler)
+			projectTaskGroup.POST("/:taskId/comment", taskHandler.AddCommentHandler)
 			// taskGroup.GET("/:id", taskHandler.GetTaskHandler)
 			// taskGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:task:update"}), taskHandler.UpdateTaskHandler)
 			// taskGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:task:delete"}), taskHandler.DeleteTaskHandler)
 		}
+	}
+
+	taskGroup := r.Group("/task")
+	taskGroup.Use(middlewares.AuthMiddleware(erpContext, true))
+	{
+		taskGroup.GET("/my", taskHandler.MyTaskHandler)
+		taskGroup.GET("/watched", taskHandler.WatchedTaskHandler)
 	}
 
 }

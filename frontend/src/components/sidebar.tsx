@@ -9,6 +9,7 @@ import { LuPowerOff } from "react-icons/lu";
 import { CollapsedContext } from "../contexts/CollapsedContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip } from "flowbite-react";
+import { GoTasklist } from "react-icons/go";
 
 interface SidebarProps {}
 
@@ -36,6 +37,20 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <AiOutlineDashboard />
             </Tooltip>
             {!collapsed && <span className="ms-3">Dashboard</span>}
+          </a>
+        </li>
+        <li className="" style={{ }}>
+          <a
+            href="#"
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            onClick={handleNavigation("/task")}
+          >
+            <Tooltip content="Task">
+              <GoTasklist />
+            </Tooltip>
+            {!collapsed && (
+              <span className="flex-1 ms-3 whitespace-nowrap">Task</span>
+            )}
           </a>
         </li>
         <li className="" style={{ }}>
