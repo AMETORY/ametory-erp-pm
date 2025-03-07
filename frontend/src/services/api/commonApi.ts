@@ -45,3 +45,31 @@ export const acceptInvitation = async (token: string) => {
     method: "GET",
   });
 };
+
+export const uploadFile = async (
+  file: File,
+  reqs: Record<string, any>,
+  onProgress: (progress: number) => void
+) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  Object.keys(reqs).forEach((key) => {
+    formData.append(key, reqs[key]);
+  });
+
+  const options = {
+    onUploadProgress: (progressEvent: ProgressEvent) => {
+      const progress = Math.round(
+        (progressEvent.loaded * 100) / progressEvent.total
+      );
+      onProgress(progress);
+    },
+  };
+
+  return await customFetch("api/v1/file/upload", {
+    method: "POST",
+    body: formData,
+    ...options,
+    isMultipart: true,
+  });
+};

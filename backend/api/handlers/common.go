@@ -12,6 +12,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/file"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/utils"
@@ -26,6 +27,7 @@ type CommonHandler struct {
 	pmService      *project_management.ProjectManagementService
 	rbacService    *auth.RBACService
 	authService    *auth.AuthService
+	fileService    *file.FileService
 }
 
 func NewCommonHandler(ctx *context.ERPContext) *CommonHandler {
@@ -49,6 +51,10 @@ func NewCommonHandler(ctx *context.ERPContext) *CommonHandler {
 	if !ok {
 		panic("AuthService is not instance of auth.AuthService")
 	}
+	fileService, ok := ctx.FileService.(*file.FileService)
+	if !ok {
+		panic("FileService is not instance of file.FileService")
+	}
 	return &CommonHandler{
 		ctx:            ctx,
 		companyService: companyService,
@@ -56,6 +62,7 @@ func NewCommonHandler(ctx *context.ERPContext) *CommonHandler {
 		pmService:      pmService,
 		rbacService:    rbacService,
 		authService:    authService,
+		fileService:    fileService,
 	}
 }
 
@@ -220,4 +227,42 @@ func (h *CommonHandler) AcceptMemberInvitationHandler(c *gin.Context) {
 		h.ctx.DB.Save(&user)
 	}
 	c.JSON(200, gin.H{"message": "Member invitation accepted successfully"})
+}
+
+func (h *CommonHandler) UploadFileHandler(c *gin.Context) {
+	h.ctx.Request = c.Request
+
+	fileObject := models.FileModel{}
+	refID, _ := c.GetPostForm("ref_id")
+	refType, _ := c.GetPostForm("ref_type")
+	skipSave := false
+	skipSaveStr, _ := c.GetPostForm("skip_save")
+	if skipSaveStr == "true" || skipSaveStr == "1" {
+		skipSave = true
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	fileByte, err := utils.FileHeaderToBytes(file)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	filename := file.Filename
+
+	fileObject.FileName = utils.FilenameTrimSpace(filename)
+	fileObject.RefID = refID
+	fileObject.RefType = refType
+	fileObject.SkipSave = skipSave
+
+	if err := h.fileService.UploadFile(fileByte, "local", "files", &fileObject); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "File uploaded successfully", "data": fileObject})
 }

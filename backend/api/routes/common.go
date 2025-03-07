@@ -11,6 +11,7 @@ import (
 
 func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.Static("/static", "../frontend/build/static")
+	r.Static("/assets/files", "../backend/assets/files")
 	r.StaticFile("/", "../frontend/build/index.html")
 
 	// Handle API routes
@@ -26,6 +27,7 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	})
 
 	commonHander := handlers.NewCommonHandler(erpContext)
+	r.POST("/api/v1/file/upload", middlewares.AuthMiddleware(erpContext, false), commonHander.UploadFileHandler)
 	r.GET("/api/v1/members", middlewares.AuthMiddleware(erpContext, false), commonHander.GetMembersHandler)
 	r.GET("/api/v1/roles", middlewares.AuthMiddleware(erpContext, false), commonHander.GetRolesHandler)
 	r.GET("/api/v1/accept-invitation/:token", commonHander.AcceptMemberInvitationHandler)

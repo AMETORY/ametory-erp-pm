@@ -1,4 +1,4 @@
-import { useContext, type FC } from "react";
+import { useContext, useEffect, useState, type FC } from "react";
 import { AiOutlineDashboard } from "react-icons/ai";
 import { BsKanban, BsPeople } from "react-icons/bs";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
@@ -10,13 +10,27 @@ import { CollapsedContext } from "../contexts/CollapsedContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip } from "flowbite-react";
 import { GoTasklist } from "react-icons/go";
+import { getInboxMessagesCount } from "../services/api/inboxApi";
 
 interface SidebarProps {}
 
 const Sidebar: FC<SidebarProps> = ({}) => {
   const { collapsed, setCollapsed } = useContext(CollapsedContext);
+  const [mounted, setMounted] = useState(false);
+  const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
 
+  useEffect(() => {
+    setMounted(true)
+  }, []);
+  
   const nav = useNavigate();
+
+  useEffect(() => {
+    if (mounted) {
+      getInboxMessagesCount().then((resp: any) => setInboxUnreadCount(resp.data)).catch(console.error)
+    }
+  
+  }, [mounted]);
 
   const handleNavigation =
     (path: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -71,6 +85,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
           <a
             href="#"
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            onClick={handleNavigation("/inbox")}
           >
             <Tooltip content="Inbox">
               <HiOutlineInboxArrowDown />
@@ -78,9 +93,9 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             {!collapsed && (
               <span className="flex-1 ms-3 whitespace-nowrap">Inbox</span>
             )}
-            {!collapsed && (
+            {!collapsed && inboxUnreadCount > 0 && (
               <span className="inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                3
+                {inboxUnreadCount}
               </span>
             )}
           </a>

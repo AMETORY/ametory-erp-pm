@@ -102,7 +102,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
-		return q.Request.URL.Path == url
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &input.ColumnID, &taskId, "MOVE_TASK", nil)
@@ -140,7 +140,7 @@ func (h *TaskHandler) RearrangeTaskHandler(c *gin.Context) {
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
-		return q.Request.URL.Path == url
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &input.ID, nil, "REARRANGE_TASK", nil)
@@ -181,7 +181,7 @@ func (h *TaskHandler) CreateTaskHandler(c *gin.Context) {
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
-		return q.Request.URL.Path == url
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), input.ColumnID, &input.ID, "CREATE_TASK", nil)
@@ -233,7 +233,7 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
-		return q.Request.URL.Path == url
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), task.ColumnID, &taskId, "UPDATE_TASK", nil)
@@ -274,7 +274,7 @@ func (h *TaskHandler) AddCommentHandler(c *gin.Context) {
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
-		return q.Request.URL.Path == url
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), task.ColumnID, &taskId, "ADD_COMMENT", &input.Comment)

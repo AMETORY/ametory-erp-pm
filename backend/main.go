@@ -13,6 +13,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/file"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
@@ -68,6 +69,9 @@ func main() {
 	erpContext := context.NewERPContext(db, nil, &ctx, skipMigration)
 	authService := auth.NewAuthService(erpContext)
 	erpContext.AuthService = authService
+
+	fileService := file.NewFileService(erpContext, cfg.Server.BaseURL)
+	erpContext.FileService = fileService
 
 	companyService := company.NewCompanyService(erpContext)
 	erpContext.CompanyService = companyService
