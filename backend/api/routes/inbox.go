@@ -14,6 +14,8 @@ func SetInboxRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		inboxGroup.POST("/send", inboxHandler.SendMessageHandler)
 		inboxGroup.GET("/inboxes", inboxHandler.GetInboxesHandler)
 		inboxGroup.GET("/messages", inboxHandler.GetMessagesHandler)
+		inboxGroup.GET("/message/:id", inboxHandler.GetMessagesDetailHandler)
+		inboxGroup.GET("/count", inboxHandler.CountUnreadHandler)
 	}
 
 }

@@ -44,6 +44,16 @@ func (h *InboxHandler) GetInboxesHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"data": data, "message": "Inbox retrieved successfully"})
 }
 
+func (h *InboxHandler) CountUnreadHandler(c *gin.Context) {
+	memberID := c.MustGet("memberID").(string)
+	data, err := h.messageService.InboxService.CountUnread(nil, &memberID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": data, "message": "Unread messages count retrieved successfully"})
+}
+
 func (h *InboxHandler) GetMessagesHandler(c *gin.Context) {
 	// memberID := c.MustGet("memberID").(string)
 	var inboxID *string
@@ -57,4 +67,14 @@ func (h *InboxHandler) GetMessagesHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"data": data, "message": "Messages retrieved successfully"})
+}
+
+func (h *InboxHandler) GetMessagesDetailHandler(c *gin.Context) {
+	messageID := c.Param("id")
+	data, err := h.messageService.InboxService.GetInboxMessageDetail(messageID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": data, "message": "Message retrieved successfully"})
 }
