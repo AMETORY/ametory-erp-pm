@@ -12,6 +12,14 @@ import (
 func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.Static("/static", "../frontend/build/static")
 	r.Static("/assets/files", "../backend/assets/files")
+	r.StaticFile("/android-chrome-192x192.png", "../frontend/build/android-chrome-192x192.png")
+	r.StaticFile("/android-chrome-512x512.png", "../frontend/build/android-chrome-512x512.png")
+	r.StaticFile("/apple-touch-icon.png", "../frontend/build/apple-touch-icon.png")
+	r.StaticFile("/asset-manifest.json", "../frontend/build/asset-manifest.json")
+	r.StaticFile("/favicon-16x16.png", "../frontend/build/favicon-16x16.png")
+	r.StaticFile("/favicon-32x32.png", "../frontend/build/favicon-32x32.png")
+	r.StaticFile("/favicon.ico", "../frontend/build/favicon.ico")
+	r.StaticFile("/site.webmanifest", "../frontend/build/site.webmanifest")
 	r.StaticFile("/", "../frontend/build/index.html")
 
 	// Handle API routes

@@ -12,6 +12,7 @@ node_modules
 /build
 
 backend/assets/files/*
+backend/ametory-pm
 # misc
 .DS_Store
 .env
