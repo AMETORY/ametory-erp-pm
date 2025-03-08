@@ -14,10 +14,12 @@ func SetInboxRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	inboxGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
 		inboxGroup.POST("/send", inboxHandler.SendMessageHandler)
+		inboxGroup.GET("/sent", inboxHandler.SentMessageHandler)
 		inboxGroup.GET("/inboxes", inboxHandler.GetInboxesHandler)
 		inboxGroup.GET("/messages", inboxHandler.GetMessagesHandler)
 		inboxGroup.GET("/message/:id", inboxHandler.GetMessagesDetailHandler)
 		inboxGroup.GET("/count", inboxHandler.CountUnreadHandler)
+		inboxGroup.GET("/count-sent", inboxHandler.CountUnreadSentHandler)
 		inboxGroup.DELETE("/message/:id", inboxHandler.DeleteMessageHandler)
 	}
 

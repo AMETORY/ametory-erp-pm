@@ -28,7 +28,7 @@ export interface InboxMessageModel {
   subject: string;
   message: string;
   read: boolean;
-  parent_id?: string;
+  parent_inbox_message_id?: string;
   parent?: InboxMessageModel;
   attachments?: FileModel[];
   replies?: InboxMessageModel[];

@@ -10,7 +10,7 @@ import { CollapsedContext } from "../contexts/CollapsedContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip } from "flowbite-react";
 import { GoTasklist } from "react-icons/go";
-import { getInboxMessagesCount } from "../services/api/inboxApi";
+import { getInboxMessagesCount, getSentMessagesCount } from "../services/api/inboxApi";
 
 interface SidebarProps {}
 
@@ -18,6 +18,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
   const { collapsed, setCollapsed } = useContext(CollapsedContext);
   const [mounted, setMounted] = useState(false);
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
+  const [sentUnreadCount, setSentUnreadCount] = useState(0);
 
   useEffect(() => {
     setMounted(true)
@@ -28,6 +29,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
   useEffect(() => {
     if (mounted) {
       getInboxMessagesCount().then((resp: any) => setInboxUnreadCount(resp.data)).catch(console.error)
+      getSentMessagesCount().then((resp: any) => setSentUnreadCount(resp.data)).catch(console.error)
     }
   
   }, [mounted]);
@@ -93,9 +95,9 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             {!collapsed && (
               <span className="flex-1 ms-3 whitespace-nowrap">Inbox</span>
             )}
-            {!collapsed && inboxUnreadCount > 0 && (
+            {!collapsed && inboxUnreadCount + sentUnreadCount > 0 && (
               <span className="inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                {inboxUnreadCount}
+                {inboxUnreadCount + sentUnreadCount}
               </span>
             )}
           </a>

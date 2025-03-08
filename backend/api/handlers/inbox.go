@@ -8,7 +8,6 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
-	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
 )
@@ -60,21 +59,39 @@ func (h *InboxHandler) SendMessageHandler(c *gin.Context) {
 
 	}
 
-	msg := gin.H{
-		"message_id":   input.ID,
-		"subject":      input.Subject,
-		"inbox_id":     *input.InboxID,
-		"message":      "Message sent",
-		"sender_id":    c.MustGet("userID").(string),
-		"recipient_id": *input.RecipientMemberID,
+	if input.ParentInboxMessageID != nil {
+		var parent models.InboxMessageModel
+		h.ctx.DB.First(&parent, "id = ?", *input.ParentInboxMessageID)
+		if parent.RecipientMemberID != &memberID {
+			h.ctx.DB.Model(&parent).Where("id = ?", parent.ID).Update("read", false)
+		}
+
+		replies, err := parent.LoadRecursiveChildren(h.ctx.DB)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		lastReplies := replies[len(replies)-1]
+		if lastReplies.RecipientMemberID != &memberID {
+			h.ctx.DB.Model(&lastReplies).Where("id = ?", lastReplies.ID).Update("read", false)
+		}
+	} else {
+		msg := gin.H{
+			"message_id":   input.ID,
+			"subject":      input.Subject,
+			"inbox_id":     *input.InboxID,
+			"message":      "Message sent",
+			"sender_id":    c.MustGet("userID").(string),
+			"recipient_id": *input.RecipientMemberID,
+		}
+		// utils.LogJson(msg)
+		b, _ := json.Marshal(msg)
+		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.Request.Header.Get("ID-Company"))
+			fmt.Println(q.Request.URL.Path, url)
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
 	}
-	utils.LogJson(msg)
-	b, _ := json.Marshal(msg)
-	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
-		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.Request.Header.Get("ID-Company"))
-		fmt.Println(q.Request.URL.Path, url)
-		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-	})
 
 	c.JSON(200, gin.H{"message": "Message sent"})
 }
@@ -99,6 +116,15 @@ func (h *InboxHandler) CountUnreadHandler(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"data": data, "message": "Unread messages count retrieved successfully"})
 }
+func (h *InboxHandler) CountUnreadSentHandler(c *gin.Context) {
+	memberID := c.MustGet("memberID").(string)
+	data, err := h.messageService.InboxService.CountUnreadSendMessage(nil, &memberID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": data, "message": "Unread messages count retrieved successfully"})
+}
 
 func (h *InboxHandler) DeleteMessageHandler(c *gin.Context) {
 	memberID := c.MustGet("memberID").(string)
@@ -111,6 +137,16 @@ func (h *InboxHandler) DeleteMessageHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"message": "Message deleted"})
+}
+
+func (h *InboxHandler) SentMessageHandler(c *gin.Context) {
+	memberID := c.MustGet("memberID").(string)
+	data, err := h.messageService.InboxService.GetSentMessages(*c.Request, c.Query("search"), nil, &memberID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": data, "message": "Messages retrieved successfully"})
 }
 func (h *InboxHandler) GetMessagesHandler(c *gin.Context) {
 	// memberID := c.MustGet("memberID").(string)
@@ -134,5 +170,13 @@ func (h *InboxHandler) GetMessagesDetailHandler(c *gin.Context) {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
 	}
+	data.Read = true
+	h.ctx.DB.Save(&data)
+
+	for _, v := range data.Replies {
+		v.Read = true
+		h.ctx.DB.Save(&v)
+	}
+
 	c.JSON(200, gin.H{"data": data, "message": "Message retrieved successfully"})
 }

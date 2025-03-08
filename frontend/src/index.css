@@ -43,3 +43,23 @@ html, body {
   @apply bg-blue-100 text-blue-600 hover:text-blue-800 hover:font-semibold
 }
 
+
+.message-content h1 {
+  @apply text-2xl font-bold;
+
+}
+
+.message-content h2 {
+  @apply text-lg font-semibold;
+
+}
+
+.message-content h3 {
+  @apply text-sm font-semibold;
+
+}
+
+.message-content h4 {
+  @apply text-xs font-semibold;
+
+}
