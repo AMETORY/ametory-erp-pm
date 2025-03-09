@@ -24,6 +24,7 @@ interface ColumnCardProps {
   onChange: (columns: ColumnModel[]) => void;
   onChangeColumn: (column: ColumnModel) => void;
   onSelectTask: (task: TaskModel) => void;
+  onAddItem: (taskId: string) => void;
 }
 
 const ColumnCard: FC<ColumnCardProps> = ({
@@ -33,6 +34,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
   onChange,
   onChangeColumn,
   onSelectTask,
+  onAddItem,
 }) => {
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
@@ -145,7 +147,9 @@ const ColumnCard: FC<ColumnCardProps> = ({
               name: `Task #${totalItem + 1}`,
               column_id: column.id,
               order_number: (column.tasks ?? []).length +1,
-            });
+            }).then((resp: any) => {
+              onAddItem(resp.task_id);
+            })
             // onChange([...columns]);
           }}
         />

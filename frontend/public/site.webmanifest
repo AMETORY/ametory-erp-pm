@@ -1,6 +1,7 @@
 {
-    "name": "Ametory PM",
-    "short_name": "",
+    "name": "Ametory Project Management",
+    "short_name": "Ametory PM",
+    "start_url": "/",
     "icons": [
         {
             "src": "/android-chrome-192x192.png",
@@ -11,6 +12,14 @@
             "src": "/android-chrome-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/ss.png",
+            "sizes": "3598x1930",
+            "type": "image/png",
+            "form_factor": "wide"
         }
     ],
     "theme_color": "#ffffff",

@@ -185,7 +185,7 @@ func (h *TaskHandler) CreateTaskHandler(c *gin.Context) {
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), input.ColumnID, &input.ID, "CREATE_TASK", nil)
-	c.JSON(200, gin.H{"message": "Task created successfully"})
+	c.JSON(200, gin.H{"message": "Task created successfully", "task_id": input.ID})
 }
 
 func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {

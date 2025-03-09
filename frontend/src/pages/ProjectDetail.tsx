@@ -41,7 +41,7 @@ import { ProjectModel } from "../models/project";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import ProjectHeader from "../components/ProjectHeader";
-import { moveTask, rearrangeTask } from "../services/api/taskApi";
+import { getTask, moveTask, rearrangeTask } from "../services/api/taskApi";
 import TaskDetail from "../components/TaskDetail";
 import { generateUUID } from "../utils/helper";
 import toast, { Toaster } from "react-hot-toast";
@@ -259,6 +259,11 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                       setActiveTask(val);
                       // console.log(val);
                     }}
+                    onAddItem={(val) => {
+                      getTask(projectId!, val)
+                        .then((resp: any) => setActiveTask(resp.data))
+                        .catch(toast.error);
+                    }}
                   />
                 );
               })}
@@ -289,6 +294,9 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
             <DragOverlay>
               {dragColumn && activeColumn ? (
                 <ColumnCard
+                  onAddItem={(val) => {
+                    console.log(val);
+                  }}
                   projectId={projectId!}
                   column={activeColumn}
                   columns={columns}

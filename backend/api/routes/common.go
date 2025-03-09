@@ -18,6 +18,7 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.StaticFile("/asset-manifest.json", "../frontend/build/asset-manifest.json")
 	r.StaticFile("/favicon-16x16.png", "../frontend/build/favicon-16x16.png")
 	r.StaticFile("/favicon-32x32.png", "../frontend/build/favicon-32x32.png")
+	r.StaticFile("/ss.png", "../frontend/build/ss.png")
 	r.StaticFile("/favicon.ico", "../frontend/build/favicon.ico")
 	r.StaticFile("/site.webmanifest", "../frontend/build/site.webmanifest")
 	r.StaticFile("/", "../frontend/build/index.html")
