@@ -116,6 +116,7 @@ const TaskPage: FC<TaskPageProps> = ({}) => {
       <Table>
         <Table.Head>
           <Table.HeadCell>Task</Table.HeadCell>
+          <Table.HeadCell>Project</Table.HeadCell>
           <Table.HeadCell>Assigned To</Table.HeadCell>
           <Table.HeadCell>Watcher</Table.HeadCell>
           <Table.HeadCell>Status</Table.HeadCell>
@@ -141,6 +142,14 @@ const TaskPage: FC<TaskPageProps> = ({}) => {
                 }}
               >
                 {task.name}
+              </Table.Cell>
+              <Table.Cell
+                className="whitespace-nowrap font-medium text-gray-900 dark:text-white cursor-pointer hover:font-semibold"
+                onClick={() => {
+                  navigate(`/project/${task.project_id}?task_id=${task.id}`);
+                }}
+              >
+                {task.project?.name}
               </Table.Cell>
               <Table.Cell>
                 {task?.assignee && (

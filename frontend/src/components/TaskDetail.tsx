@@ -18,7 +18,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { HiAdjustments, HiClipboardList, HiUserCircle } from "react-icons/hi";
-import { MdComment, MdDashboard, MdDone } from "react-icons/md";
+import { MdClose, MdComment, MdDashboard, MdDone } from "react-icons/md";
 import { RiFullscreenFill } from "react-icons/ri";
 import Select, { InputActionMeta } from "react-select";
 import { WebsocketContext } from "../contexts/WebsocketContext";
@@ -26,7 +26,7 @@ import { ProjectModel } from "../models/project";
 import { TaskCommentModel, TaskModel } from "../models/task";
 import { addComment, getTask, updateTask } from "../services/api/taskApi";
 import { initial, invert } from "../utils/helper";
-import { BsActivity, BsCheck2Circle } from "react-icons/bs";
+import { BsActivity, BsCheck2Circle, BsPencil } from "react-icons/bs";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
 import { ProfileContext } from "../contexts/ProfileContext";
 import { MentionsInput, Mention } from "react-mentions";
@@ -56,6 +56,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const [comment, setComment] = useState("");
   const [isEditted, setIsEditted] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskModel>();
+  const [editDesc, setEditDesc] = useState(false);
   const [watchers, setWatchers] = useState<
     { label: string; value: string; avatar: ReactNode }[]
   >([]);
@@ -163,6 +164,20 @@ const TaskDetail: FC<TaskDetailProps> = ({
       },
     },
   };
+
+  const saveTask = () => {
+    updateTask(task!.project_id!, task.id!, {
+      ...activeTask,
+      watchers: watchers.map((watcher) => ({
+        id: watcher.value,
+      })),
+    })
+      .catch(toast.error)
+      .then(() => {
+        toast.success("Task updated successfully");
+        setIsEditted(false);
+      });
+  }
 
   useEffect(() => {
     if (activeTask) {
@@ -428,17 +443,68 @@ const TaskDetail: FC<TaskDetailProps> = ({
             </tr>
           </tbody>
         </table>
-        <Editor
-          apiKey={process.env.REACT_APP_TINY_MCE_KEY}
-          init={{
-            plugins:
-              "anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount ",
-            toolbar:
-              "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat",
-          }}
-          initialValue={activeTask?.description ?? ""}
-          onChange={handleEditorChange}
-        />
+        {editDesc ? (
+          <Editor
+            apiKey={process.env.REACT_APP_TINY_MCE_KEY}
+            init={{
+              plugins:
+                "anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount ",
+              toolbar:
+                "closeButton saveButton | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat ",
+              setup: (editor: any) => {
+                editor.ui.registry.addButton("closeButton", {
+                  icon: "close",
+                  tooltip: "Close editor",
+                  onAction: (_: any) => setEditDesc(false),
+                });
+
+                editor.ui.registry.addButton("saveButton", {
+                  icon: "save",
+                  tooltip: "Save Task",
+                  onAction: (_: any) => {
+                    saveTask()
+                  },
+                });
+
+                editor.ui.registry.addMenuItem("closeButton", {
+                  text: "Close editor",
+                  onAction: (_: any) => setEditDesc(false),
+                });
+               
+                editor.ui.registry.addMenuItem("saveButton", {
+                  text: "Save",
+                  onAction: (_: any) => {
+                    saveTask()
+                  },
+                });
+              },
+              menubar: "file edit view insert format tools table custom",
+              menu: {
+                custom: { title: "Editor", items: "closeButton saveButton" },
+              },
+            }}
+            initialValue={activeTask?.description ?? ""}
+            onChange={handleEditorChange}
+          />
+        ) : (
+          <div>
+            <div className="flex flex-row gap-2 items-center group/item">
+              <h3 className="font-semibold text-xl">Description</h3>
+              <BsPencil
+                size={16}
+                className="cursor-pointer group/edit invisible group-hover/item:visible text-gray-600"
+                onClick={() => setEditDesc((prev) => !prev)}
+              />
+            </div>
+            <div
+              className="min-h-10"
+              dangerouslySetInnerHTML={{
+                __html: activeTask?.description ?? "",
+              }}
+            />
+          </div>
+        )}
+
         <Tabs
           aria-label="Default tabs"
           variant="default"

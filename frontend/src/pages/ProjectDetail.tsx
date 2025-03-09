@@ -36,7 +36,7 @@ import {
   getProject,
   rearrangeColumns,
 } from "../services/api/projectApi";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { ProjectModel } from "../models/project";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
@@ -61,6 +61,11 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
   const [project, setProject] = useState<ProjectModel>();
   const [columns, setColumns] = useState<ColumnModel[]>([]);
   const [isTaskFullScreen, setIsTaskFullScreen] = useState(false);
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+
+  // Example usage:
+  const taskId = queryParams.get("task_id");
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -72,6 +77,14 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  useEffect(() => {
+    if (taskId) {
+      getTask(projectId!, taskId)
+        .then((resp: any) => setActiveTask(resp.data))
+        .catch(toast.error);
+    }
+  }, [taskId]);
 
   useEffect(() => {
     if (!projectId) return;
