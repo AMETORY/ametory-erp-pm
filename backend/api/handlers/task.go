@@ -206,7 +206,29 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
 	}
+	if task.AssigneeID != input.AssigneeID {
+		msg := gin.H{
+			"task_id":      taskId,
+			"message":      "Assignee changed successfully",
+			"command":      "RELOAD_TASK",
+			"column_id":    task.ColumnID,
+			"project_id":   task.ProjectID,
+			"sender_id":    c.MustGet("userID").(string),
+			"recipient_id": input.AssigneeID,
+		}
+		b, _ := json.Marshal(msg)
+		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
 
+	}
+
+	if input.Completed {
+		now := time.Now()
+		input.CompletedDate = &now
+		input.Percentage = 100
+	}
 	err = h.ctx.DB.Omit(clause.Associations).Save(&input).Error
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -219,6 +241,20 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 	ids := []string{}
 	for _, v := range input.Watchers {
 		ids = append(ids, v.ID)
+		msg := gin.H{
+			"task_id":      taskId,
+			"message":      "Watcher changed successfully",
+			"command":      "RELOAD_TASK",
+			"column_id":    task.ColumnID,
+			"project_id":   task.ProjectID,
+			"sender_id":    c.MustGet("userID").(string),
+			"recipient_id": v.ID,
+		}
+		b, _ := json.Marshal(msg)
+		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
 	}
 	h.ctx.DB.Find(&watchers, "id in (?)", ids)
 	h.ctx.DB.Model(&task).Association("Watchers").Append(watchers)

@@ -17,5 +17,6 @@ func SetupAuthRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		authGroup.GET("/verification/:token", authHandler.VerificationEmailHandler)
 		authGroup.POST("/change-password", middlewares.AuthMiddleware(erpContext, false), authHandler.ChangePasswordHandler)
 		authGroup.GET("/profile", middlewares.AuthMiddleware(erpContext, false), authHandler.GetProfile)
+		authGroup.PUT("/profile", middlewares.AuthMiddleware(erpContext, false), authHandler.UpdateProfile)
 	}
 }

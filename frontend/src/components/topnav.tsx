@@ -5,6 +5,7 @@ import { CompaniesContext, CompanyIDContext } from "../contexts/CompanyContext";
 import { Avatar, Dropdown } from "flowbite-react";
 import { ProfileContext } from "../contexts/ProfileContext";
 import { initial } from "../utils/helper";
+import { useNavigate } from "react-router-dom";
 
 interface TopnavProps {}
 
@@ -13,6 +14,7 @@ const Topnav: React.FC<TopnavProps> = () => {
   const { companyID, setCompanyID } = useContext(CompanyIDContext);
   const { collapsed, setCollapsed } = useContext(CollapsedContext);
   const { profile, setProfile } = useContext(ProfileContext);
+  const nav = useNavigate()
 
   return (
     <nav className="fixed top-0 z-20 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -72,6 +74,8 @@ const Topnav: React.FC<TopnavProps> = () => {
                 rounded
                 stacked
                 placeholderInitials={initial(profile?.full_name)}
+                className="cursor-pointer"
+                onClick={() => nav("/profile")}
               />
             </div>
           </div>

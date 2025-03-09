@@ -260,5 +260,43 @@ func (h *AuthHandler) VerificationEmailHandler(c *gin.Context) {
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	user := c.MustGet("user").(models.UserModel)
 	h.ctx.DB.Preload("Companies").Find(&user)
-	c.JSON(200, gin.H{"user": user})
+	c.JSON(200, gin.H{"user": user, "companies": user.Companies, "member": c.MustGet("member").(models.MemberModel)})
+}
+
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	var input struct {
+		FullName       string            `json:"full_name"`
+		Address        string            `json:"address"`
+		ProfilePicture *models.FileModel `json:"profile_picture,omitempty" gorm:"-"`
+	}
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	user := c.MustGet("user").(models.UserModel)
+	if input.FullName != "" {
+		user.FullName = input.FullName
+	}
+	if input.Address != "" {
+		user.Address = input.Address
+	}
+
+	if input.ProfilePicture != nil {
+		input.ProfilePicture.RefID = user.ID
+		input.ProfilePicture.RefType = "user"
+		err = h.ctx.DB.Save(&input.ProfilePicture).Error
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	err = h.ctx.DB.Save(&user).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Profile updated", "user": user})
 }

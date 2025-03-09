@@ -5,6 +5,7 @@ import {
   Datepicker,
   Tabs,
   TabsRef,
+  TextInput,
   Tooltip,
 } from "flowbite-react";
 import {
@@ -17,20 +18,22 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import { HiAdjustments, HiClipboardList, HiUserCircle } from "react-icons/hi";
-import { MdComment, MdDashboard } from "react-icons/md";
+import { MdComment, MdDashboard, MdDone } from "react-icons/md";
 import { RiFullscreenFill } from "react-icons/ri";
 import Select, { InputActionMeta } from "react-select";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProjectModel } from "../models/project";
 import { TaskCommentModel, TaskModel } from "../models/task";
 import { addComment, getTask, updateTask } from "../services/api/taskApi";
-import { initial } from "../utils/helper";
-import { BsActivity } from "react-icons/bs";
+import { initial, invert } from "../utils/helper";
+import { BsActivity, BsCheck2Circle } from "react-icons/bs";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
 import { ProfileContext } from "../contexts/ProfileContext";
 import { MentionsInput, Mention } from "react-mentions";
 import { parseMentions } from "../utils/helper-ui";
 import Moment from "react-moment";
+import moment from "moment";
+import { priorityOptions, severityOptions } from "../utils/constants";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -193,12 +196,72 @@ const TaskDetail: FC<TaskDetailProps> = ({
               setActiveTask({ ...activeTask, name: el.target.value });
             }}
           />
-          <Tooltip content="Full Screen" placement="left">
-            <RiFullscreenFill
-              className="cursor-pointer"
-              onClick={onSwitchFullscreen}
-            />
-          </Tooltip>
+          <div className="flex flex-row gap-2 items-center">
+            {!activeTask?.completed && (
+              <div className="relative">
+                <TextInput
+                  type="number"
+                  max={100}
+                  value={activeTask?.percentage ?? 0}
+                  onChange={(e) => {
+                    setIsEditted(true);
+                    setActiveTask({
+                      ...activeTask,
+                      percentage:
+                        parseInt(e.target.value) > 100
+                          ? 100
+                          : parseInt(e.target.value),
+                    });
+                  }}
+                  className="w-20 p-0 !text-right"
+                  sizing="sm"
+                  style={{ textAlign: "right", paddingRight: 20 }}
+                />
+                <small className="absolute top-1/2 -translate-y-1/2 right-2">
+                  %
+                </small>
+              </div>
+            )}
+
+            {activeTask?.completed ? (
+              <Tooltip
+                content={`Completed at ${moment(
+                  activeTask?.completed_date
+                ).format("DD MMM YYYY, HH:mm")}`}
+                placement="left"
+              >
+                <BsCheck2Circle className="text-green-500" />
+              </Tooltip>
+            ) : (
+              <Button
+                size="xs"
+                onClick={() => {
+                  updateTask(task!.project_id!, task.id!, {
+                    ...activeTask,
+                    completed: true,
+                  })
+                    .catch(toast.error)
+                    .then(() => {
+                      toast.success("Task updated successfully");
+                      setIsEditted(false);
+                      setActiveTask({ ...activeTask, completed: true });
+                    });
+                }}
+                color="gray"
+                className="w-40"
+              >
+                <BsCheck2Circle className="mr-2" />
+                Mark As Completed
+              </Button>
+            )}
+
+            <Tooltip content="Full Screen" placement="left">
+              <RiFullscreenFill
+                className="cursor-pointer"
+                onClick={onSwitchFullscreen}
+              />
+            </Tooltip>
+          </div>
         </div>
         <table className="w-full">
           <tbody>
@@ -207,7 +270,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
               <td className="px-2 py-1 w-28">
                 <Datepicker
                   className="!border-0"
-                  value={activeTask?.start_date!}
+                  value={moment(activeTask?.start_date).toDate()}
                   onChange={(date) => {
                     setIsEditted(true);
                     setActiveTask({ ...activeTask, start_date: date! });
@@ -237,11 +300,11 @@ const TaskDetail: FC<TaskDetailProps> = ({
               </td>
             </tr>
             <tr>
-              <td className="px-2 py-1 w-28"> Date Line</td>
+              <td className="px-2 py-1 w-28"> Due Date</td>
               <td className="px-2 py-1 w-28">
                 <Datepicker
                   className="!border-0"
-                  value={activeTask?.end_date!}
+                  value={moment(activeTask?.end_date).toDate()}
                   onChange={(date) => {
                     setIsEditted(true);
                     setActiveTask({ ...activeTask, end_date: date! });
@@ -285,6 +348,72 @@ const TaskDetail: FC<TaskDetailProps> = ({
                     <div className="flex flex-row gap-2  items-center">
                       {option.avatar}
                       <span>{option.label}</span>
+                    </div>
+                  )}
+                  inputValue={""}
+                  onInputChange={(
+                    newValue: string,
+                    actionMeta: InputActionMeta
+                  ) => {
+                    // console.log(newValue, actionMeta);
+                  }}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-2 py-1 w-28"> Priority</td>
+              <td className="px-2 py-1 w-28">
+                <Select
+                  className="w-full"
+                  isSearchable={false}
+                  defaultValue={priorityOptions.find(
+                    (option) => option.value === task?.priority
+                  )}
+                  onChange={(val) => {
+                    setIsEditted(true);
+                    setActiveTask({ ...activeTask, priority: val?.value! });
+                  }}
+                  options={priorityOptions}
+                  formatOptionLabel={(option: any) => (
+                    <div
+                      className="flex flex-row gap-2  items-center text-center px-2 py-1 rounded"
+                      style={{ backgroundColor: option.color }}
+                    >
+                      <span style={{ color: invert(option.color) }}>
+                        {option.label}
+                      </span>
+                    </div>
+                  )}
+                  inputValue={""}
+                  onInputChange={(
+                    newValue: string,
+                    actionMeta: InputActionMeta
+                  ) => {
+                    // console.log(newValue, actionMeta);
+                  }}
+                />
+              </td>
+              <td className="px-2 py-1 w-28"> Severity</td>
+              <td className="px-2 py-1 w-28">
+                <Select
+                  className="w-full"
+                  isSearchable={false}
+                  defaultValue={severityOptions.find(
+                    (option) => option.value === task?.severity
+                  )}
+                  onChange={(val) => {
+                    setIsEditted(true);
+                    setActiveTask({ ...activeTask, severity: val?.value! });
+                  }}
+                  options={severityOptions}
+                  formatOptionLabel={(option: any) => (
+                    <div
+                      className="flex flex-row gap-2  items-center text-center px-2 py-1 rounded"
+                      style={{ backgroundColor: option.color }}
+                    >
+                      <span style={{ color: invert(option.color) }}>
+                        {option.label}
+                      </span>
                     </div>
                   )}
                   inputValue={""}
@@ -398,16 +527,21 @@ const TaskDetail: FC<TaskDetailProps> = ({
               </div>
             </div>
           </Tabs.Item>
-          <Tabs.Item title={<div className="flex flex-row gap-1">
-            {(task?.comment_count ?? 0) > 0 && (
-            <div className=" flex-row flex gap-2 items-center">
-              {((task?.comment_count ?? 0) < 100 ? (task?.comment_count ?? 0) : "+99")}
-              
-            </div>
-
-          )}
-           Comments
-          </div>} icon={GoCommentDiscussion}>
+          <Tabs.Item
+            title={
+              <div className="flex flex-row gap-1">
+                {(task?.comment_count ?? 0) > 0 && (
+                  <div className=" flex-row flex gap-2 items-center">
+                    {(task?.comment_count ?? 0) < 100
+                      ? task?.comment_count ?? 0
+                      : "+99"}
+                  </div>
+                )}
+                Comments
+              </div>
+            }
+            icon={GoCommentDiscussion}
+          >
             <div className="space-y-2">
               {(activeTask?.comments ?? []).map((comment) => (
                 <div
@@ -479,7 +613,6 @@ const TaskDetail: FC<TaskDetailProps> = ({
             </ul>
           </Tabs.Item>
         </Tabs>
-        
       </div>
       {isEditted && (
         <div className="bg-red border-t pt-2 flex flex-row justify-end gap-2">

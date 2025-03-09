@@ -22,7 +22,7 @@ import {
   LOCAL_STORAGE_TOKEN,
 } from "../../utils/constants";
 import { WebsocketContext } from "../../contexts/WebsocketContext";
-import { ProfileContext } from "../../contexts/ProfileContext";
+import { MemberContext, ProfileContext } from "../../contexts/ProfileContext";
 import { Toaster } from "react-hot-toast";
 import Loading from "../Loading";
 import { LoadingContext } from "../../contexts/LoadingContext";
@@ -33,6 +33,7 @@ interface AdminLayoutProps {
 
 const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
   const { profile, setProfile } = useContext(ProfileContext);
+  const { member, setMember } = useContext(MemberContext);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
   const { loading, setLoading } = useContext(LoadingContext);
@@ -72,6 +73,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
     getProfile().then((res: any) => {
       setProfile(res.user);
       setCompanies(res.user.companies);
+      setMember(res.member)
     });
     asyncStorage.getItem(LOCAL_STORAGE_TOKEN).then((token) => {
       setToken(token);

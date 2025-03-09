@@ -3,6 +3,7 @@ import { TaskModel } from "../models/task";
 import { Avatar } from "flowbite-react";
 import { initial } from "../utils/helper";
 import { GoCommentDiscussion } from "react-icons/go";
+import { BsCheck2Circle } from "react-icons/bs";
 
 interface TaskCardProps {
   task: TaskModel;
@@ -23,7 +24,8 @@ const TaskCard: FC<TaskCardProps> = ({ task, isdragged = false, onClick }) => {
     >
       <div className="flex items-center justify-between">
         {task?.name}
-        <div className="flex gap-2 flex-row">
+        <div className="flex gap-2 flex-row items-center">
+          {task.completed && <BsCheck2Circle className="text-green-500" size={16}/>}
           {(task?.comment_count ?? 0) > 0 && (
             <div className="text-xs flex-row flex gap-1 items-center">
               {((task?.comment_count ?? 0) < 100 ? (task?.comment_count ?? 0) : "+99")}

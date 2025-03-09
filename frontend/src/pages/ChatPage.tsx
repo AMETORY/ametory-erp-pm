@@ -11,13 +11,17 @@ import { ChatChannelModel } from "../models/chat";
 import { getPagination } from "../utils/helper";
 import { useNavigate, useParams } from "react-router-dom";
 import ChannelMessages from "../components/ChannelMessages";
+import { asyncStorage } from "../utils/async_storage";
+import { LOCAL_STORAGE_DEFAULT_CHANNEL } from "../utils/constants";
+import { WebsocketContext } from "../contexts/WebsocketContext";
+import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 
 interface ChatPageProps {}
 
 const ChatPage: FC<ChatPageProps> = ({}) => {
   const [openChannelForm, setOpenChannelForm] = useState(false);
   const { loading, setLoading } = useContext(LoadingContext);
-  const {channelId} = useParams()
+  const { channelId } = useParams();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<FileModel>();
@@ -28,10 +32,21 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [channels, setChannels] = useState<ChatChannelModel[]>([]);
   const nav = useNavigate();
+  const { profile, setProfile } = useContext(ProfileContext);
+  const { member, setMember } = useContext(MemberContext);
+  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+    useContext(WebsocketContext);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!channelId) return;
+    if (wsMsg?.command == "CHANNEL_RELOAD" && member?.id == wsMsg.recipient_id) {
+      getAllChannels();
+    }
+  }, [wsMsg, profile, member, channelId]);
 
   useEffect(() => {
     if (mounted) {
@@ -55,6 +70,8 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
         data = { ...data, avatar: file };
       }
       await createChannel(data);
+      setOpenChannelForm(false);
+      getAllChannels();
     } catch (e) {
       toast.error(`${e}`);
     } finally {
@@ -98,7 +115,11 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
                 <li
                   className="flex justify-between items-center p-2 hover:bg-gray-50 cursor-pointer hover:font-semibold"
                   key={e.id}
-                  onClick={() => nav(`/chat/${e.id}`)}
+                  onClick={() => {
+                    nav(`/chat/${e.id}`);
+                    asyncStorage.setItem(LOCAL_STORAGE_DEFAULT_CHANNEL, e.id);
+                  }}
+                  style={{ background: channelId == e.id ? "#e5e7eb" : "" }}
                 >
                   <div className="flex gap-2 items-center">
                     {e.avatar && (
@@ -108,9 +129,8 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
                       />
                     )}
                     <div className="flex flex-col">
-                    <span className="font-semibold">{e.name}</span>
-                    <small className="">{e.description}</small>
-
+                      <span className="font-semibold">{e.name}</span>
+                      <small className="">{e.description}</small>
                     </div>
                   </div>
                 </li>

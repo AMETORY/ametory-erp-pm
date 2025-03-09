@@ -38,3 +38,20 @@ export const generateUUID = () => {
         return v.toString(16);
     });
 };
+
+
+export const invert = (hex) => {
+    const rgb = hexToRgb(hex);
+    const thresh = 165;
+    const result = (rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114) > thresh ? '#000000' : '#ffffff';
+    return result;
+}
+
+const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+};

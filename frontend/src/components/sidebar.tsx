@@ -4,7 +4,7 @@ import { BsKanban, BsPeople } from "react-icons/bs";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
 import { SlPeople } from "react-icons/sl";
 import { asyncStorage } from "../utils/async_storage";
-import { LOCAL_STORAGE_COMPANIES, LOCAL_STORAGE_COMPANY_ID, LOCAL_STORAGE_TOKEN } from "../utils/constants";
+import { LOCAL_STORAGE_COMPANIES, LOCAL_STORAGE_COMPANY_ID, LOCAL_STORAGE_DEFAULT_CHANNEL, LOCAL_STORAGE_TOKEN } from "../utils/constants";
 import { LuPowerOff } from "react-icons/lu";
 import { CollapsedContext } from "../contexts/CollapsedContext";
 import { useNavigate } from "react-router-dom";
@@ -108,7 +108,15 @@ const Sidebar: FC<SidebarProps> = ({}) => {
           <a
             href="#"
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-            onClick={handleNavigation("/chat")}
+            onClick={async () => {
+              let channelID = await asyncStorage.getItem(LOCAL_STORAGE_DEFAULT_CHANNEL)
+              if (channelID) {
+                nav(`/chat/${channelID}`)
+              } else {
+                nav(`/chat`)
+
+              }
+            }}
           >
             <Tooltip content="Chat">
               <HiOutlineChat />

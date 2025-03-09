@@ -30,6 +30,9 @@ export interface TaskModel {
   comments?: TaskCommentModel[];
   activities?: ProjectActivityModel[];
   comment_count?: number
+  percentage?: number;
+  priority?: string
+  severity?: string
 }
 
 export interface TaskCommentModel {

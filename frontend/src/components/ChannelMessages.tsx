@@ -80,7 +80,7 @@ const ChannelMessages: FC<ChannelMessagesProps> = ({ channelId }) => {
 
   useEffect(() => {
     if (!channelId) return;
-    if (wsMsg?.channel_id == channelId) {
+    if (wsMsg?.channel_id == channelId && wsMsg?.command == "RECEIVE_MESSAGE") {
       setMessages([...messages, wsMsg.data]);
       setTimeout(() => {
         scrollToBottom()
@@ -201,7 +201,7 @@ const ChannelMessages: FC<ChannelMessagesProps> = ({ channelId }) => {
           onClick={openModal}
         />
       </div>
-      <div id="channel-messages" className="messages h-[calc(100%-160px)] overflow-y-auto p-4 bg-gray-50">
+      <div id="channel-messages" className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 ">
         {(messages ?? []).map((message) => {
           let isMe = message.sender_member?.user?.id == profile?.id;
           return (
@@ -235,12 +235,12 @@ const ChannelMessages: FC<ChannelMessagesProps> = ({ channelId }) => {
                           return (
                             <Popover
                               trigger="hover"
-                              content={<div className=" aspect-square rounded-full object-cover w-64 h-64"><img src={file.url} /></div>}
+                              content={<div className=" aspect-square rounded-full object-cover w-80 h-80"><img src={file.url} /></div>}
                             >
                               
                               <img
                                 src={file.url}
-                                className=" aspect-square rounded-full object-cover w-8 h-8"
+                                className=" aspect-square rounded-lg object-cover w-24 h-24"
                                 onClick={() => window.open(file.url)}
                               />
                               
@@ -248,7 +248,7 @@ const ChannelMessages: FC<ChannelMessagesProps> = ({ channelId }) => {
                           );
                         }
                         return (
-                          <div className=" aspect-square rounded-full object-cover w-8 h-8 flex justify-center items-center bg-gray-200" onClick={() => window.open(file.url)}>
+                          <div className=" aspect-square rounded-lg object-cover w-24 h-24 flex justify-center items-center bg-gray-200" onClick={() => window.open(file.url)}>
                             <RiAttachment2 size={24} />
                           </div>
                         );

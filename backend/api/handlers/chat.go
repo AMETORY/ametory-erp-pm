@@ -126,6 +126,7 @@ func (h *ChatHandler) CreateMessageHandler(c *gin.Context) {
 		"channel_id":     channelID,
 		"channel_name":   channel.Name,
 		"channel_avatar": channelURL,
+		"command":        "RECEIVE_MESSAGE",
 		"data":           input,
 		"sender_id":      c.MustGet("userID").(string),
 		"sender_name":    member.User.FullName,
@@ -200,6 +201,19 @@ func (h *ChatHandler) AddChannelParticipant(c *gin.Context) {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
+		msg := gin.H{
+			"message":      "Participant added to channel successfully",
+			"channel_id":   channelID,
+			"command":      "CHANNEL_RELOAD",
+			"data":         input,
+			"sender_id":    c.MustGet("userID").(string),
+			"recipient_id": v,
+		}
+		b, _ := json.Marshal(msg)
+		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
 	}
 
 	c.JSON(200, gin.H{"message": "Participant added to channel successfully"})
@@ -219,6 +233,19 @@ func (h *ChatHandler) DeleteChannelParticipant(c *gin.Context) {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
+		msg := gin.H{
+			"message":      "Participant added to channel successfully",
+			"channel_id":   channelID,
+			"command":      "CHANNEL_RELOAD",
+			"data":         input,
+			"sender_id":    c.MustGet("userID").(string),
+			"recipient_id": v,
+		}
+		b, _ := json.Marshal(msg)
+		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
 	}
 
 	c.JSON(200, gin.H{"message": "Participant removed from channel successfully"})

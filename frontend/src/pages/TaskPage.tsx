@@ -25,6 +25,8 @@ import TaskDetail from "../components/TaskDetail";
 import { BsListTask } from "react-icons/bs";
 import { ProjectModel } from "../models/project";
 import { getProject } from "../services/api/projectApi";
+import { MemberContext } from "../contexts/ProfileContext";
+import { WebsocketContext } from "../contexts/WebsocketContext";
 
 interface TaskPageProps {}
 
@@ -46,10 +48,20 @@ const TaskPage: FC<TaskPageProps> = ({}) => {
   const [activeTask, setActiveTask] = useState<TaskModel>();
   const [isTaskFullScreen, setIsTaskFullScreen] = useState(false);
   const [project, setProject] = useState<ProjectModel>();
+  const { member, setMember } = useContext(MemberContext);
+    const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+      useContext(WebsocketContext);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (wsMsg?.command == "RELOAD_TASK" && member?.id == wsMsg.recipient_id) {
+      getAllMyTasks();
+      getAllWatchedTasks();
+    }
+  }, [wsMsg, member]);
 
   useEffect(() => {
     if (mounted) {
