@@ -21,4 +21,5 @@ export interface ChatMessageModel {
     message: string;
     type: string;
     date: string;
+    files: FileModel[];
 }

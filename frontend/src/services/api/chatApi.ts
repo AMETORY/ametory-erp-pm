@@ -61,6 +61,18 @@ export const updateChannel = async (channelID: string, channel: any) => {
     body: JSON.stringify(channel),
   });
 };
+export const addParticipant = async (channelID: string, memberIds: string[]) => {
+  return customFetch(`api/v1/chat/channel/${channelID}/add-participant`, {
+    method: "PUT",
+    body: JSON.stringify(memberIds),
+  });
+};
+export const deleteParticipant = async (channelID: string, memberIds: string[]) => {
+  return customFetch(`api/v1/chat/channel/${channelID}/delete-participant`, {
+    method: "DELETE",
+    body: JSON.stringify(memberIds),
+  });
+};
 
 export const deleteChannel = async (channelID: string) => {
   return customFetch(`api/v1/chat/channel/${channelID}`, {

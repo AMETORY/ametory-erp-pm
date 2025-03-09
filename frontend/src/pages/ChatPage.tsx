@@ -76,7 +76,7 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
   };
   return (
     <AdminLayout>
-      <div className="p-4 flex flex-col h-full">
+      <div className="p-4 flex flex-col h-full ">
         <div className="flex justify-between items-center mb-2 border-b pb-4">
           <h1 className="text-3xl font-bold ">Chat</h1>
           <div className="flex gap-2">
@@ -117,7 +117,7 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
               ))}
             </ul>
           </div>
-          <div className="w-full border-l ">
+          <div className="w-full border-l relative">
             {channelId && <ChannelMessages channelId={channelId} />}
           </div>
         </div>

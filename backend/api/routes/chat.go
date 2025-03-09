@@ -16,6 +16,8 @@ func SetChatRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		chatGroup.GET("/channels", chatHandler.GetChannelsHandler)
 		chatGroup.GET("/channel/:id", chatHandler.GetChannelDetailHandler)
 		chatGroup.GET("/channel/:id/messages", chatHandler.GetChannelMessageHandler)
+		chatGroup.PUT("/channel/:id/add-participant", chatHandler.AddChannelParticipant)
+		chatGroup.DELETE("/channel/:id/delete-participant", chatHandler.DeleteChannelParticipant)
 		chatGroup.POST("/channel", chatHandler.CreateChannelHandler)
 		chatGroup.POST("/channel/:id/message", chatHandler.CreateMessageHandler)
 		chatGroup.GET("/channel/:id/message/:messageId", chatHandler.GetChatMessageDetailHandler)

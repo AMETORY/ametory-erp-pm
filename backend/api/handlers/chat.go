@@ -103,15 +103,32 @@ func (h *ChatHandler) CreateMessageHandler(c *gin.Context) {
 		return
 	}
 
+	for i, v := range input.Files {
+		v.RefID = input.ID
+		v.RefType = "chat"
+		h.ctx.DB.Save(&v)
+		input.Files[i] = v
+	}
+
+	var channel models.ChatChannelModel
+	h.ctx.DB.Preload("Avatar").Where("id = ?", channelID).Find(&channel)
+
 	member := c.MustGet("member").(models.MemberModel)
 	user := c.MustGet("user").(models.UserModel)
 	member.User = user
 	input.SenderMember = &member
+	channelURL := ""
+	if channel.Avatar != nil {
+		channelURL = channel.Avatar.URL
+	}
 	msg := gin.H{
-		"message":    "Message created",
-		"channel_id": channelID,
-		"data":       input,
-		"sender_id":  c.MustGet("userID").(string),
+		"message":        "Message created",
+		"channel_id":     channelID,
+		"channel_name":   channel.Name,
+		"channel_avatar": channelURL,
+		"data":           input,
+		"sender_id":      c.MustGet("userID").(string),
+		"sender_name":    member.User.FullName,
 	}
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
@@ -167,4 +184,42 @@ func (h *ChatHandler) DeleteMessageHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Message deleted"})
+}
+
+func (h *ChatHandler) AddChannelParticipant(c *gin.Context) {
+	channelID := c.Param("id")
+	var input []string
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, v := range input {
+		err := h.messageService.ChatService.AddParticipant(channelID, nil, &v)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.JSON(200, gin.H{"message": "Participant added to channel successfully"})
+}
+
+func (h *ChatHandler) DeleteChannelParticipant(c *gin.Context) {
+	channelID := c.Param("id")
+	var input []string
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, v := range input {
+		err := h.messageService.ChatService.DeleteParticipant(channelID, nil, &v)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.JSON(200, gin.H{"message": "Participant removed from channel successfully"})
 }

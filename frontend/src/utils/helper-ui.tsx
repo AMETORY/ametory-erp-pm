@@ -18,7 +18,7 @@ export const parseMentions = (text: string, handleClick: (type: string, id: stri
   
       // Add text before mention
       if (before)
-      elements.push(<span key={`text-${i}`}>{before.split("<br />").map((t, i) => <React.Fragment key={i}>{t}<br /></React.Fragment>)}</span>);
+      elements.push(<span key={`text-${i}`}>{before.split("<br />").map((t, i) => <React.Fragment key={i}>{t}</React.Fragment>)}</span>);
   
       // Add mention element based on prefix
       if (prefix && name && id) {
