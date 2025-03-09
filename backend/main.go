@@ -105,6 +105,7 @@ func main() {
 	routes.SetupAuthRoutes(v1, erpContext)
 	routes.SetupProjectRoutes(v1, erpContext)
 	routes.SetInboxRoutes(v1, erpContext)
+	routes.SetChatRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

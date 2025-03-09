@@ -14,6 +14,7 @@ func SetChatRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	chatGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
 		chatGroup.GET("/channels", chatHandler.GetChannelsHandler)
+		chatGroup.GET("/channel/:id", chatHandler.GetChannelDetailHandler)
 		chatGroup.GET("/channel/:id/messages", chatHandler.GetChannelMessageHandler)
 		chatGroup.POST("/channel", chatHandler.CreateChannelHandler)
 		chatGroup.POST("/channel/:id/message", chatHandler.CreateMessageHandler)
