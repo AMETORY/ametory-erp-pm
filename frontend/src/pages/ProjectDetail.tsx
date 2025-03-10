@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -29,7 +29,7 @@ import TaskCard from "../components/TaskCard";
 import { TaskModel } from "../models/task";
 import { ColumnModel } from "../models/column";
 import ColumnCard from "../components/ColumnCard";
-import { Drawer } from "flowbite-react";
+import { Drawer, Tabs, TabsRef } from "flowbite-react";
 import { BsListTask } from "react-icons/bs";
 import {
   addNewColumn,
@@ -45,6 +45,11 @@ import { getTask, moveTask, rearrangeTask } from "../services/api/taskApi";
 import TaskDetail from "../components/TaskDetail";
 import { generateUUID } from "../utils/helper";
 import toast, { Toaster } from "react-hot-toast";
+import { PiKanbanLight } from "react-icons/pi";
+import { IoStatsChartOutline } from "react-icons/io5";
+import ProjectSummary from "../components/ProjectSummary";
+import { FaChartGantt } from "react-icons/fa6";
+import GanttChart from "../components/GanttChart";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -63,6 +68,8 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
   const [isTaskFullScreen, setIsTaskFullScreen] = useState(false);
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
+  const tabsRef = useRef<TabsRef>(null);
+  const [activeTab, setActiveTab] = useState(1);
 
   // Example usage:
   const taskId = queryParams.get("task_id");
@@ -226,92 +233,27 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
     }
   };
 
-  return (
-    <AdminLayout>
-      {project && (
-        <ProjectHeader
-          project={project}
-          onChange={(val) => {
-            setProject(val);
-          }}
-        />
-      )}
-      <div className="p-4 h-full overflow-x-scroll unselected">
-        <DndContext
-          onDragEnd={handleDragEnd}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          sensors={sensors}
+  const renderKanban = () => (
+    <div className="px-4 h-full overflow-x-scroll unselected">
+      <DndContext
+        onDragEnd={handleDragEnd}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        sensors={sensors}
+      >
+        <SortableContext
+          items={columns.map((column) => ({
+            id: column.id as UniqueIdentifier,
+          }))}
+          strategy={horizontalListSortingStrategy}
         >
-          <SortableContext
-            items={columns.map((column) => ({
-              id: column.id as UniqueIdentifier,
-            }))}
-            strategy={horizontalListSortingStrategy}
-          >
-            <div className=" flex-nowrap flex gap-4 w-fit">
-              {columns.map((column) => {
-                return (
-                  <ColumnCard
-                    projectId={projectId!}
-                    key={column.id}
-                    column={column}
-                    columns={columns}
-                    onChange={setColumns}
-                    onChangeColumn={(val) => {
-                      setColumns([
-                        ...columns.map((c) => {
-                          if (c.id === val.id) {
-                            return val;
-                          }
-                          return c;
-                        }),
-                      ]);
-                    }}
-                    onSelectTask={(val) => {
-                      setActiveTask(val);
-                      // console.log(val);
-                    }}
-                    onAddItem={(val) => {
-                      getTask(projectId!, val)
-                        .then((resp: any) => setActiveTask(resp.data))
-                        .catch(toast.error);
-                    }}
-                  />
-                );
-              })}
-              <div
-                className="flex flex-col items-center "
-                style={{ width: 300 }}
-              >
-                <div
-                  className="border p-4 rounded-lg text-center cursor-pointer hover:bg-gray-50 transform w-full"
-                  onClick={() => {
-                    let data = {
-                      id: generateUUID(),
-                      name: "New Column",
-                      order: columns.length + 1,
-                      color: `hsl(${Math.floor(
-                        Math.random() * 360
-                      )}, 100%, 90%)`,
-                      tasks: [],
-                    };
-                    setColumns([...columns, data]);
-                    addNewColumn(projectId!, data);
-                  }}
-                >
-                  Add New Column
-                </div>
-              </div>
-            </div>
-            <DragOverlay>
-              {dragColumn && activeColumn ? (
+          <div className=" flex-nowrap flex gap-4 w-fit">
+            {columns.map((column) => {
+              return (
                 <ColumnCard
-                  onAddItem={(val) => {
-                    console.log(val);
-                  }}
                   projectId={projectId!}
-                  column={activeColumn}
+                  key={column.id}
+                  column={column}
                   columns={columns}
                   onChange={setColumns}
                   onChangeColumn={(val) => {
@@ -324,21 +266,103 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
                       }),
                     ]);
                   }}
-                  onSelectTask={(val) => {}}
-                />
-              ) : (
-                <TaskCard
-                  onClick={(val) => {
-                    console.log(val);
+                  onSelectTask={(val) => {
+                    setActiveTask(val);
+                    // console.log(val);
                   }}
-                  task={activeCard as TaskModel}
-                  isdragged={true}
+                  onAddItem={(val) => {
+                    getTask(projectId!, val)
+                      .then((resp: any) => setActiveTask(resp.data))
+                      .catch(toast.error);
+                  }}
                 />
-              )}
-            </DragOverlay>
-          </SortableContext>
-        </DndContext>
-      </div>
+              );
+            })}
+            <div className="flex flex-col items-center " style={{ width: 300 }}>
+              <div
+                className="border p-4 rounded-lg text-center cursor-pointer hover:bg-gray-50 transform w-full"
+                onClick={() => {
+                  let data = {
+                    id: generateUUID(),
+                    name: "New Column",
+                    order: columns.length + 1,
+                    color: `hsl(${Math.floor(Math.random() * 360)}, 100%, 90%)`,
+                    tasks: [],
+                  };
+                  setColumns([...columns, data]);
+                  addNewColumn(projectId!, data);
+                }}
+              >
+                Add New Column
+              </div>
+            </div>
+          </div>
+          <DragOverlay>
+            {dragColumn && activeColumn ? (
+              <ColumnCard
+                onAddItem={(val) => {
+                  console.log(val);
+                }}
+                projectId={projectId!}
+                column={activeColumn}
+                columns={columns}
+                onChange={setColumns}
+                onChangeColumn={(val) => {
+                  setColumns([
+                    ...columns.map((c) => {
+                      if (c.id === val.id) {
+                        return val;
+                      }
+                      return c;
+                    }),
+                  ]);
+                }}
+                onSelectTask={(val) => {}}
+              />
+            ) : (
+              <TaskCard
+                onClick={(val) => {
+                  console.log(val);
+                }}
+                task={activeCard as TaskModel}
+                isdragged={true}
+              />
+            )}
+          </DragOverlay>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+  return (
+    <AdminLayout>
+      {project && (
+        <ProjectHeader
+          project={project}
+          onChange={(val) => {
+            setProject(val);
+          }}
+        />
+      )}
+      <Tabs
+        aria-label="Default tabs"
+        variant="underline"
+        ref={tabsRef}
+        onActiveTabChange={(tab) => {
+          setActiveTab(tab);
+          // console.log(tab);
+        }}
+        className=""
+      >
+        <Tabs.Item active={activeTab === 0} title="Summary" icon={IoStatsChartOutline}>
+          {project && <ProjectSummary project={project} />}
+        </Tabs.Item>
+        <Tabs.Item active={activeTab === 1} title="Kanban" icon={PiKanbanLight}>
+          {renderKanban()}
+        </Tabs.Item>
+        <Tabs.Item active={activeTab === 1} title="Gantt Chart" icon={FaChartGantt}>
+          {project && <GanttChart project={project} />}
+        </Tabs.Item>
+      </Tabs>
       {activeTask && project && (
         <Drawer
           style={{ width: !isTaskFullScreen ? "1000px" : "100%" }}

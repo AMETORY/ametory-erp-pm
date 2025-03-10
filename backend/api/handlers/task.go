@@ -160,6 +160,8 @@ func (h *TaskHandler) CreateTaskHandler(c *gin.Context) {
 	input.ProjectID = projectId
 	input.StartDate = &now
 	input.Status = "ACTIVE"
+	input.Priority = "LOW"
+	input.Severity = "LOW"
 	totalTask, err := h.pmService.TaskService.CountTasksInColumn(*input.ColumnID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

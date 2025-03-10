@@ -83,7 +83,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
       style={{
         backgroundColor: column.color,
         width: "300px",
-        minHeight: "calc(100vh - 180px)",
+        minHeight: "calc(100vh - 230px)",
       }}
     >
       <div className="flex flex-row justify-between group/item">

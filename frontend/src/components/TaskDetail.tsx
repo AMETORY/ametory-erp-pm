@@ -3,6 +3,7 @@ import {
   Avatar,
   Button,
   Datepicker,
+  Progress,
   Tabs,
   TabsRef,
   TextInput,
@@ -25,7 +26,7 @@ import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProjectModel } from "../models/project";
 import { TaskCommentModel, TaskModel } from "../models/task";
 import { addComment, getTask, updateTask } from "../services/api/taskApi";
-import { initial, invert } from "../utils/helper";
+import { getColor, initial, invert } from "../utils/helper";
 import { BsActivity, BsCheck2Circle, BsPencil } from "react-icons/bs";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
 import { ProfileContext } from "../contexts/ProfileContext";
@@ -177,7 +178,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
         toast.success("Task updated successfully");
         setIsEditted(false);
       });
-  }
+  };
 
   useEffect(() => {
     if (activeTask) {
@@ -199,9 +200,15 @@ const TaskDetail: FC<TaskDetailProps> = ({
       );
     }
   }, [activeTask]);
+ 
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex-1 space-y-2 overflow-y-auto">
+        <Progress
+          color={getColor(activeTask?.percentage ?? 0)}
+          size="sm"
+          progress={activeTask?.percentage ?? 0}
+        />
         <div className="flex flex-row items-center justify-between">
           <input
             className="border-0 py-2 text-2xl font-semibold focus:border-0 focus:outline-none w-full"
@@ -462,7 +469,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
                   icon: "save",
                   tooltip: "Save Task",
                   onAction: (_: any) => {
-                    saveTask()
+                    saveTask();
                   },
                 });
 
@@ -470,11 +477,11 @@ const TaskDetail: FC<TaskDetailProps> = ({
                   text: "Close editor",
                   onAction: (_: any) => setEditDesc(false),
                 });
-               
+
                 editor.ui.registry.addMenuItem("saveButton", {
                   text: "Save",
                   onAction: (_: any) => {
-                    saveTask()
+                    saveTask();
                   },
                 });
               },

@@ -55,3 +55,44 @@ const hexToRgb = (hex) => {
         b: parseInt(result[3], 16)
     } : null;
 };
+
+
+
+export const colorToStyle = (color) => {
+    const colorMap = {
+        "dark": "#1A202C",
+        "blue": "#3B82F6",
+        "red": "#EF4444",
+        "green": "#34D399",
+        "yellow": "#F7DC6F",
+        "indigo": "#6366F1",
+        "purple": "#8B5CF6",
+        "cyan": "#45A0E6",
+        "gray": "#64748B",
+        "lime": "#84CC16",
+        "pink": "#EC4899",
+        "teal": "#14B8A6"
+    };
+    return colorMap[color];
+}
+export const getColor = (percentage) => {
+    if (percentage >= 90) {
+        return "green";
+    } else if (percentage >= 75) {
+        return "lime";
+    } else if (percentage >= 50) {
+        return "yellow";
+    } else if (percentage >= 25) {
+        return "cyan";
+    } else if (percentage > 0) {
+        return "red";
+    } else {
+        return "dark";
+    }
+};
+
+
+
+export const daysToMilliseconds = (days) => {
+    return days * 24 * 60 * 60 * 1000;
+}

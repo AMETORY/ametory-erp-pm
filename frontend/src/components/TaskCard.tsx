@@ -1,7 +1,7 @@
 import { useEffect, type FC } from "react";
 import { TaskModel } from "../models/task";
 import { Avatar } from "flowbite-react";
-import { initial } from "../utils/helper";
+import { colorToStyle, getColor, initial } from "../utils/helper";
 import { GoCommentDiscussion } from "react-icons/go";
 import { BsCheck2Circle } from "react-icons/bs";
 
@@ -15,10 +15,12 @@ const TaskCard: FC<TaskCardProps> = ({ task, isdragged = false, onClick }) => {
   useEffect(() => {}, [task]);
   return (
     <div
-      className="bg-white p-2 mt-2 rounded shadow"
+      className={`bg-white p-2 mt-2 rounded shadow`}
       id={task?.id}
       style={{
         transform: isdragged ? "rotate(-2deg)" : undefined,
+        borderLeftColor: colorToStyle(getColor(task?.percentage ?? 0)),
+        borderLeftWidth: "4px",
       }}
       onClick={() => onClick(task)}
     >
