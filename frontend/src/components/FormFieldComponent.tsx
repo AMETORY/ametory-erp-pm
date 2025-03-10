@@ -59,6 +59,7 @@ const FormFieldComponent: FC<FormFieldComponentProps> = ({
         <div className="flex flex-row gap-2 items-center">
           {renderIcon(field.type, 16)}{" "}
           <input
+          className="min-w-[600px] bg-transparent"
             value={field.label}
             onChange={(el) => {
               field.label = el.target.value;
@@ -86,6 +87,8 @@ const FormFieldComponent: FC<FormFieldComponentProps> = ({
         {(field.type === FormFieldType.TextField ||
           field.type === FormFieldType.TextArea || 
           field.type === FormFieldType.EmailField || 
+          field.type === FormFieldType.Currency || 
+          field.type === FormFieldType.PasswordField || 
           field.type === FormFieldType.NumberField 
         ) && (
           <div className="flex flex-col">
@@ -111,6 +114,7 @@ const FormFieldComponent: FC<FormFieldComponentProps> = ({
         )}
         {(field.type === FormFieldType.TextField ||
           field.type === FormFieldType.TextArea || 
+          field.type === FormFieldType.Currency || 
           field.type === FormFieldType.EmailField || 
           field.type === FormFieldType.NumberField ) && (
           <div className="flex flex-col">
@@ -166,7 +170,7 @@ const FormFieldComponent: FC<FormFieldComponentProps> = ({
                 <Label value={"Label"} className="text-sm font-medium px-2" />
                 <input
                   value={e.label}
-                  className="px-2 py-1 border rounded-md"
+                  className="px-2 py-1 border rounded-md "
                   onChange={(val) => {
                     e.label = val.target.value;
                     field.options[i] = e;

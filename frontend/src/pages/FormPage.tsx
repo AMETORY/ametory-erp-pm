@@ -51,7 +51,6 @@ const FormPage: FC<FormPageProps> = ({}) => {
       const resp: any = await getFormTemplates({ page, size, search });
       setFormTemplates(resp.data.items);
       setPagination(getPagination(resp.data));
-      toast.success("Templates fetched successfully");
     } catch (error) {
       toast.error(`${error}`);
     } finally {

@@ -48,6 +48,7 @@ import { getFormTemplate, updateFormTemplate } from "../services/api/formApi";
 import { IoMove } from "react-icons/io5";
 import FormSectionComponent from "../components/FormSectionComponent";
 import FormFieldComponent from "../components/FormFieldComponent";
+import FormView from "../components/FormView";
 
 interface FormTempateDetailProps {}
 
@@ -192,7 +193,7 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
             sections: template!.sections,
           });
 
-          console.log(activeIndex)
+          console.log(activeIndex);
 
           updateFormTemplate(templateId!, {
             ...template,
@@ -329,7 +330,7 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
                   <div className="flex flex-col space-y-4 my-4">
                     {(template?.sections ?? []).map((section) => (
                       <FormSectionComponent
-                      isDragged={false}
+                        isDragged={false}
                         template={template!}
                         section={section}
                         key={section.id}
@@ -350,7 +351,7 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
                   <DragOverlay>
                     {activeSection && !activeField && (
                       <FormSectionComponent
-                      isDragged={true}
+                        isDragged={true}
                         template={template!}
                         section={activeSection}
                         key={activeSection.id}
@@ -382,11 +383,11 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
               </DndContext>
             </div>
           </Tabs.Item>
-          <Tabs.Item
-            title="Preview"
-            active={activeTab == 1}
-            icon={BsEye}
-          ></Tabs.Item>
+          <Tabs.Item title="Preview" active={activeTab == 1} icon={BsEye}>
+            <div className="bg-gray-100 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-240px)]">
+              <FormView sections={template?.sections ?? []} />
+            </div>
+          </Tabs.Item>
         </Tabs>
       </div>
     </AdminLayout>
