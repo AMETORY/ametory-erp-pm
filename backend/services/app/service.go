@@ -35,6 +35,10 @@ var (
 		"company": {
 			{"company": append(cruds, "approval")},
 		},
+		"customer_relationship": {
+			{"form_template": cruds},
+			{"form": cruds},
+		},
 		"project_management": {
 			{"project": cruds},
 			{"member": append(cruds, "approval", "invite")},

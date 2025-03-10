@@ -8,6 +8,7 @@ import MemberPage from "../pages/MemberPage";
 import InboxPage from "../pages/Inbox";
 import ChatPage from "../pages/ChatPage";
 import ProfilePage from "../pages/ProfilePage";
+import FormPage from "../pages/FormPage";
 
 interface PrivateRouteProps {}
 
@@ -21,6 +22,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/inbox" element={<InboxPage />} />
       <Route path="/chat" element={<ChatPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/form" element={<FormPage />} />
       <Route path="/chat/:channelId" element={<ChatPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />
       <Route path="*" element={<Navigate to="/" />} />

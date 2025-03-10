@@ -13,6 +13,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/file"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
@@ -85,6 +86,9 @@ func main() {
 	messageSrv := message.NewMessageService(erpContext)
 	erpContext.MessageService = messageSrv
 
+	csrService := customer_relationship.NewCustomerRelationshipService(erpContext)
+	erpContext.CustomerRelationshipService = csrService
+
 	appService := app.NewAppService(erpContext, cfg, redisClient, websocket)
 	erpContext.AppService = appService
 
@@ -106,6 +110,7 @@ func main() {
 	routes.SetupProjectRoutes(v1, erpContext)
 	routes.SetInboxRoutes(v1, erpContext)
 	routes.SetChatRoutes(v1, erpContext)
+	routes.SetFormRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {
