@@ -31,13 +31,18 @@ func (h *FormHandler) CreateFormTemplateHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	memberID := c.MustGet("memberID").(string)
+	userID := c.MustGet("userID").(string)
+	companyID := c.GetHeader("ID-Company")
+	formTemplate.CreatedByMemberID = &memberID
+	formTemplate.CreatedByID = &userID
+	formTemplate.CompanyID = &companyID
 	if err := h.csrService.FormService.CreateFormTemplate(&formTemplate); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, formTemplate)
+	c.JSON(http.StatusCreated, gin.H{"data": formTemplate, "message": "Form template created successfully", "id": formTemplate.ID})
 }
 
 // GetFormTemplatesHandler retrieves all form templates
@@ -48,7 +53,7 @@ func (h *FormHandler) GetFormTemplatesHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, formTemplates)
+	c.JSON(http.StatusOK, gin.H{"data": formTemplates, "message": "Form templates retrieved successfully"})
 }
 
 // GetFormTemplateHandler retrieves a form template by ID
@@ -60,7 +65,7 @@ func (h *FormHandler) GetFormTemplateHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, formTemplate)
+	c.JSON(http.StatusOK, gin.H{"data": formTemplate, "message": "Form template retrieved successfully"})
 }
 
 // UpdateFormTemplateHandler updates a form template by ID
@@ -77,7 +82,7 @@ func (h *FormHandler) UpdateFormTemplateHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, formTemplate)
+	c.JSON(http.StatusOK, gin.H{"data": formTemplate})
 }
 
 // DeleteFormTemplateHandler deletes a form template by ID
@@ -88,7 +93,7 @@ func (h *FormHandler) DeleteFormTemplateHandler(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusNoContent, gin.H{"message": "Form template deleted successfully"})
 }
 
 // CreateFormHandler handles the creation of a new form
@@ -104,10 +109,10 @@ func (h *FormHandler) CreateFormHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, form)
+	c.JSON(http.StatusCreated, gin.H{"message": "Form created successfully"})
 }
 
-// GetFormHandler retrieves a form by ID
+// GetFormsHandler retrieves all forms
 func (h *FormHandler) GetFormsHandler(c *gin.Context) {
 	form, err := h.csrService.FormService.GetForms(*c.Request, c.Query("search"))
 	if err != nil {
@@ -115,8 +120,10 @@ func (h *FormHandler) GetFormsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, form)
+	c.JSON(http.StatusOK, gin.H{"data": form, "message": "Forms retrieved successfully"})
 }
+
+// GetFormHandler retrieves a form by ID
 func (h *FormHandler) GetFormHandler(c *gin.Context) {
 	id := c.Param("id")
 	form, err := h.csrService.FormService.GetForm(id)
@@ -125,7 +132,7 @@ func (h *FormHandler) GetFormHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, form)
+	c.JSON(http.StatusOK, gin.H{"data": form, "message": "Form retrieved successfully"})
 }
 
 // UpdateFormHandler updates a form by ID
@@ -142,7 +149,7 @@ func (h *FormHandler) UpdateFormHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, form)
+	c.JSON(http.StatusOK, gin.H{"message": "Form updated successfully"})
 }
 
 // DeleteFormHandler deletes a form by ID
@@ -153,5 +160,5 @@ func (h *FormHandler) DeleteFormHandler(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusNoContent, gin.H{"message": "Form deleted successfully"})
 }
