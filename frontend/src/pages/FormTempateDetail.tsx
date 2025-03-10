@@ -49,6 +49,7 @@ import { IoMove } from "react-icons/io5";
 import FormSectionComponent from "../components/FormSectionComponent";
 import FormFieldComponent from "../components/FormFieldComponent";
 import FormView from "../components/FormView";
+import { toSnakeCase } from "../utils/helper";
 
 interface FormTempateDetailProps {}
 
@@ -385,7 +386,16 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
           </Tabs.Item>
           <Tabs.Item title="Preview" active={activeTab == 1} icon={BsEye}>
             <div className="bg-gray-100 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-240px)]">
-              <FormView sections={template?.sections ?? []} />
+              <FormView
+                sections={template?.sections ?? []}
+                onSubmit={(val) => {
+                  for (const section of val) {
+                    for (const field of section.fields) {
+                      console.log(toSnakeCase(field.label),":", field.value);
+                    }
+                  }
+                }}
+              />
             </div>
           </Tabs.Item>
         </Tabs>

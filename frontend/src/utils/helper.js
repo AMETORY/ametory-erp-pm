@@ -96,3 +96,11 @@ export const getColor = (percentage) => {
 export const daysToMilliseconds = (days) => {
     return days * 24 * 60 * 60 * 1000;
 }
+
+export const toSnakeCase = (str) => {
+    return str
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .join('_');
+}
