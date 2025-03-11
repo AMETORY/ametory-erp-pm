@@ -19,6 +19,7 @@ import { UserModel } from "../models/user";
 import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 import AcceptInvitation from "../pages/AcceptInvitation";
 import { MemberModel } from "../models/member";
+import FormPublicPage from "../pages/FormPublicPage";
 
 interface AppRoutesProps {
   token?: string | null;
@@ -92,6 +93,7 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
                   value={{ isWsConnected, setWsConnected, wsMsg, setWsMsg }}
                 >
                   <BrowserRouter>
+                    
                     {token && <PrivateRoute />}
                     {!token && <PublicRoute />}
                   </BrowserRouter>

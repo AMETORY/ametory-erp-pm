@@ -89,6 +89,106 @@ var templates = `[
         { "name": "Published", "icon": "📚", "color": "#CE93D8" },
         { "name": "Promotion", "icon": "📢", "color": "#FFCC80" }
       ]
+    },
+    {
+      "industry": "HR Recruitment",
+      "columns": [
+        { "name": "Job Posting", "icon": "📢", "color": "#FFECB3" },
+        { "name": "Applications Received", "icon": "📄", "color": "#FFDDC1" },
+        { "name": "Screening", "icon": "🧐", "color": "#F8BBD0" },
+        { "name": "Interview Scheduled", "icon": "📅", "color": "#B3E5FC" },
+        { "name": "Interviewed", "icon": "🤝", "color": "#A5D6A7" },
+        { "name": "Offer Extended", "icon": "💼", "color": "#FFE082" },
+        { "name": "Hired", "icon": "✅", "color": "#D4E157" },
+        { "name": "Onboarding", "icon": "📋", "color": "#81D4FA" }
+      ]
+    },
+    {
+      "industry": "Procurement",
+      "columns": [
+        { "name": "Request for Quotation", "icon": "📋", "color": "#FFDDC1" },
+        { "name": "Quotations Received", "icon": "📩", "color": "#FFABAB" },
+        { "name": "Vendor Evaluation", "icon": "🧐", "color": "#B3E5FC" },
+        { "name": "Purchase Order Created", "icon": "📝", "color": "#A5D6A7" },
+        { "name": "Order Shipped", "icon": "🚚", "color": "#FFCC80" },
+        { "name": "Received & Inspected", "icon": "🔎", "color": "#D4E157" },
+        { "name": "Payment Processed", "icon": "💰", "color": "#F48FB1" },
+        { "name": "Completed", "icon": "✅", "color": "#81D4FA" }
+      ]
+    },
+    {
+      "industry": "Supply Chain",
+      "columns": [
+        { "name": "Demand Planning", "icon": "📊", "color": "#FFECB3" },
+        { "name": "Supplier Selection", "icon": "🏷️", "color": "#FFDDC1" },
+        { "name": "Purchase Order", "icon": "📝", "color": "#FFE082" },
+        { "name": "Inbound Logistics", "icon": "🚚", "color": "#B3E5FC" },
+        { "name": "Inventory Management", "icon": "📦", "color": "#A5D6A7" },
+        { "name": "Production", "icon": "🏗️", "color": "#FFCC80" },
+        { "name": "Quality Control", "icon": "🔎", "color": "#CE93D8" },
+        { "name": "Outbound Logistics", "icon": "🚛", "color": "#F8BBD0" },
+        { "name": "Delivered", "icon": "✅", "color": "#D4E157" }
+      ]
+    },
+    {
+      "industry": "Production Process",
+      "columns": [
+        { "name": "Material Preparation", "icon": "🧱", "color": "#FFDDC1" },
+        { "name": "Work Order Created", "icon": "📝", "color": "#FFE082" },
+        { "name": "Production Planning", "icon": "📊", "color": "#FFCC80" },
+        { "name": "In Progress", "icon": "⚙️", "color": "#B3E5FC" },
+        { "name": "Quality Check", "icon": "🔎", "color": "#CE93D8" },
+        { "name": "Rework / Adjustment", "icon": "🔧", "color": "#FFABAB" },
+        { "name": "Packaging", "icon": "📦", "color": "#A5D6A7" },
+        { "name": "Ready for Delivery", "icon": "🚚", "color": "#F8BBD0" },
+        { "name": "Delivered", "icon": "✅", "color": "#D4E157" },
+        { "name": "Post-Production Review", "icon": "📝", "color": "#81D4FA" }
+      ]
+    },
+    {
+      "industry": "Credit Application",
+      "columns": [
+        { "name": "Application Received", "icon": "📥", "color": "#FFECB3" },
+        { "name": "Document Verification", "icon": "📑", "color": "#FFDDC1" },
+        { "name": "Credit Assessment", "icon": "💰", "color": "#FFE082" },
+        { "name": "Background Check", "icon": "🕵️", "color": "#B3E5FC" },
+        { "name": "Approval Process", "icon": "✅", "color": "#A5D6A7" },
+        { "name": "Contract Signing", "icon": "📝", "color": "#FFCC80" },
+        { "name": "Fund Disbursement", "icon": "💸", "color": "#F8BBD0" },
+        { "name": "Repayment Monitoring", "icon": "📊", "color": "#81D4FA" },
+        { "name": "Closed", "icon": "🔒", "color": "#D4E157" }
+      ]
+    },
+    {
+      "industry": "Repair Service",
+      "columns": [
+        { "name": "Service Request Received", "icon": "📥", "color": "#FFECB3" },
+        { "name": "Initial Assessment", "icon": "🔍", "color": "#FFDDC1" },
+        { "name": "Cost Estimation", "icon": "💰", "color": "#FFE082" },
+        { "name": "Customer Approval", "icon": "📝", "color": "#B3E5FC" },
+        { "name": "Parts Ordering", "icon": "🛒", "color": "#A5D6A7" },
+        { "name": "In Progress", "icon": "⚙️", "color": "#FFCC80" },
+        { "name": "Quality Control", "icon": "✅", "color": "#CE93D8" },
+        { "name": "Ready for Pickup", "icon": "🚗", "color": "#F8BBD0" },
+        { "name": "Delivered", "icon": "📦", "color": "#81D4FA" },
+        { "name": "Follow-up", "icon": "📞", "color": "#D4E157" }
+      ]
+    },
+    {
+      "industry": "Financial/Tax Audit",
+      "columns": [
+        { "name": "Engagement Planning", "icon": "📋", "color": "#FFECB3" },
+        { "name": "Document Submission", "icon": "📄", "color": "#FFDDC1" },
+        { "name": "Preliminary Review", "icon": "🔍", "color": "#FFE082" },
+        { "name": "Risk Assessment", "icon": "⚠️", "color": "#B3E5FC" },
+        { "name": "Fieldwork", "icon": "🏗️", "color": "#A5D6A7" },
+        { "name": "Issue Identification", "icon": "❗", "color": "#FFABAB" },
+        { "name": "Management Discussion", "icon": "💬", "color": "#FFCC80" },
+        { "name": "Report Drafting", "icon": "📝", "color": "#CE93D8" },
+        { "name": "Client Review", "icon": "🧐", "color": "#81D4FA" },
+        { "name": "Final Report Submission", "icon": "📁", "color": "#D4E157" },
+        { "name": "Follow-up & Advisory", "icon": "📞", "color": "#F8BBD0" }
+      ]
     }
   ]`
 

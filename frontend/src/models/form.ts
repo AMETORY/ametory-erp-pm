@@ -1,5 +1,8 @@
 import { UserModel } from "./user";
 import { MemberModel } from "./member";
+import { ColumnModel } from "./column";
+import { ProjectModel } from "./project";
+import { FileModel } from "./file";
 
 export interface FormTemplateModel {
   id: string;
@@ -110,3 +113,27 @@ export const formMenus = [
       text: "Toggle Switch",
     },
   ];
+
+export interface FormModel {
+  id?: string;
+  code?: string;
+  title?: string;
+  cover?: FileModel;
+  description?: string;
+  submit_url?: string;
+  method?: string;
+  headers?: string;
+  is_public?: boolean;
+  status?: string;
+  form_template_id?: string;
+  form_template?: FormTemplateModel;
+  created_by_id?: string;
+  created_by?: UserModel;
+  created_by_member_id?: string;
+  created_by_member?: MemberModel;
+  company_id?: string;
+  column_id?: string;
+  column?: ColumnModel;
+  project_id?: string;
+  project?: ProjectModel;
+}

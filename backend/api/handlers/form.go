@@ -104,12 +104,33 @@ func (h *FormHandler) CreateFormHandler(c *gin.Context) {
 		return
 	}
 
+	if form.Headers == "" {
+		form.Headers = "{}"
+	}
+	companyID := c.GetHeader("ID-Company")
+	memberID := c.MustGet("memberID").(string)
+	userID := c.MustGet("userID").(string)
+	form.Status = "ACTIVE"
+	form.CompanyID = &companyID
+	form.CreatedByMemberID = &memberID
+	form.CreatedByID = &userID
 	if err := h.csrService.FormService.CreateForm(&form); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Form created successfully"})
+	if form.Cover != nil {
+		form.Cover.RefID = form.ID
+		form.Cover.RefType = "form-cover"
+		h.ctx.DB.Save(&form.Cover)
+	}
+	if form.Picture != nil {
+		form.Picture.RefID = form.ID
+		form.Picture.RefType = "form-picture"
+		h.ctx.DB.Save(&form.Picture)
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Form created successfully", "id": form.ID})
 }
 
 // GetFormsHandler retrieves all forms
@@ -147,6 +168,17 @@ func (h *FormHandler) UpdateFormHandler(c *gin.Context) {
 	if err := h.csrService.FormService.UpdateForm(id, &form); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	if form.Cover != nil {
+		form.Cover.RefID = form.ID
+		form.Cover.RefType = "form-cover"
+		h.ctx.DB.Save(&form.Cover)
+	}
+	if form.Picture != nil {
+		form.Picture.RefID = form.ID
+		form.Picture.RefType = "form-picture"
+		h.ctx.DB.Save(&form.Picture)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Form updated successfully"})

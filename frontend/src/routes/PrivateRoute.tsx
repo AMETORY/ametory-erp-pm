@@ -10,12 +10,15 @@ import ChatPage from "../pages/ChatPage";
 import ProfilePage from "../pages/ProfilePage";
 import FormPage from "../pages/FormPage";
 import FormTempateDetail from "../pages/FormTempateDetail";
+import FormDetail from "../pages/FormDetail";
+import FormPublicPage from "../pages/FormPublicPage";
 
 interface PrivateRouteProps {}
 
 const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
   return (
     <Routes>
+      <Route path="/public/form/:formCode" element={<FormPublicPage />} />
       <Route path="/" element={<Home />} />
       <Route path="/project" element={<ProjectPage />} />
       <Route path="/task" element={<TaskPage />} />
@@ -24,7 +27,11 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/chat" element={<ChatPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/form" element={<FormPage />} />
-      <Route path="/form-template/:templateId" element={<FormTempateDetail />} />
+      <Route
+        path="/form-template/:templateId"
+        element={<FormTempateDetail />}
+      />
+      <Route path="/form/:formId" element={<FormDetail />} />
       <Route path="/chat/:channelId" element={<ChatPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />
       <Route path="*" element={<Navigate to="/" />} />
