@@ -63,6 +63,19 @@ export const getFormDetail = async (id: string) => {
     method: "GET",
   });
 };
+
+export const getFormPublic = async (code: string) => {
+  return await customFetch(`api/v1/form/public/${code}`, {
+    method: "GET",
+  });
+};
+export const postFormPublic = async (code: string, data: any) => {
+  return await customFetch(`api/v1/form/public/${code}`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
 export const updateForm = async (id: string, data: any) => {
   return await customFetch(`api/v1/form/${id}`, {
     method: "PUT",

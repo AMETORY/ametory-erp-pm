@@ -108,6 +108,7 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
             <TextInput
               type={"email"}
               sizing={"sm"}
+              name={field.label}
               placeholder={field.placeholder}
               required={field.required}
               value={sectionValues[sectionIndex].fields[fieldIndex].value}
@@ -293,15 +294,35 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
                 <div className="flex items-center gap-2" key={i}>
                   <Radio
                     id={`${field.label}-${i}`}
-                    name={field.label}
                     value={option.value}
                     checked={
-                      sectionValues[sectionIndex].fields[fieldIndex].value
+                      sectionValues[sectionIndex].fields[fieldIndex].value ==
+                      option.value
                     }
                     onChange={(val) => {
-                      sectionValues[sectionIndex].fields[fieldIndex].value =
-                        option.value;
-                      setSectionValues(sectionValues);
+                      // sectionValues[sectionIndex].fields[fieldIndex].value =
+                      //   val.target.value;
+                      setSectionValues([
+                        ...sectionValues.map((section, i) => {
+                          if (i == sectionIndex) {
+                            return {
+                              ...section,
+                              fields: [
+                                ...section.fields.map((field, j) => {
+                                  if (j == fieldIndex) {
+                                    return {
+                                      ...field,
+                                      value: val.target.value,
+                                    };
+                                  }
+                                  return field;
+                                }),
+                              ],
+                            };
+                          }
+                          return section;
+                        }),
+                      ]);
                     }}
                   />
                   <Label htmlFor={option.value}>{option.label}</Label>
@@ -322,6 +343,7 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
                   {field.help_text}
                 </legend>
               )}
+
               {field.options.map((option, i) => (
                 <div className="flex items-center gap-2" key={i}>
                   <Checkbox
@@ -443,6 +465,7 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
         </div>
       ))}
       <Button
+        type="submit"
         onClick={() => {
           onSubmit(sectionValues);
         }}

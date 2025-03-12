@@ -9,6 +9,7 @@ import (
 )
 
 func SetFormRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
+
 	formHandler := handlers.NewFormHandler(erpContext)
 	formTemplateGroup := r.Group("/form-template")
 	formTemplateGroup.Use(middlewares.AuthMiddleware(erpContext, true))
@@ -20,6 +21,9 @@ func SetFormRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		formTemplateGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form_template:delete"}), formHandler.DeleteFormTemplateHandler)
 	}
 
+	r.GET("/form/public/:formCode", formHandler.PublicFormHandler)
+	r.POST("/form/public/:formCode", formHandler.FormResponseHandler)
+
 	formGroup := r.Group("/form")
 	formGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
@@ -29,4 +33,5 @@ func SetFormRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		formGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form:update"}), formHandler.UpdateFormHandler)
 		formGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form:delete"}), formHandler.DeleteFormHandler)
 	}
+
 }
