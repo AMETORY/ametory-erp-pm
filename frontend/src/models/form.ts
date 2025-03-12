@@ -48,7 +48,7 @@ export interface FormField {
   default_value: string;
   help_text: string;
   disabled: boolean;
-  value?: any
+  value?: any;
 }
 
 export interface FormSection {
@@ -58,61 +58,60 @@ export interface FormSection {
   fields: FormField[];
 }
 
-
 export const formMenus = [
-    {
-      key: FormFieldType.TextField,
-      text: "Text Field",
-    },
-    {
-      key: FormFieldType.TextArea,
-      text: "Text Area",
-    },
-    {
-      key: FormFieldType.RadioButton,
-      text: "Radio Button",
-    },
-    {
-      key: FormFieldType.Checkbox,
-      text: "Checkbox",
-    },
-    {
-      key: FormFieldType.Dropdown,
-      text: "Dropdown",
-    },
-    {
-      key: FormFieldType.DatePicker,
-      text: "Date Picker",
-    },
-    {
-      key: FormFieldType.DateRangePicker,
-      text: "Date Range Picker",
-    },
-    {
-      key: FormFieldType.NumberField,
-      text: "Number Field",
-    },
-    {
-      key: FormFieldType.Currency,
-      text: "Currency",
-    },
-    {
-      key: FormFieldType.EmailField,
-      text: "Email Field",
-    },
-    {
-      key: FormFieldType.PasswordField,
-      text: "Password Field",
-    },
-    {
-      key: FormFieldType.FileUpload,
-      text: "File Upload",
-    },
-    {
-      key: FormFieldType.ToggleSwitch,
-      text: "Toggle Switch",
-    },
-  ];
+  {
+    key: FormFieldType.TextField,
+    text: "Text Field",
+  },
+  {
+    key: FormFieldType.TextArea,
+    text: "Text Area",
+  },
+  {
+    key: FormFieldType.RadioButton,
+    text: "Radio Button",
+  },
+  {
+    key: FormFieldType.Checkbox,
+    text: "Checkbox",
+  },
+  {
+    key: FormFieldType.Dropdown,
+    text: "Dropdown",
+  },
+  {
+    key: FormFieldType.DatePicker,
+    text: "Date Picker",
+  },
+  {
+    key: FormFieldType.DateRangePicker,
+    text: "Date Range Picker",
+  },
+  {
+    key: FormFieldType.NumberField,
+    text: "Number Field",
+  },
+  {
+    key: FormFieldType.Currency,
+    text: "Currency",
+  },
+  {
+    key: FormFieldType.EmailField,
+    text: "Email Field",
+  },
+  {
+    key: FormFieldType.PasswordField,
+    text: "Password Field",
+  },
+  {
+    key: FormFieldType.FileUpload,
+    text: "File Upload",
+  },
+  {
+    key: FormFieldType.ToggleSwitch,
+    text: "Toggle Switch",
+  },
+];
 
 export interface FormModel {
   id?: string;
@@ -136,4 +135,14 @@ export interface FormModel {
   column?: ColumnModel;
   project_id?: string;
   project?: ProjectModel;
+  responses?: FormData[];
+}
+
+export interface FormData {
+  id: string;
+  form_id: string;
+  form: object;
+  sections: FormSection[];
+  metadata: string;
+  ref_id: string;
 }

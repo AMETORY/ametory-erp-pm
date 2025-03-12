@@ -1,13 +1,21 @@
 import { useContext, useEffect, useRef, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { getFormDetail, updateForm } from "../services/api/formApi";
-import { FormModel, FormTemplateModel } from "../models/form";
+import {
+  FormModel,
+  FormSection,
+  FormTemplateModel,
+  FormData,
+  FormField,
+  FormFieldType,
+} from "../models/form";
 import toast from "react-hot-toast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import {
   Button,
   Label,
+  Modal,
   Tabs,
   Textarea,
   TextInput,
@@ -21,7 +29,15 @@ import { uploadFile } from "../services/api/commonApi";
 import { FileModel } from "../models/file";
 import { IoImageOutline } from "react-icons/io5";
 import FormView from "../components/FormView";
-import { BsCode, BsCodeSlash, BsShare } from "react-icons/bs";
+import {
+  BsCheck2Circle,
+  BsCode,
+  BsCodeSlash,
+  BsEye,
+  BsShare,
+} from "react-icons/bs";
+import Moment from "react-moment";
+import { money } from "../utils/helper";
 interface FormDetailProps {}
 
 const FormDetail: FC<FormDetailProps> = ({}) => {
@@ -33,6 +49,7 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
   const [columns, setColumns] = useState<ColumnModel[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileCover, setFileCover] = useState<FileModel>();
+  const [selectedResponse, setSelectedResponse] = useState<FormData>();
 
   useEffect(() => {
     getAllProjects("");
@@ -53,6 +70,117 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
       .then((e: any) => setProjects(e.data.items))
       .catch(toast.error);
   };
+
+  const renderValue = (fieldType: FormFieldType, val: any) => {
+    switch (fieldType) {
+      case FormFieldType.DateRangePicker:
+        return (
+          val && (
+            <div>
+              {val[0] && <Moment format="DD MMM YYYY">{val[0]}</Moment>} ~{" "}
+              {val[1] && <Moment format="DD MMM YYYY">{val[1]}</Moment>}
+            </div>
+          )
+        );
+      case FormFieldType.DatePicker:
+        return val && <Moment format="DD MMM YYYY">{val}</Moment>;
+      case FormFieldType.PasswordField:
+        return val && "* * * * * * *";
+      case FormFieldType.ToggleSwitch:
+        return val && <BsCheck2Circle />;
+      case FormFieldType.FileUpload:
+        return (
+          val && (
+            <Link to={val} target="_blank">
+              {val}
+            </Link>
+          )
+        );
+      case FormFieldType.NumberField:
+      case FormFieldType.Currency:
+        return money(parseFloat(val));
+      case FormFieldType.Checkbox:
+        return (
+          <ul className=" list-disc ml-4">
+            {val.map((e: any) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        );
+
+      default:
+        break;
+    }
+    return val;
+  };
+
+  const renderResponses = (responses: FormData[]) => {
+    if (responses.length == 0) return;
+    let sections: any[] = [];
+    for (const element of responses) {
+      for (const section of element.sections) {
+        sections.push({
+          id: section.id,
+          record_id: element.id,
+          title: section.section_title,
+          number_field: section.fields.length,
+          sub_title: section.fields.map((e) => e.label),
+          fields: section.fields,
+        });
+      }
+    }
+
+    return (
+      <div className="overflow-x-auto w-[calc(100% - 300px)]">
+        <table className="bg-white min-w-full">
+          <thead>
+            <tr>
+              {sections.map((e) => (
+                <td
+                  className="px-4 py-2 bg-gray-50 border text-center font-semibold"
+                  key={e.id}
+                  colSpan={e.number_field}
+                >
+                  {e.title}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              {sections.map((section) =>
+                section.sub_title.map((e: any) => (
+                  <td
+                    className="px-4 py-2 border bg-gray-50 font-semibold min-w-[160px]"
+                    key={e}
+                  >
+                    {e}
+                  </td>
+                ))
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="hover:bg-blue-50 ">
+              {sections.map((section) => {
+                return section.fields.map((e: FormField) => (
+                  <td
+                    className="px-4 py-2 border cursor-pointer "
+                    key={e.id}
+                    onClick={() => {
+                      setSelectedResponse(
+                        form?.responses?.find((e) => e.id == section.record_id)
+                      );
+                    }}
+                  >
+                    {renderValue(e.type, e.value)}
+                  </td>
+                ));
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
   return (
     <AdminLayout>
       <div className="flex flex-row w-full h-full flex-1 gap-2">
@@ -60,14 +188,21 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
           <div className="flex justify-between items-center">
             <h3 className="text-2xl font-bold">Form Detail</h3>
             <div className="flex gap-2 items-center">
-              {form?.is_public && <BsShare size={12} className="cursor-pointer" onClick={() => {
-                let url = `${process.env.REACT_APP_BASE_URL}/public/form/${form?.code}`
-                navigator.clipboard.writeText(url);
-                toast.success("URL copied to clipboard");
-                window.open(url)
-              }} />}
               {form?.is_public && (
-                <BsCodeSlash className=" cursor-pointer"
+                <BsShare
+                  size={12}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    let url = `${process.env.REACT_APP_BASE_URL}/public/form/${form?.code}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("URL copied to clipboard");
+                    window.open(url);
+                  }}
+                />
+              )}
+              {form?.is_public && (
+                <BsCodeSlash
+                  className=" cursor-pointer"
                   size={12}
                   onClick={() => {
                     let code = `<iframe src="${process.env.REACT_APP_BASE_URL}/public/form/${form?.code}" width="100%" style="height: 100vh;"  frameborder="0" marginheight="0" marginwidth="0">Loading...</iframe>
@@ -357,7 +492,7 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
             </div>
           </div>
         </div>
-        <div className="w-full border-l relative bg-gray-50">
+        <div className="w-[calc(100%-300px)] border-l relative bg-gray-50">
           <Tabs>
             <Tabs.Item title="Preview">
               <div className="bg-gray-50 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-100px)] ">
@@ -383,7 +518,11 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
                 />
               </div>
             </Tabs.Item>
-            <Tabs.Item title="Responses"></Tabs.Item>
+            <Tabs.Item title="Responses">
+              <div className="px-4">
+                {form?.responses && renderResponses(form.responses)}
+              </div>
+            </Tabs.Item>
           </Tabs>
         </div>
       </div>
@@ -409,6 +548,37 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
           }
         }}
       />
+      <Modal
+        show={selectedResponse != undefined}
+        onClose={() => setSelectedResponse(undefined)}
+      >
+        <Modal.Header>
+        Response Details
+        </Modal.Header>
+        <Modal.Body>
+          {(selectedResponse?.sections ?? []).map((e) => (
+            <div className="" key={e.id}>
+              <h2 className="text-lg font-bold">{e.section_title}</h2>
+
+              <table className="w-full mb-4">
+                {e.fields.map((f) => (
+                  <tr key={f.id} className="border">
+                    <td className="px-2 py-1 font-semibold bg-gray-50 border " style={{ 
+                      width: 200
+                     }}>
+                      {f.label}
+                    </td>
+
+                    <td className="px-2 py-1 border">
+                      {renderValue(f.type, f.value)}
+                    </td>
+                  </tr>
+                ))}
+              </table>
+            </div>
+          ))}
+        </Modal.Body>
+      </Modal>
     </AdminLayout>
   );
 };
