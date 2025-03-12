@@ -1,5 +1,6 @@
 import { ColumnModel } from "./column";
 import { FileModel } from "./file";
+import { FormSection } from "./form";
 import { MemberModel } from "./member";
 import { ProjectActivityModel, ProjectModel } from "./project";
 
@@ -33,6 +34,9 @@ export interface TaskModel {
   percentage?: number;
   priority?: string
   severity?: string
+  form_response?: {
+    sections: FormSection[]
+  }
 }
 
 export interface TaskCommentModel {

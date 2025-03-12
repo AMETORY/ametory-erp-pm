@@ -26,7 +26,7 @@ import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProjectModel } from "../models/project";
 import { TaskCommentModel, TaskModel } from "../models/task";
 import { addComment, getTask, updateTask } from "../services/api/taskApi";
-import { getColor, initial, invert } from "../utils/helper";
+import { getColor, initial, invert, money } from "../utils/helper";
 import { BsActivity, BsCheck2Circle, BsPencil } from "react-icons/bs";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
 import { ProfileContext } from "../contexts/ProfileContext";
@@ -34,7 +34,10 @@ import { MentionsInput, Mention } from "react-mentions";
 import { parseMentions } from "../utils/helper-ui";
 import Moment from "react-moment";
 import moment from "moment";
+import { SiGoogleforms } from "react-icons/si";
 import { priorityOptions, severityOptions } from "../utils/constants";
+import { FormFieldType } from "../models/form";
+import { Link } from "react-router-dom";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -180,6 +183,43 @@ const TaskDetail: FC<TaskDetailProps> = ({
       });
   };
 
+  const renderValue = (fieldType: FormFieldType, val: any) => {
+    switch (fieldType) {
+      case FormFieldType.DateRangePicker:
+        return (
+          val && (
+            <div>
+              {val[0] && <Moment format="DD MMM YYYY">{val[0]}</Moment>} ~{" "}
+              {val[1] && <Moment format="DD MMM YYYY">{val[1]}</Moment>}
+            </div>
+          )
+        );
+      case FormFieldType.DatePicker:
+        return val && <Moment format="DD MMM YYYY">{val}</Moment>;
+      case FormFieldType.PasswordField:
+        return val && "* * * * * * *";
+      case FormFieldType.ToggleSwitch:
+        return val && <BsCheck2Circle />;
+      case FormFieldType.FileUpload:
+        return val && <Link to={val} target="_blank">{val}</Link>;
+      case FormFieldType.NumberField:
+      case FormFieldType.Currency:
+        return money(parseFloat(val));
+      case FormFieldType.Checkbox:
+        return (
+          <ul>
+            {val.map((e: any) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        );
+
+      default:
+        break;
+    }
+    return val;
+  };
+
   useEffect(() => {
     if (activeTask) {
       setWatchers(
@@ -200,7 +240,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
       );
     }
   }, [activeTask]);
- 
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex-1 space-y-2 overflow-y-auto">
@@ -685,6 +725,29 @@ const TaskDetail: FC<TaskDetailProps> = ({
               ))}
             </ul>
           </Tabs.Item>
+          {activeTask?.form_response && (
+            <Tabs.Item title="Form Response" icon={SiGoogleforms}>
+              {(activeTask?.form_response?.sections ?? []).map((e) => (
+                <div className="" key={e.id}>
+                  <h2 className="text-lg font-bold">{e.section_title}</h2>
+
+                  <table className="w-full mb-4">
+                    {e.fields.map((f) => (
+                      <tr key={f.id} className="border">
+                        <td className="px-2 py-1 font-semibold bg-gray-50 border w-[300px]">
+                          {f.label}
+                        </td>
+
+                        <td className="px-2 py-1 border">
+                          {renderValue(f.type, f.value)}
+                        </td>
+                      </tr>
+                    ))}
+                  </table>
+                </div>
+              ))}
+            </Tabs.Item>
+          )}
         </Tabs>
       </div>
       {isEditted && (
