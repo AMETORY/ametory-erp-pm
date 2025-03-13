@@ -12,6 +12,7 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
+	"github.com/AMETORY/ametory-erp-modules/contact"
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/file"
@@ -77,6 +78,9 @@ func main() {
 	companyService := company.NewCompanyService(erpContext)
 	erpContext.CompanyService = companyService
 
+	contactService := contact.NewContactService(erpContext, companyService)
+	erpContext.ContactService = contactService
+
 	pmService := project_management.NewProjectManagementService(erpContext)
 	erpContext.ProjectManagementService = pmService
 
@@ -111,6 +115,7 @@ func main() {
 	routes.SetInboxRoutes(v1, erpContext)
 	routes.SetChatRoutes(v1, erpContext)
 	routes.SetFormRoutes(v1, erpContext)
+	routes.SetContactRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

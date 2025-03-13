@@ -12,6 +12,7 @@ import FormPage from "../pages/FormPage";
 import FormTempateDetail from "../pages/FormTempateDetail";
 import FormDetail from "../pages/FormDetail";
 import FormPublicPage from "../pages/FormPublicPage";
+import ContactPage from "../pages/ContactPage";
 
 interface PrivateRouteProps {}
 
@@ -34,6 +35,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/form/:formId" element={<FormDetail />} />
       <Route path="/chat/:channelId" element={<ChatPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

@@ -5,7 +5,7 @@ import { BsKanban, BsPeople } from "react-icons/bs";
 import { GoTasklist } from "react-icons/go";
 import { HiOutlineChat } from "react-icons/hi";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
-import { LuPowerOff } from "react-icons/lu";
+import { LuContact2, LuPowerOff } from "react-icons/lu";
 import { SiGoogleforms } from "react-icons/si";
 import { useNavigate } from "react-router-dom";
 import { CollapsedContext } from "../contexts/CollapsedContext";
@@ -157,6 +157,21 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             </Tooltip>
             {!collapsed && (
               <span className="flex-1 ms-3 whitespace-nowrap">Form</span>
+            )}
+           
+          </a>
+        </li>
+        <li className="" style={{ }}>
+          <a
+            href="#"
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            onClick={handleNavigation("/contact")}
+          >
+            <Tooltip content="Contact">
+              <LuContact2 />
+            </Tooltip>
+            {!collapsed && (
+              <span className="flex-1 ms-3 whitespace-nowrap">Contact</span>
             )}
            
           </a>
