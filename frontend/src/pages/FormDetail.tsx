@@ -117,19 +117,27 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
   const renderResponses = (responses: FormData[]) => {
     if (responses.length == 0) return;
     let sections: any[] = [];
-    for (const element of responses) {
-      for (const section of element.sections) {
+      for (const section of responses[0].sections) {
         sections.push({
           id: section.id,
-          record_id: element.id,
+          record_id: responses[0].id,
           title: section.section_title,
           number_field: section.fields.length,
           sub_title: section.fields.map((e) => e.label),
-          fields: section.fields,
         });
       }
+    let records: any = [];
+    for (const resp of responses) {
+      let fields: any = [];
+      for (const section of resp.sections) {
+        fields.push(...section.fields);
+      }
+      records.push({
+        id: resp.id,
+        data: fields
+      });
     }
-
+    console.log(records);
     return (
       <div className="overflow-x-auto w-[calc(100% - 300px)]">
         <table className="bg-white min-w-full">
@@ -147,10 +155,10 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
             </tr>
             <tr>
               {sections.map((section) =>
-                section.sub_title.map((e: any) => (
+                section.sub_title.map((e: any, i: number) => (
                   <td
                     className="px-4 py-2 border bg-gray-50 font-semibold min-w-[160px]"
-                    key={e}
+                    key={i}
                   >
                     {e}
                   </td>
@@ -159,23 +167,15 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
             </tr>
           </thead>
           <tbody>
-            <tr className="hover:bg-blue-50 ">
-              {sections.map((section) => {
-                return section.fields.map((e: FormField) => (
-                  <td
-                    className="px-4 py-2 border cursor-pointer "
-                    key={e.id}
-                    onClick={() => {
-                      setSelectedResponse(
-                        form?.responses?.find((e) => e.id == section.record_id)
-                      );
-                    }}
-                  >
-                    {renderValue(e.type, e.value)}
-                  </td>
-                ));
-              })}
-            </tr>
+            {records.map((e: any, i: number) => (
+              <tr key={i} id={`data-${e.id}`} className="hover:bg-blue-50" onClick={() => {
+                setSelectedResponse(form?.responses?.find(r => r.id == e.id))
+              }}>
+                {e.data.map((f: FormField, j: number) => (
+                  <td className="px-4 py-2 border cursor-pointer " key={j}>{f.value}</td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -552,9 +552,7 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
         show={selectedResponse != undefined}
         onClose={() => setSelectedResponse(undefined)}
       >
-        <Modal.Header>
-        Response Details
-        </Modal.Header>
+        <Modal.Header>Response Details</Modal.Header>
         <Modal.Body>
           {(selectedResponse?.sections ?? []).map((e) => (
             <div className="" key={e.id}>
@@ -563,9 +561,12 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
               <table className="w-full mb-4">
                 {e.fields.map((f) => (
                   <tr key={f.id} className="border">
-                    <td className="px-2 py-1 font-semibold bg-gray-50 border " style={{ 
-                      width: 200
-                     }}>
+                    <td
+                      className="px-2 py-1 font-semibold bg-gray-50 border "
+                      style={{
+                        width: 200,
+                      }}
+                    >
                       {f.label}
                     </td>
 
