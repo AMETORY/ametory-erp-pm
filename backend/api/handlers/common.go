@@ -311,8 +311,9 @@ func (h *CommonHandler) GetRapidAPIPluginsHandler(c *gin.Context) {
 
 func (h *CommonHandler) AddRapidAdpiPluginHandler(c *gin.Context) {
 	input := struct {
-		ID  string `json:"name" binding:"required"`
-		Key string `json:"key" binding:"required"`
+		ID   string `json:"id" binding:"required"`
+		Key  string `json:"key" binding:"required"`
+		Host string `json:"host" binding:"required"`
 	}{}
 
 	err := c.ShouldBindJSON(&input)
@@ -322,16 +323,9 @@ func (h *CommonHandler) AddRapidAdpiPluginHandler(c *gin.Context) {
 	}
 
 	var companyPlugins rapid_api_models.CompanyRapidApiPlugin
-	err = h.ctx.DB.Where("company_id = ? and plugin_id = ?", c.GetHeader("ID-Company"), input.ID).First(&companyPlugins).Error
+	err = h.ctx.DB.Where("company_id = ? and rapid_api_plugin_id = ?", c.GetHeader("ID-Company"), input.ID).First(&companyPlugins).Error
 	if err == nil {
 		c.JSON(400, gin.H{"error": "plugin has added"})
-		return
-	}
-
-	var rapidApiPlugin rapid_api_models.RapidApiPlugin
-	err = h.ctx.DB.Where("id = ?", input.ID).First(&rapidApiPlugin).Error
-	if err != nil {
-		c.JSON(400, gin.H{"error": "plugin not found"})
 		return
 	}
 
@@ -339,7 +333,7 @@ func (h *CommonHandler) AddRapidAdpiPluginHandler(c *gin.Context) {
 		CompanyID:        c.GetHeader("ID-Company"),
 		RapidApiPluginID: input.ID,
 		RapidApiKey:      input.Key,
-		RapidApiHost:     rapidApiPlugin.URL,
+		RapidApiHost:     input.Host,
 	}
 
 	if err := h.ctx.DB.Create(&companyPlugin).Error; err != nil {
@@ -349,4 +343,23 @@ func (h *CommonHandler) AddRapidAdpiPluginHandler(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Plugin added successfully"})
 
+}
+
+func (h *CommonHandler) GetCompanyPluginsHandler(c *gin.Context) {
+	var companyPlugins []rapid_api_models.CompanyRapidApiPlugin
+	err := h.ctx.DB.Preload("RapidApiPlugin").Where("company_id = ?", c.GetHeader("ID-Company")).Find(&companyPlugins).Error
+	if err != nil {
+		c.JSON(400, gin.H{"error": err})
+		return
+	}
+	c.JSON(200, gin.H{"message": "get company plugins successfully", "data": companyPlugins})
+}
+
+func (h *CommonHandler) DeleteCompanyPluginHandler(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.ctx.DB.Where("company_id = ? and rapid_api_plugin_id = ?", c.GetHeader("ID-Company"), id).Delete(&rapid_api_models.CompanyRapidApiPlugin{}).Error; err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "delete plugin successfully"})
 }

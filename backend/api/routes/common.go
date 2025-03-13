@@ -46,5 +46,7 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.GET("/api/v1/setting", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.CompanySettingHandler)
 	r.PUT("/api/v1/setting", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.UpdateCompanySettingHandler)
 	r.GET("/api/v1/rapid-api-plugins", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.GetRapidAPIPluginsHandler)
-	r.POST("/api/v1/add-rapid-api-plugins", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.AddRapidAdpiPluginHandler)
+	r.POST("/api/v1/add-rapid-api-plugin", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.AddRapidAdpiPluginHandler)
+	r.GET("/api/v1/company-rapid-api-plugins", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.GetCompanyPluginsHandler)
+	r.DELETE("/api/v1/company-rapid-api-plugin/:id", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.DeleteCompanyPluginHandler)
 }

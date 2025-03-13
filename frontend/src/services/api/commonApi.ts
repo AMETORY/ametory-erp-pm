@@ -74,9 +74,6 @@ export const uploadFile = async (
   });
 };
 
-
-
-
 export const getSetting = async () => {
   return await customFetch(`api/v1/setting`, {
     method: "GET",
@@ -89,6 +86,19 @@ export const updateSetting = async (data: any) => {
   });
 };
 export const getRapidAPIPlugins = async () => {
-  return await customFetch(`api/v1/rapid-api-plugins`, {
+  return await customFetch(`api/v1/rapid-api-plugins`, {});
+};
+export const getCompanyRapidAPIPlugins = async () => {
+  return await customFetch(`api/v1/company-rapid-api-plugins`, {});
+};
+export const deleteCompanyRapidAPIPlugin = async (id: string) => {
+  return await customFetch(`api/v1/company-rapid-api-plugin/${id}`, {
+    method: "DELETE",
+  });
+};
+export const addRapidAPIPlugins = async (data: any) => {
+  return await customFetch(`api/v1/add-rapid-api-plugin`, {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 };

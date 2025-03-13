@@ -5,6 +5,7 @@ import {
   FileInput,
   Label,
   Modal,
+  Table,
   Tabs,
   TabsRef,
   Textarea,
@@ -12,6 +13,9 @@ import {
 } from "flowbite-react";
 import { BsInfoCircle, BsPlugin } from "react-icons/bs";
 import {
+  addRapidAPIPlugins,
+  deleteCompanyRapidAPIPlugin,
+  getCompanyRapidAPIPlugins,
   getRapidAPIPlugins,
   getSetting,
   updateSetting,
@@ -21,7 +25,10 @@ import { SettingModel } from "../models/setting";
 import toast from "react-hot-toast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import { FileModel } from "../models/file";
-import { RapidApiPluginModel } from "../models/rapid_api";
+import {
+  CompanyRapidApiPluginModel,
+  RapidApiPluginModel,
+} from "../models/rapid_api";
 import Select, { InputActionMeta } from "react-select";
 
 interface SettingPageProps {}
@@ -36,6 +43,9 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
   const [plugins, setPlugins] = useState<RapidApiPluginModel[]>([]);
   const [modalPluginOpen, setModalPluginOpen] = useState(false);
   const [selectedPlugin, setSelectedPlugin] = useState<RapidApiPluginModel>();
+  const [companyPlugins, setCompanyPlugins] = useState<
+    CompanyRapidApiPluginModel[]
+  >([]);
   const [pluginKey, setPluginKey] = useState("");
   const [pluginHost, setPluginHost] = useState("");
 
@@ -48,6 +58,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
       setLoading(true);
       getAllSetting();
       getAllPlugins();
+      getAllCompanyPlugins();
     }
   }, [mounted]);
 
@@ -67,6 +78,17 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
       setLoading(true);
       const resp: any = await getRapidAPIPlugins();
       setPlugins(resp.data);
+    } catch (error: any) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const getAllCompanyPlugins = async () => {
+    try {
+      setLoading(true);
+      const resp: any = await getCompanyRapidAPIPlugins();
+      setCompanyPlugins(resp.data);
     } catch (error: any) {
       toast.error(`${error}`);
     } finally {
@@ -196,13 +218,74 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
           + Add Plugin
         </Button>
       </div>
-      <div className="bg-white rounded-lg p-4"></div>
+      <Table>
+        <Table.Head>
+          <Table.HeadCell>Plugin Name</Table.HeadCell>
+          <Table.HeadCell>Key</Table.HeadCell>
+          <Table.HeadCell>Host</Table.HeadCell>
+          <Table.HeadCell>Actions</Table.HeadCell>
+        </Table.Head>
+        <Table.Body className="divide-y">
+          {companyPlugins.length === 0 && (
+            <Table.Row>
+              <Table.Cell colSpan={5} className="text-center">
+                No plugins found.
+              </Table.Cell>
+            </Table.Row>
+          )}
+          {companyPlugins.map((plugin, i) => (
+            <Table.Row
+              key={i}
+              className="bg-white dark:border-gray-700 dark:bg-gray-800"
+            >
+              <Table.Cell>{plugin.rapid_api_plugin?.name}</Table.Cell>
+              <Table.Cell>{plugin.rapid_api_key}</Table.Cell>
+              <Table.Cell>{plugin.rapid_api_host}</Table.Cell>
+              <Table.Cell>
+                {/* <a
+                                      href="#"
+                                      className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
+                                    >
+                                      Edit
+                                    </a> */}
+                <a
+                  href="#"
+                  className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (
+                      window.confirm(
+                        `Are you sure you want to delete  ${plugin?.rapid_api_plugin?.name}?`
+                      )
+                    ) {
+                      deleteCompanyRapidAPIPlugin(
+                        plugin?.rapid_api_plugin_id
+                      ).then(() => {
+                        getCompanyRapidAPIPlugins();
+                      });
+                    }
+                  }}
+                >
+                  Delete
+                </a>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
     </div>
   );
 
   const addPlugin = async () => {
     try {
       setLoading(true);
+      await addRapidAPIPlugins({
+        id: selectedPlugin?.id,
+        key: pluginKey,
+        host: pluginHost,
+      });
+      getAllPlugins();
+      toast.success("Plugin added successfully");
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -270,7 +353,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
                 placeholder="Key"
               />
             </div>
-            
+
             <div className="flex flex-col gap-1">
               <Label htmlFor="plugin-host">Host</Label>
               <TextInput

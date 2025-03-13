@@ -107,6 +107,7 @@ const ProjectPage: FC<ProjectPageProps> = ({}) => {
             + Create new project
           </Button>
         </div>
+        
         <Table>
           <Table.Head>
             <Table.HeadCell>Project Name</Table.HeadCell>

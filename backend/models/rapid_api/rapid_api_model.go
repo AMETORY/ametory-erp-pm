@@ -47,11 +47,11 @@ type RapidApiEndpointParams struct {
 }
 
 type CompanyRapidApiPlugin struct {
-	CompanyID        string              `gorm:"primaryKey"`
-	Company          models.CompanyModel `gorm:"foreignKey:CompanyID"`
-	RapidApiPluginID string              `gorm:"primaryKey"`
-	RapidApiPlugin   RapidApiPlugin      `gorm:"foreignKey:RapidApiPluginID"`
-	RapidApiKey      string
-	RapidApiHost     string
-	Endpoints        []RapidApiEndpoint `gorm:"-"`
+	CompanyID        string              `gorm:"primaryKey" json:"company_id,omitempty"`
+	Company          models.CompanyModel `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
+	RapidApiPluginID string              `gorm:"primaryKey" json:"rapid_api_plugin_id,omitempty"`
+	RapidApiPlugin   RapidApiPlugin      `gorm:"foreignKey:RapidApiPluginID" json:"rapid_api_plugin,omitempty"`
+	RapidApiKey      string              `json:"rapid_api_key,omitempty"`
+	RapidApiHost     string              `json:"rapid_api_host,omitempty"`
+	Endpoints        []RapidApiEndpoint  `gorm:"-" json:"endpoints,omitempty"`
 }
