@@ -32,13 +32,15 @@ func (h *ContactHandler) CreateContactHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	companyID := c.GetHeader("ID-Company")
+	contact.CompanyID = &companyID
 
 	if err := h.contactService.CreateContact(&contact); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, contact)
+	c.JSON(http.StatusOK, gin.H{"message": "Contact created successfully"})
 }
 
 func (h *ContactHandler) GetContactHandler(c *gin.Context) {
@@ -50,7 +52,7 @@ func (h *ContactHandler) GetContactHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, contact)
+	c.JSON(http.StatusOK, gin.H{"data": contact, "message": "Contact created successfully"})
 }
 
 func (h *ContactHandler) UpdateContactHandler(c *gin.Context) {
@@ -67,7 +69,7 @@ func (h *ContactHandler) UpdateContactHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, contact)
+	c.JSON(http.StatusOK, gin.H{"message": "Contact created successfully"})
 }
 
 func (h *ContactHandler) DeleteContactHandler(c *gin.Context) {
@@ -82,13 +84,12 @@ func (h *ContactHandler) DeleteContactHandler(c *gin.Context) {
 
 func (h *ContactHandler) GetContactsHandler(c *gin.Context) {
 
-	var isCustomer, isVendor, isSupplier = false, false, false
-	isCustomer = true
-	contacts, err := h.contactService.GetContacts(*c.Request, c.Query("search"), &isCustomer, &isVendor, &isSupplier)
+	isCustomer := true
+	contacts, err := h.contactService.GetContacts(*c.Request, c.Query("search"), &isCustomer, nil, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, contacts)
+	c.JSON(http.StatusOK, gin.H{"data": contacts, "message": "Contact created successfully"})
 }

@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	rapid_api_models "ametory-pm/models/rapid_api"
 	"ametory-pm/objects"
+	"ametory-pm/services"
 	"ametory-pm/services/app"
 	"encoding/json"
 	"errors"
@@ -21,13 +23,14 @@ import (
 )
 
 type CommonHandler struct {
-	ctx            *context.ERPContext
-	companyService *company.CompanyService
-	appService     *app.AppService
-	pmService      *project_management.ProjectManagementService
-	rbacService    *auth.RBACService
-	authService    *auth.AuthService
-	fileService    *file.FileService
+	ctx             *context.ERPContext
+	companyService  *company.CompanyService
+	appService      *app.AppService
+	pmService       *project_management.ProjectManagementService
+	rbacService     *auth.RBACService
+	authService     *auth.AuthService
+	fileService     *file.FileService
+	rapidApiService *services.RapidApiService
 }
 
 func NewCommonHandler(ctx *context.ERPContext) *CommonHandler {
@@ -55,14 +58,19 @@ func NewCommonHandler(ctx *context.ERPContext) *CommonHandler {
 	if !ok {
 		panic("FileService is not instance of file.FileService")
 	}
+	rapidApiService, ok := ctx.ThirdPartyServices["RapidAPI"].(*services.RapidApiService)
+	if !ok {
+		panic("RapidApiService is not instance of services.RapidApiService")
+	}
 	return &CommonHandler{
-		ctx:            ctx,
-		companyService: companyService,
-		appService:     appService,
-		pmService:      pmService,
-		rbacService:    rbacService,
-		authService:    authService,
-		fileService:    fileService,
+		ctx:             ctx,
+		companyService:  companyService,
+		appService:      appService,
+		pmService:       pmService,
+		rbacService:     rbacService,
+		authService:     authService,
+		fileService:     fileService,
+		rapidApiService: rapidApiService,
 	}
 }
 
@@ -265,4 +273,80 @@ func (h *CommonHandler) UploadFileHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"message": "File uploaded successfully", "data": fileObject})
+}
+
+func (h *CommonHandler) CompanySettingHandler(c *gin.Context) {
+	h.ctx.Request = c.Request
+	data, err := h.companyService.GetCompanyByID(c.GetHeader("ID-Company"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Get company setting successfully", "data": data})
+}
+func (h *CommonHandler) UpdateCompanySettingHandler(c *gin.Context) {
+	var input models.CompanyModel
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	h.ctx.Request = c.Request
+	err = h.companyService.UpdateCompany(c.GetHeader("ID-Company"), &input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": " company setting update successfully"})
+}
+
+func (h *CommonHandler) GetRapidAPIPluginsHandler(c *gin.Context) {
+	plugins, err := h.rapidApiService.GetPlugins()
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "get plugins successfully", "data": plugins})
+}
+
+func (h *CommonHandler) AddRapidAdpiPluginHandler(c *gin.Context) {
+	input := struct {
+		ID  string `json:"name" binding:"required"`
+		Key string `json:"key" binding:"required"`
+	}{}
+
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	var companyPlugins rapid_api_models.CompanyRapidApiPlugin
+	err = h.ctx.DB.Where("company_id = ? and plugin_id = ?", c.GetHeader("ID-Company"), input.ID).First(&companyPlugins).Error
+	if err == nil {
+		c.JSON(400, gin.H{"error": "plugin has added"})
+		return
+	}
+
+	var rapidApiPlugin rapid_api_models.RapidApiPlugin
+	err = h.ctx.DB.Where("id = ?", input.ID).First(&rapidApiPlugin).Error
+	if err != nil {
+		c.JSON(400, gin.H{"error": "plugin not found"})
+		return
+	}
+
+	companyPlugin := rapid_api_models.CompanyRapidApiPlugin{
+		CompanyID:        c.GetHeader("ID-Company"),
+		RapidApiPluginID: input.ID,
+		RapidApiKey:      input.Key,
+		RapidApiHost:     rapidApiPlugin.URL,
+	}
+
+	if err := h.ctx.DB.Create(&companyPlugin).Error; err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Plugin added successfully"})
+
 }

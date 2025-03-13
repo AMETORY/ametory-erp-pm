@@ -73,3 +73,22 @@ export const uploadFile = async (
     isMultipart: true,
   });
 };
+
+
+
+
+export const getSetting = async () => {
+  return await customFetch(`api/v1/setting`, {
+    method: "GET",
+  });
+};
+export const updateSetting = async (data: any) => {
+  return await customFetch(`api/v1/setting`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+export const getRapidAPIPlugins = async () => {
+  return await customFetch(`api/v1/rapid-api-plugins`, {
+  });
+};

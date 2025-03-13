@@ -28,6 +28,25 @@ func RbacUserMiddleware(erpContext *context.ERPContext, permissions []string) gi
 		c.Next()
 	}
 }
+func RbacSuperAdminMiddleware(erpContext *context.ERPContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		member := c.MustGet("member").(models.MemberModel)
+
+		erpContext.DB.Preload("Role.Permissions").Find(&member)
+
+		user := c.MustGet("user").(models.UserModel)
+		user.Roles = []models.RoleModel{*member.Role}
+
+		ok, err := CheckIsSuperAdminPermission(user)
+		if !ok {
+			c.JSON(403, gin.H{"message": err.Error(), "error": err.Error()})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
 
 func CheckPermission(user models.UserModel, permissionNames []string) (bool, error) {
 
@@ -47,4 +66,16 @@ func CheckPermission(user models.UserModel, permissionNames []string) (bool, err
 	}
 
 	return false, fmt.Errorf("permissions %s not found", strings.Join(permissionNames, ", "))
+}
+func CheckIsSuperAdminPermission(user models.UserModel) (bool, error) {
+
+	// Periksa izin
+	for _, role := range user.Roles {
+		if role.IsSuperAdmin {
+			return true, nil
+		}
+
+	}
+
+	return false, fmt.Errorf("user is not super admin")
 }

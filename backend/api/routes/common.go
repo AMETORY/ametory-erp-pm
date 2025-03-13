@@ -43,4 +43,8 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.POST("/api/v1/invite-member", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacUserMiddleware(erpContext, []string{"project_management:member:invite"}), commonHander.InviteMemberHandler)
 	r.GET("/api/v1/invited", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacUserMiddleware(erpContext, []string{"project_management:member:invite"}), commonHander.InvitedHandler)
 	r.DELETE("/api/v1/invited/:id", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacUserMiddleware(erpContext, []string{"project_management:member:invite"}), commonHander.DeleteInvitedHandler)
+	r.GET("/api/v1/setting", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.CompanySettingHandler)
+	r.PUT("/api/v1/setting", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.UpdateCompanySettingHandler)
+	r.GET("/api/v1/rapid-api-plugins", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.GetRapidAPIPluginsHandler)
+	r.POST("/api/v1/add-rapid-api-plugins", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.AddRapidAdpiPluginHandler)
 }

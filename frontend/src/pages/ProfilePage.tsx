@@ -27,7 +27,7 @@ const ProfilePage: FC<ProfilePageProps> = ({}) => {
   const [activeTab, setActiveTab] = useState(0);
 
   const renderInfo = () => (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-y-auto h-[calc(100vh-180px)]">
       <h1 className="text-3xl font-bold">Edit Profile</h1>
       <div className="bg-white rounded-lg p-4">
         <div className="flex flex-col gap-2 space-y-4">
@@ -71,6 +71,7 @@ const ProfilePage: FC<ProfilePageProps> = ({}) => {
               onChange={(e) =>
                 setProfile({ ...profile!, full_name: e.target.value })
               }
+              placeholder="Enter your name"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -80,6 +81,7 @@ const ProfilePage: FC<ProfilePageProps> = ({}) => {
               onChange={(e) =>
                 setProfile({ ...profile!, address: e.target.value })
               }
+              placeholder="Enter your address"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -91,6 +93,7 @@ const ProfilePage: FC<ProfilePageProps> = ({}) => {
               onChange={(e) =>
                 setProfile({ ...profile!, email: e.target.value })
               }
+              placeholder="Enter your email"
             />
           </div>
           <div>

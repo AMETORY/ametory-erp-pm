@@ -7,6 +7,7 @@ import (
 	"ametory-pm/services/app"
 	"ametory-pm/worker"
 	ctx "context"
+	"fmt"
 	"net/mail"
 	"os"
 
@@ -106,6 +107,12 @@ func main() {
 	emailSender.SetTemplate("../templates/email/layout.html", "../templates/email/body.html")
 
 	erpContext.EmailSender = emailSender
+
+	rapidApiService := services.NewRapidAdpiService(erpContext)
+
+	erpContext.AddThirdPartyService("RapidAPI", rapidApiService)
+
+	fmt.Println(erpContext.ThirdPartyServices)
 
 	routes.NewCommonRoutes(r, erpContext)
 	v1 := r.Group("/api/v1")

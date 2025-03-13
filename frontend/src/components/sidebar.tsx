@@ -1,7 +1,7 @@
 import { Tooltip } from "flowbite-react";
 import { useContext, useEffect, useState, type FC } from "react";
 import { AiOutlineDashboard } from "react-icons/ai";
-import { BsKanban, BsPeople } from "react-icons/bs";
+import { BsGear, BsKanban, BsPeople } from "react-icons/bs";
 import { GoTasklist } from "react-icons/go";
 import { HiOutlineChat } from "react-icons/hi";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
@@ -172,6 +172,21 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             </Tooltip>
             {!collapsed && (
               <span className="flex-1 ms-3 whitespace-nowrap">Contact</span>
+            )}
+           
+          </a>
+        </li>
+        <li className="" style={{ }}>
+          <a
+            href="#"
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+            onClick={handleNavigation("/setting")}
+          >
+            <Tooltip content="Setting">
+              <BsGear />
+            </Tooltip>
+            {!collapsed && (
+              <span className="flex-1 ms-3 whitespace-nowrap">Setting</span>
             )}
            
           </a>
