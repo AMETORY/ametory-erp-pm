@@ -26,6 +26,7 @@ func NewRapidAdpiService(erpContext *context.ERPContext) *RapidApiService {
 			&rapid_api_models.RapidApiPlugin{},
 			&rapid_api_models.RapidApiEndpoint{},
 			&rapid_api_models.RapidApiData{},
+			&rapid_api_models.RapidApiDataHistory{},
 			&rapid_api_models.CompanyRapidApiPlugin{},
 		)
 	}

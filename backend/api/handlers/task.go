@@ -458,6 +458,15 @@ func (h *TaskHandler) AddPluginHandler(c *gin.Context) {
 
 	input.ParsedData = resp
 
+	var history rapid_api_models.RapidApiDataHistory = rapid_api_models.RapidApiDataHistory{
+		RapidApiDataID:    input.ID,
+		Data:              string(b),
+		ChangedByMemberID: c.MustGet("memberID").(string),
+		ChangedAt:         time.Now(),
+	}
+	history.ID = utils.Uuid()
+	h.ctx.DB.Save(&history)
+
 	c.JSON(200, gin.H{"data": task, "message": "Task retrieved successfully"})
 }
 
@@ -510,5 +519,17 @@ func (h *TaskHandler) GetDataPluginHandler(c *gin.Context) {
 	h.ctx.DB.Save(&pluginData)
 
 	pluginData.ParsedData = resp
+
+	var history rapid_api_models.RapidApiDataHistory = rapid_api_models.RapidApiDataHistory{
+
+		RapidApiDataID:    pluginDataId,
+		Data:              string(b),
+		ChangedByMemberID: c.MustGet("memberID").(string),
+		ChangedAt:         time.Now(),
+	}
+
+	history.ID = utils.Uuid()
+	h.ctx.DB.Save(&history)
+
 	c.JSON(200, gin.H{"data": pluginData, "message": "Data retrieved successfully"})
 }

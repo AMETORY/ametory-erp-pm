@@ -161,7 +161,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
 
   const getAllCompanyPlugins = async () => {
     try {
-      setLoading(true);
+      // setLoading(true);
       const resp: any = await getCompanyRapidAPIPlugins();
       setCompanyPlugins(resp.data);
     } catch (error: any) {
@@ -741,6 +741,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
                       getTaskPluginData(project!.id!, activeTask!.id!, e.id)
                         .catch((err) => toast.error(`${err}`))
                         .then(() => {
+                          toast.success("Plugin refresh successfully");
                           getTaskPlugins(project!.id!, activeTask!.id!).then(
                             (resp: any) => {
                               setPluginDatas(resp.data);

@@ -45,11 +45,12 @@ import { getTask, moveTask, rearrangeTask } from "../services/api/taskApi";
 import TaskDetail from "../components/TaskDetail";
 import { generateUUID } from "../utils/helper";
 import toast, { Toaster } from "react-hot-toast";
-import { PiKanbanLight } from "react-icons/pi";
+import { PiKanbanLight, PiTable } from "react-icons/pi";
 import { IoStatsChartOutline } from "react-icons/io5";
 import ProjectSummary from "../components/ProjectSummary";
 import { FaChartGantt } from "react-icons/fa6";
 import GanttChart from "../components/GanttChart";
+import ProjectTable from "../components/ProjectTable";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -333,6 +334,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
       </DndContext>
     </div>
   );
+
   return (
     <AdminLayout>
       {project && (
@@ -353,13 +355,31 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
         }}
         className=""
       >
-        <Tabs.Item active={activeTab === 0} title="Summary" icon={IoStatsChartOutline}>
+        <Tabs.Item
+          active={activeTab === 0}
+          title="Summary"
+          icon={IoStatsChartOutline}
+        >
           {project && <ProjectSummary project={project} />}
         </Tabs.Item>
         <Tabs.Item active={activeTab === 1} title="Kanban" icon={PiKanbanLight}>
           {renderKanban()}
         </Tabs.Item>
-        <Tabs.Item active={activeTab === 1} title="Gantt Chart" icon={FaChartGantt}>
+        <Tabs.Item active={activeTab === 1} title="Table" icon={PiTable}>
+          {project && (
+            <ProjectTable
+              setActiveTask={setActiveTask}
+              setColumns={setColumns}
+              project={project}
+              columns={columns}
+            />
+          )}
+        </Tabs.Item>
+        <Tabs.Item
+          active={activeTab === 1}
+          title="Gantt Chart"
+          icon={FaChartGantt}
+        >
           {project && <GanttChart project={project} />}
         </Tabs.Item>
       </Tabs>

@@ -1,6 +1,8 @@
 package rapid_api_models
 
 import (
+	"time"
+
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 )
@@ -27,20 +29,31 @@ type RapidApiEndpoint struct {
 
 type RapidApiData struct {
 	shared.BaseModel
-	CompanyID          string              `json:"company_id,omitempty" gorm:"not null"`
-	Company            models.CompanyModel `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
-	Title              string              `json:"title,omitempty" gorm:"not null;type:varchar(100)"`
-	RapidApiEndpointID string              `json:"rapid_api_endpoint_id,omitempty" gorm:"not null;foreignKey:RapidApiEndpointID"`
-	RapidApiEndpoint   RapidApiEndpoint    `gorm:"foreignKey:RapidApiEndpointID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_endpoint,omitempty"`
-	RapidApiPluginID   string              `json:"rapid_api_plugin_id,omitempty" gorm:"not null;foreignKey:RapidApiPluginID"`
-	RapidApiPlugin     RapidApiPlugin      `gorm:"foreignKey:RapidApiPluginID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_plugin,omitempty"`
-	Data               string              `json:"data,omitempty" gorm:"type:JSON"`
-	Params             string              `json:"params,omitempty" gorm:"type:JSON"`
-	TaskID             string              `json:"task_id,omitempty" gorm:"not null"`
-	Task               models.TaskModel    `gorm:"foreignKey:TaskID" json:"task,omitempty"`
-	ThumbnailURL       string              `json:"thumbnail_url,omitempty"`
-	ParsedData         any                 `json:"parsed_data,omitempty" gorm:"-"`
-	ParsedParams       any                 `json:"parsed_params,omitempty" gorm:"-"`
+	CompanyID          string                `json:"company_id,omitempty" gorm:"not null"`
+	Company            models.CompanyModel   `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
+	Title              string                `json:"title,omitempty" gorm:"not null;type:varchar(100)"`
+	RapidApiEndpointID string                `json:"rapid_api_endpoint_id,omitempty" gorm:"not null;foreignKey:RapidApiEndpointID"`
+	RapidApiEndpoint   RapidApiEndpoint      `gorm:"foreignKey:RapidApiEndpointID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_endpoint,omitempty"`
+	RapidApiPluginID   string                `json:"rapid_api_plugin_id,omitempty" gorm:"not null;foreignKey:RapidApiPluginID"`
+	RapidApiPlugin     RapidApiPlugin        `gorm:"foreignKey:RapidApiPluginID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_plugin,omitempty"`
+	Data               string                `json:"data,omitempty" gorm:"type:JSON"`
+	Params             string                `json:"params,omitempty" gorm:"type:JSON"`
+	TaskID             string                `json:"task_id,omitempty" gorm:"not null"`
+	Task               models.TaskModel      `gorm:"foreignKey:TaskID" json:"task,omitempty"`
+	ThumbnailURL       string                `json:"thumbnail_url,omitempty"`
+	ParsedData         any                   `json:"parsed_data,omitempty" gorm:"-"`
+	ParsedParams       any                   `json:"parsed_params,omitempty" gorm:"-"`
+	History            []RapidApiDataHistory `json:"history" gorm:"foreignKey:RapidApiDataID"`
+}
+
+type RapidApiDataHistory struct {
+	shared.BaseModel
+	RapidApiDataID    string             `json:"rapid_api_data_id,omitempty" gorm:"not null;foreignKey:RapidApiDataID"`
+	RapidApiData      RapidApiData       `gorm:"foreignKey:RapidApiDataID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_data,omitempty"`
+	Data              string             `json:"data,omitempty" gorm:"type:JSON"`
+	ChangedByMemberID string             `json:"changed_by_member_id,omitempty"`
+	ChangedByMember   models.MemberModel `gorm:"foreignKey:ChangedByMemberID" json:"changed_by_member,omitempty"`
+	ChangedAt         time.Time          `json:"changed_at,omitempty" gorm:"not null"`
 }
 
 type RapidApiEndpointParams struct {
