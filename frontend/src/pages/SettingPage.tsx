@@ -30,6 +30,8 @@ import {
   RapidApiPluginModel,
 } from "../models/rapid_api";
 import Select, { InputActionMeta } from "react-select";
+import { LuLink, LuLink2 } from "react-icons/lu";
+import { Link } from "react-router-dom";
 
 interface SettingPageProps {}
 
@@ -97,7 +99,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
   };
 
   const renderInfo = () => (
-    <div className="flex flex-col gap-4 overflow-y-auto h-[calc(100vh-160px)]">
+    <div className="flex flex-col gap-4 overflow-y-auto h-[calc(100vh-160px)] p-2">
       <h1 className="text-3xl font-bold">Edit Company</h1>
       <div className="bg-white rounded-lg p-4">
         <div className="flex flex-col gap-2 space-y-4">
@@ -205,7 +207,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
     </div>
   );
   const renderPlugin = () => (
-    <div className="flex flex-col gap-4 overflow-y-auto h-[calc(100vh-160px)]">
+    <div className="flex flex-col gap-4 overflow-y-auto h-[calc(100vh-160px)] p-2">
       <div className="flex justify-between">
         <h1 className="text-3xl font-bold">Rapid API Plugin</h1>
         <Button
@@ -221,6 +223,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
       <Table>
         <Table.Head>
           <Table.HeadCell>Plugin Name</Table.HeadCell>
+          <Table.HeadCell>Plugin URL</Table.HeadCell>
           <Table.HeadCell>Key</Table.HeadCell>
           <Table.HeadCell>Host</Table.HeadCell>
           <Table.HeadCell>Actions</Table.HeadCell>
@@ -239,6 +242,9 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
               className="bg-white dark:border-gray-700 dark:bg-gray-800"
             >
               <Table.Cell>{plugin.rapid_api_plugin?.name}</Table.Cell>
+              <Table.Cell>
+                <Link className=" hover:text-blue-400 hover:underline" target="_blank" to={plugin.rapid_api_plugin?.url}>{plugin.rapid_api_plugin?.url}</Link>
+              </Table.Cell>
               <Table.Cell>{plugin.rapid_api_key}</Table.Cell>
               <Table.Cell>{plugin.rapid_api_host}</Table.Cell>
               <Table.Cell>
@@ -261,7 +267,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
                       deleteCompanyRapidAPIPlugin(
                         plugin?.rapid_api_plugin_id
                       ).then(() => {
-                        getCompanyRapidAPIPlugins();
+                        getAllCompanyPlugins();
                       });
                     }
                   }}
@@ -284,8 +290,9 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
         key: pluginKey,
         host: pluginHost,
       });
-      getAllPlugins();
+      getAllCompanyPlugins();
       toast.success("Plugin added successfully");
+      setModalPluginOpen(false);
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -312,7 +319,12 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
           >
             {renderInfo()}
           </Tabs.Item>
-          <Tabs.Item active={activeTab === 1} title="Plugin" icon={BsPlugin}>
+          <Tabs.Item
+            active={activeTab === 1}
+            title="Plugin"
+            icon={BsPlugin}
+            className=""
+          >
             {renderPlugin()}
           </Tabs.Item>
         </Tabs>
@@ -343,6 +355,15 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
                 placeholder="Select a plugin"
               />
             </div>
+            {selectedPlugin?.url && (
+              <div className="flex flex-col gap-1 ">
+                <Label htmlFor="plugin-name">URL</Label>
+                <div className="flex gap-2 items-center hover:underline cursor-pointer hover:text-blue-600" onClick={() => window.open(selectedPlugin?.url)}>
+                  {selectedPlugin?.url}{" "}
+                  <LuLink2  className="cursor-pointer text-gray-400 hover:text-gray-600" />
+                </div>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <Label htmlFor="plugin-key">Key</Label>
               <TextInput

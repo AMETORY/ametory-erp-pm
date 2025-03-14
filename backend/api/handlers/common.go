@@ -347,10 +347,16 @@ func (h *CommonHandler) AddRapidAdpiPluginHandler(c *gin.Context) {
 
 func (h *CommonHandler) GetCompanyPluginsHandler(c *gin.Context) {
 	var companyPlugins []rapid_api_models.CompanyRapidApiPlugin
-	err := h.ctx.DB.Preload("RapidApiPlugin").Where("company_id = ?", c.GetHeader("ID-Company")).Find(&companyPlugins).Error
+	err := h.ctx.DB.Preload("RapidApiPlugin.RapidApiEndpoints").Where("company_id = ?", c.GetHeader("ID-Company")).Find(&companyPlugins).Error
 	if err != nil {
 		c.JSON(400, gin.H{"error": err})
 		return
+	}
+	for i, v := range companyPlugins {
+		if len(v.RapidApiKey) > 30 {
+			v.RapidApiKey = v.RapidApiKey[:len(v.RapidApiKey)-30] + "******************************"
+		}
+		companyPlugins[i] = v
 	}
 	c.JSON(200, gin.H{"message": "get company plugins successfully", "data": companyPlugins})
 }

@@ -109,3 +109,7 @@ export const money = (val, friction = 2) => {
     if (!val) return 0;
     return val.toLocaleString('id-ID', { useGrouping: true, maximumFractionDigits: friction });
 }
+
+export const nl2br = (str) => {
+    return str.replace(/(\r\n|\n\r|\r|\n)/g, '<br>');
+}

@@ -29,3 +29,19 @@ export interface CompanyRapidApiPluginModel {
   rapid_api_key: string;
   rapid_api_host: string;
 }
+
+
+export interface RapidApiDataModel {
+  id: string;
+  company_id: string;
+  company: CompanyModel;
+  title: string;
+  rapid_api_endpoint_id: string;
+  rapid_api_endpoint: RapidApiEndpointModel;
+  rapid_api_plugin_id: string;
+  rapid_api_plugin: RapidApiPluginModel;
+  params: string;
+  task_id: string;
+  parsed_data: any;
+  parsed_params: any[];
+}

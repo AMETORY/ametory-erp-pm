@@ -2,7 +2,10 @@ import { Editor } from "@tinymce/tinymce-react";
 import {
   Avatar,
   Button,
+  Carousel,
   Datepicker,
+  Label,
+  Modal,
   Progress,
   Tabs,
   TabsRef,
@@ -18,16 +21,35 @@ import {
   type FC,
 } from "react";
 import toast from "react-hot-toast";
-import { HiAdjustments, HiClipboardList, HiUserCircle } from "react-icons/hi";
+import {
+  HiAdjustments,
+  HiClipboardList,
+  HiRefresh,
+  HiUserCircle,
+} from "react-icons/hi";
 import { MdClose, MdComment, MdDashboard, MdDone } from "react-icons/md";
 import { RiFullscreenFill } from "react-icons/ri";
 import Select, { InputActionMeta } from "react-select";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProjectModel } from "../models/project";
 import { TaskCommentModel, TaskModel } from "../models/task";
-import { addComment, getTask, updateTask } from "../services/api/taskApi";
-import { getColor, initial, invert, money } from "../utils/helper";
-import { BsActivity, BsCheck2Circle, BsPencil } from "react-icons/bs";
+import {
+  addComment,
+  addTaskPlugin,
+  getTask,
+  getTaskPluginData,
+  getTaskPlugins,
+  updateTask,
+} from "../services/api/taskApi";
+import { getColor, initial, invert, money, nl2br } from "../utils/helper";
+import {
+  BsActivity,
+  BsCheck2Circle,
+  BsCollection,
+  BsPencil,
+  BsQuote,
+  BsYoutube,
+} from "react-icons/bs";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
 import { ProfileContext } from "../contexts/ProfileContext";
 import { MentionsInput, Mention } from "react-mentions";
@@ -38,6 +60,18 @@ import { SiGoogleforms } from "react-icons/si";
 import { priorityOptions, severityOptions } from "../utils/constants";
 import { FormFieldType } from "../models/form";
 import { Link } from "react-router-dom";
+import { LoadingContext } from "../contexts/LoadingContext";
+import { getCompanyRapidAPIPlugins } from "../services/api/commonApi";
+import {
+  CompanyRapidApiPluginModel,
+  RapidApiDataModel,
+  RapidApiEndpointModel,
+} from "../models/rapid_api";
+import { LuLink } from "react-icons/lu";
+import { AiOutlineLike } from "react-icons/ai";
+import { PiBookmark, PiPlay, PiPlayCircle } from "react-icons/pi";
+import { IoShareOutline } from "react-icons/io5";
+import { FaDigg, FaRetweet } from "react-icons/fa6";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -50,6 +84,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   project,
   onSwitchFullscreen,
 }) => {
+  const { loading, setLoading } = useContext(LoadingContext);
   const { profile, setProfile } = useContext(ProfileContext);
   const tabsRef = useRef<TabsRef>(null);
 
@@ -66,7 +101,19 @@ const TaskDetail: FC<TaskDetailProps> = ({
   >([]);
   const [comments, setComments] = useState<TaskCommentModel[]>([]);
   const [emojis, setEmojis] = useState([]);
-
+  const [addPlugin, setAddPlugin] = useState(false);
+  const [companyPlugins, setCompanyPlugins] = useState<
+    CompanyRapidApiPluginModel[]
+  >([]);
+  const [selectedPlugin, setSelectedPlugin] =
+    useState<CompanyRapidApiPluginModel>();
+  const [selectedEnpoint, setSelectedEnpoint] =
+    useState<RapidApiEndpointModel>();
+  const [pluginTitle, setPluginTitle] = useState("");
+  const [pluginEndpointParams, setPluginEndpointParams] = useState<
+    { key: string; type: string; value: string }[]
+  >([]);
+  const [pluginDatas, setPluginDatas] = useState<RapidApiDataModel[]>([]);
   useEffect(() => {
     fetch(
       "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
@@ -98,7 +145,31 @@ const TaskDetail: FC<TaskDetailProps> = ({
       // console.log(task != activeTask)
       //   setIsEditted(true);
     }
-  }, [activeTask]);
+    if (mounted) {
+      getAllCompanyPlugins();
+      if (project && activeTask) {
+        getTaskPlugins(project!.id!, activeTask!.id!).then((resp: any) => {
+          setPluginDatas(resp.data);
+        });
+      }
+    }
+  }, [activeTask, mounted]);
+
+  useEffect(() => {
+    setPluginEndpointParams(JSON.parse(selectedEnpoint?.params ?? "[]"));
+  }, [selectedEnpoint]);
+
+  const getAllCompanyPlugins = async () => {
+    try {
+      setLoading(true);
+      const resp: any = await getCompanyRapidAPIPlugins();
+      setCompanyPlugins(resp.data);
+    } catch (error: any) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!mounted) return;
@@ -201,7 +272,13 @@ const TaskDetail: FC<TaskDetailProps> = ({
       case FormFieldType.ToggleSwitch:
         return val && <BsCheck2Circle />;
       case FormFieldType.FileUpload:
-        return val && <Link to={val} target="_blank">{val}</Link>;
+        return (
+          val && (
+            <Link to={val} target="_blank">
+              {val}
+            </Link>
+          )
+        );
       case FormFieldType.NumberField:
       case FormFieldType.Currency:
         return money(parseFloat(val));
@@ -240,6 +317,96 @@ const TaskDetail: FC<TaskDetailProps> = ({
       );
     }
   }, [activeTask]);
+
+  const renderCommentBox = () => (
+    <div className="flex flex-row gap-4 items-start p-2">
+      <Avatar
+        rounded
+        img={profile?.profile_picture?.url}
+        placeholderInitials={initial(profile?.full_name)}
+        alt="Avatar"
+        size="sm"
+      />
+      <div className="flex-1">
+        {/* <h3 className="text-xl font-semibold text-gray-600 mb-2">
+          {profile?.full_name}
+        </h3> */}
+        <MentionsInput
+          value={comment}
+          onChange={(val) => {
+            setComment(val.target.value);
+          }}
+          style={emojiStyle}
+          placeholder={
+            "Press ':' for emojis, mention people using '@' and shift+enter to send"
+          }
+          autoFocus
+          onKeyDown={async (val: any) => {
+            if (val.key === "Enter" && val.shiftKey) {
+              try {
+                setLoading(true);
+                if (comment) {
+                  await addComment(project!.id!, task.id!, {
+                    comment,
+                  });
+
+                  setComment("");
+
+                  toast.success("Comment added successfully");
+                  // tabsRef.current?.setActiveTab(1);
+                }
+              } catch (error) {
+                toast.error(`${error}`);
+              } finally {
+                setLoading(false);
+              }
+
+              return;
+            }
+          }}
+        >
+          <Mention
+            trigger="@"
+            data={(project?.members ?? []).map((member) => ({
+              id: member.id!,
+              display: member.user?.full_name!,
+            }))}
+            style={{
+              backgroundColor: "#cee4e5",
+            }}
+            appendSpaceOnAdd
+          />
+          <Mention
+            trigger=":"
+            markup="__id__"
+            regex={neverMatchingRegex}
+            data={queryEmojis}
+          />
+        </MentionsInput>
+        {/* <div className="flex justify-end mt-4">
+        <Button
+          className="w-32"
+          onClick={() => {
+            if (comment) {
+              addComment(project!.id!, task.id!, {
+                comment,
+              })
+                .catch(toast.error)
+                .then(() => {
+                  setComment("");
+
+                  toast.success("Comment added successfully");
+                  tabsRef.current?.setActiveTab(1);
+                });
+            }
+          }}
+        >
+          Submit
+        </Button>
+      </div> */}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -551,7 +718,448 @@ const TaskDetail: FC<TaskDetailProps> = ({
             />
           </div>
         )}
+        {companyPlugins.length > 0 && (
+          <div>
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-xl">Plugins</h3>
+              <Button
+                onClick={() => setAddPlugin(true)}
+                className="mt-4"
+                color="gray"
+                size="xs"
+              >
+                Add Plugin
+              </Button>
+            </div>
+            {pluginDatas.map((e) => (
+              <div key={e.id}>
+                <div className="flex gap-2 items-center">
+                  <h3 className="text-lg font-semibold">{e.title}</h3>
+                  <HiRefresh
+                    className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                    onClick={() => {
+                      getTaskPluginData(project!.id!, activeTask!.id!, e.id)
+                        .catch((err) => toast.error(`${err}`))
+                        .then(() => {
+                          getTaskPlugins(project!.id!, activeTask!.id!).then(
+                            (resp: any) => {
+                              setPluginDatas(resp.data);
+                            }
+                          );
+                        });
+                    }}
+                  />
+                </div>
+                <div className="flex flex-row gap-2">
+                  {e.parsed_data?.thumbnails && (
+                    <div className="aspect-square w-[300px] object-cover">
+                      <Carousel leftControl="<" rightControl=">">
+                        {(e.parsed_data?.thumbnails ?? []).map(
+                          (thumbail: any, i: number) => (
+                            <img src={thumbail} key={i} className=" " />
+                          )
+                        )}
+                      </Carousel>
+                    </div>
+                  )}
+                  <div className="w-full">
+                    <div className="flex justify-between">
+                      <h3 className="text-xl font[500] mb-2">Insight</h3>
+                    </div>
+                    <table className="w-full">
+                      <tbody>
+                        {e.parsed_params[0].value && (
+                          <tr>
+                            <td className="pr-2">Link</td>
+                            <td className="text-right"></td>
+                            <td className="w-1">
+                              <LuLink
+                                size={12}
+                                className=" text-blue-400 hover:text-blue-600 cursor-pointer"
+                                onClick={() => {
+                                  if (
+                                    e.parsed_data?.endpoint_key ==
+                                    "video_details"
+                                  ) {
+                                    window.open(
+                                      `https://www.youtube.com/watch?v=${e.parsed_data?.id}`
+                                    );
+                                    // window.open(e.parsed_params[0].value);
+                                  }
+                                  if (
+                                    e.parsed_data?.endpoint_key ==
+                                    "get_tweet_details"
+                                  ) {
+                                    window.open(
+                                      `https://x.com/${e.parsed_data?.user?.screen_name}/status/${e.parsed_data?.id_str}`
+                                    );
+                                    // window.open(e.parsed_params[0].value);
+                                  }
+                                  if (
+                                    e.parsed_data?.endpoint_key ==
+                                    "get_facebook_post_details"
+                                  ) {
+                                    window.open(e.parsed_data?.post_link);
+                                    // window.open(e.parsed_params[0].value);
+                                  }
+                                  if (
+                                    e.parsed_data?.endpoint_key ==
+                                    "get_post_detail"
+                                  ) {
+                                    window.open(
+                                      `https://www.tiktok.com/@${e.parsed_data?.author.uniqueId}/video/${e.parsed_data?.id}?is_from_webapp=1&sender_device=pc`
+                                    );
+                                    // window.open(e.parsed_params[0].value);
+                                  }
 
+                                  if (
+                                    e.parsed_data?.endpoint_key ==
+                                    "media_info_by_url_v2_media_info_by_url_get"
+                                  ) {
+                                    window.open(e.parsed_params[0].value);
+                                  }
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions && (
+                          <tr>
+                            <td className="pr-2">Reactions</td>
+                            <td className="text-right"></td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.Angry && (
+                          <tr>
+                            <td className="pr-2">Angry</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reactions?.Angry)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.Care && (
+                          <tr>
+                            <td className="pr-2">Care</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reactions?.Care)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.Haha && (
+                          <tr>
+                            <td className="pr-2">Haha</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reactions?.Haha)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.Love && (
+                          <tr>
+                            <td className="pr-2">Love</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reactions?.Love)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.Sad && (
+                          <tr>
+                            <td className="pr-2">Sad</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reactions?.Sad)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.Wow && (
+                          <tr>
+                            <td className="pr-2">Wow</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reactions?.Wow)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reactions?.total_reaction_count && (
+                          <tr>
+                            <td className="pr-2">Total Reaction Count</td>
+                            <td className="text-right">
+                              {money(
+                                e.parsed_data?.reactions?.total_reaction_count
+                              )}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.comments_count && (
+                          <tr>
+                            <td className="pr-2">Comments</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.comments_count)}
+                            </td>
+                            <td className="w-1">
+                              <GoComment size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.viewCount && (
+                          <tr>
+                            <td className="pr-2">Views</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.viewCount)}
+                            </td>
+                            <td className="w-1">
+                              <BsYoutube size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.likeCount && (
+                          <tr>
+                            <td className="pr-2">Likes</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.likeCount)}
+                            </td>
+                            <td className="w-1">
+                              <AiOutlineLike size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.commentCount && (
+                          <tr>
+                            <td className="pr-2">Comments</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.commentCount)}
+                            </td>
+                            <td className="w-1">
+                              <GoComment size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.share_count && (
+                          <tr>
+                            <td className="pr-2">Share Count</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.share_count)}
+                            </td>
+                            <td className="w-1"></td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.stats?.collectCount && (
+                          <tr>
+                            <td className="pr-2">Collects</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.stats?.collectCount)}
+                            </td>
+                            <td className="w-1">
+                              <BsCollection size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.stats?.commentCount && (
+                          <tr>
+                            <td className="pr-2">Comments</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.stats?.commentCount)}
+                            </td>
+                            <td className="w-1">
+                              <GoComment size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.stats?.playCount && (
+                          <tr>
+                            <td className="pr-2">Plays</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.stats?.playCount)}
+                            </td>
+                            <td className="w-1">
+                              <PiPlayCircle size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.stats?.shareCount && (
+                          <tr>
+                            <td className="pr-2">Shares</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.stats?.shareCount)}
+                            </td>
+                            <td className="w-1">
+                              <IoShareOutline size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.stats?.diggCount && (
+                          <tr>
+                            <td className="pr-2">Diggs</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.stats?.diggCount)}
+                            </td>
+                            <td className="w-1">
+                              <FaDigg size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.favorite_count && (
+                          <tr>
+                            <td className="pr-2">Favorites</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.favorite_count)}
+                            </td>
+                            <td className="w-1">
+                              <AiOutlineLike size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.like_count && (
+                          <tr>
+                            <td className="pr-2">Likes</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.like_count)}
+                            </td>
+                            <td className="w-1">
+                              <AiOutlineLike size={12} />
+                            </td>
+                          </tr>
+                        )}
+
+                        {e.parsed_data?.reply_count && (
+                          <tr>
+                            <td className="pr-2">Replies</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reply_count)}
+                            </td>
+                            <td className="w-1">
+                              <GoComment size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.comment_count && (
+                          <tr>
+                            <td className="pr-2">Comments</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.comment_count)}
+                            </td>
+                            <td className="w-1">
+                              <GoComment size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.play_count && (
+                          <tr>
+                            <td className="pr-2">Plays</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.play_count)}
+                            </td>
+                            <td className="w-1">
+                              <PiPlay size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.retweet_count && (
+                          <tr>
+                            <td className="pr-2">Retweets</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.retweet_count)}
+                            </td>
+                            <td className="w-1">
+                              <FaRetweet size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.quote_count && (
+                          <tr>
+                            <td className="pr-2">Quotes</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.quote_count)}
+                            </td>
+                            <td className="w-1">
+                              <BsQuote size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.save_count && (
+                          <tr>
+                            <td className="pr-2">Saves</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.save_count)}
+                            </td>
+                            <td className="w-1">
+                              <PiBookmark size={12} />
+                            </td>
+                          </tr>
+                        )}
+                        {e.parsed_data?.reshare_count && (
+                          <tr>
+                            <td className="pr-2">Reshares</td>
+                            <td className="text-right">
+                              {money(e.parsed_data?.reshare_count)}
+                            </td>
+                            <td className="w-1">
+                              <IoShareOutline size={12} />
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+
+                    {e.parsed_data?.caption && (
+                      <div
+                        className="text-xs mt-4"
+                        dangerouslySetInnerHTML={{
+                          __html: nl2br(e.parsed_data?.caption.text),
+                        }}
+                      />
+                    )}
+                    {e.parsed_data?.full_text && (
+                      <div
+                        className="text-xs mt-4"
+                        dangerouslySetInnerHTML={{
+                          __html: nl2br(e.parsed_data?.full_text),
+                        }}
+                      />
+                    )}
+                    {e.parsed_data?.desc && (
+                      <div
+                        className="text-xs mt-4"
+                        dangerouslySetInnerHTML={{
+                          __html: nl2br(e.parsed_data?.desc),
+                        }}
+                      />
+                    )}
+                    {e.parsed_data?.values?.text && (
+                      <div
+                        className="text-xs mt-4"
+                        dangerouslySetInnerHTML={{
+                          __html: nl2br(e.parsed_data?.values?.text),
+                        }}
+                      />
+                    )}
+                    {e.parsed_data?.title && (
+                      <div
+                        className="text-sm font-[500] mt-4 "
+                        dangerouslySetInnerHTML={{
+                          __html: nl2br(e.parsed_data?.title),
+                        }}
+                      />
+                    )}
+                    {e.parsed_data?.description && (
+                      <div
+                        className="text-xs mt-4"
+                        dangerouslySetInnerHTML={{
+                          __html: nl2br(e.parsed_data?.description),
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <Tabs
           aria-label="Default tabs"
           variant="default"
@@ -562,84 +1170,9 @@ const TaskDetail: FC<TaskDetailProps> = ({
           }}
           className="mt-4"
         >
-          <Tabs.Item active title="Add Comments" icon={GoComment}>
-            <div className="flex flex-row gap-4 items-start">
-              <Avatar
-                rounded
-                img={profile?.profile_picture?.url}
-                placeholderInitials={initial(profile?.full_name)}
-                alt="Avatar"
-                size="md"
-              />
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  {profile?.full_name}
-                </h3>
-                {/* <Editor
-                  apiKey={process.env.REACT_APP_TINY_MCE_KEY}
-                  init={{
-                    plugins:
-                      "anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount textcolor colorpicker",
-                    toolbar: "emoticons | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor",
-                    menubar: false,
-                    statusbar: false,
-                    height: 150,
-                  }}
-                  onChange={(e: any) => {
-                    setComment(e.target.getContent());
-                  }}
-                /> */}
-                <MentionsInput
-                  value={comment}
-                  onChange={(val) => {
-                    setComment(val.target.value);
-                  }}
-                  style={emojiStyle}
-                  placeholder={"Press ':' for emojis, mention people using '@'"}
-                  autoFocus
-                >
-                  <Mention
-                    trigger="@"
-                    data={(project?.members ?? []).map((member) => ({
-                      id: member.id!,
-                      display: member.user?.full_name!,
-                    }))}
-                    style={{
-                      backgroundColor: "#cee4e5",
-                    }}
-                    appendSpaceOnAdd
-                  />
-                  <Mention
-                    trigger=":"
-                    markup="__id__"
-                    regex={neverMatchingRegex}
-                    data={queryEmojis}
-                  />
-                </MentionsInput>
-                <div className="flex justify-end mt-4">
-                  <Button
-                    className="w-32"
-                    onClick={() => {
-                      if (comment) {
-                        addComment(project!.id!, task.id!, {
-                          comment,
-                        })
-                          .catch(toast.error)
-                          .then(() => {
-                            setComment("");
-
-                            toast.success("Comment added successfully");
-                            tabsRef.current?.setActiveTab(1);
-                          });
-                      }
-                    }}
-                  >
-                    Submit
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Tabs.Item>
+          {/* <Tabs.Item active title="Add Comments" icon={GoComment}>
+            {renderCommentBox()}
+          </Tabs.Item> */}
           <Tabs.Item
             title={
               <div className="flex flex-row gap-1">
@@ -655,75 +1188,82 @@ const TaskDetail: FC<TaskDetailProps> = ({
             }
             icon={GoCommentDiscussion}
           >
-            <div className="space-y-2">
-              {(activeTask?.comments ?? []).map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`flex items-start gap-2 p-2  dark:bg-gray-800 ${
-                    profile?.id == comment?.member?.user_id
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  {profile?.id != comment?.member?.user_id && (
-                    <Avatar
-                      rounded
-                      img={comment.member?.user?.profile_picture?.url}
-                      alt="Avatar"
-                      size="sm"
-                      placeholderInitials={initial(
-                        comment.member?.user?.full_name
+            <div className=" ">
+              <div className="h-[calc(50vh-60px)]   overflow-y-auto">
+                <div className="space-y-2">
+                  {(activeTask?.comments ?? []).map((comment) => (
+                    <div
+                      key={comment.id}
+                      className={`flex items-start gap-2 p-2  dark:bg-gray-800 ${
+                        profile?.id == comment?.member?.user_id
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
+                      {profile?.id != comment?.member?.user_id && (
+                        <Avatar
+                          rounded
+                          img={comment.member?.user?.profile_picture?.url}
+                          alt="Avatar"
+                          size="sm"
+                          placeholderInitials={initial(
+                            comment.member?.user?.full_name
+                          )}
+                          className="py-2"
+                        />
                       )}
-                      className="py-2"
-                    />
-                  )}
 
-                  <div className="flex flex-col rounded bg-gray-100 p-2 min-w-[300px] ">
-                    <div className="flex justify-between items-end">
-                      <span className="font-medium text-gray-800 dark:text-white">
-                        {comment.member?.user?.full_name}
-                      </span>
-                      <Moment fromNow className="text-xs">
-                        {comment?.published_at}
-                      </Moment>
+                      <div className="flex flex-col rounded bg-gray-100 p-2 min-w-[300px] ">
+                        <div className="flex justify-between items-end">
+                          <span className="font-medium text-gray-800 dark:text-white">
+                            {comment.member?.user?.full_name}
+                          </span>
+                          <Moment fromNow className="text-xs">
+                            {comment?.published_at}
+                          </Moment>
+                        </div>
+                        <span className="text-gray-600 dark:text-gray-300">
+                          {parseMentions(comment.comment ?? "", (type, id) => {
+                            // console.log(type, id);
+                          })}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {parseMentions(comment.comment ?? "", (type, id) => {
-                        // console.log(type, id);
-                      })}
-                    </span>
-                  </div>
+                  ))}
+                  {/* <div className="flex justify-center">
+                  <Button
+                    color="gray"
+                    onClick={() => {
+                      tabsRef.current?.setActiveTab(0);
+                    }}
+                  >
+                    Add New Comment
+                  </Button>
+                </div> */}
                 </div>
-              ))}
-              <div className="flex justify-center">
-                <Button
-                  color="gray"
-                  onClick={() => {
-                    tabsRef.current?.setActiveTab(0);
-                  }}
-                >
-                  Add New Comment
-                </Button>
               </div>
+              <div className="h-[60px]">{renderCommentBox()}</div>
             </div>
           </Tabs.Item>
           <Tabs.Item title="Activity" icon={BsActivity}>
-            <ul className="space-y-4">
-              {activeTask?.activities?.map((activity) => (
-                <li
-                  key={activity.id}
-                  className="p-2 bg-gray-100 px-4 py-2 w-fit rounded-lg"
-                >
-                  <span className="text-gray-600 dark:text-gray-300 hover:font-semibold">
-                    {activity.member?.user?.full_name}
-                  </span>{" "}
-                  <strong>
-                    {activity.activity_type?.replaceAll("_", " ")}
-                  </strong>{" "}
-                  at <Moment fromNow>{activity.activity_date}</Moment>
-                </li>
-              ))}
-            </ul>
+            <div className="h-[calc(50vh-60px)]   overflow-y-auto">
+              <ul className="space-y-4">
+                {activeTask?.activities?.map((activity) => (
+                  <li
+                    key={activity.id}
+                    className="p-2 bg-gray-100 px-4 py-2 w-fit rounded-lg"
+                  >
+                    <span className="text-gray-600 dark:text-gray-300 hover:font-semibold">
+                      {activity.member?.user?.full_name}
+                    </span>{" "}
+                    <strong>
+                      {activity.activity_type?.replaceAll("_", " ")}
+                    </strong>{" "}
+                    at <Moment fromNow>{activity.activity_date}</Moment>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </Tabs.Item>
           {activeTask?.form_response && (
             <Tabs.Item title="Form Response" icon={SiGoogleforms}>
@@ -773,6 +1313,132 @@ const TaskDetail: FC<TaskDetailProps> = ({
           </Button>
         </div>
       )}
+      <Modal show={addPlugin} onClose={() => setAddPlugin(false)}>
+        <Modal.Header>Add Plugin</Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4 flex flex-col">
+            <div className="flex flex-col gap-1 ">
+              <Label htmlFor="plugin-name">Title</Label>
+              <TextInput
+                placeholder="Title"
+                value={pluginTitle}
+                onChange={(el) => {
+                  setPluginTitle(el.target.value);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1 ">
+              <Label htmlFor="plugin-name">Plugin Name</Label>
+              <Select
+                id="plugin-name"
+                value={
+                  selectedPlugin
+                    ? {
+                        label: selectedPlugin.rapid_api_plugin?.name,
+                        value: selectedPlugin.rapid_api_plugin_id,
+                      }
+                    : null
+                }
+                onChange={(option) => {
+                  setSelectedPlugin(
+                    companyPlugins.find(
+                      (e) => e.rapid_api_plugin_id == option?.value
+                    )
+                  );
+                  setSelectedEnpoint(undefined);
+                }}
+                options={companyPlugins.map((plugin) => ({
+                  label: plugin.rapid_api_plugin?.name,
+                  value: plugin.rapid_api_plugin_id,
+                }))}
+                placeholder="Select a plugin"
+              />
+            </div>
+            {selectedPlugin && (
+              <div className="flex flex-col gap-1 ">
+                <Label htmlFor="plugin-name">End Point</Label>
+                <Select
+                  id="plugin-name"
+                  value={
+                    selectedEnpoint
+                      ? {
+                          label: selectedEnpoint.title,
+                          value: selectedEnpoint.id,
+                        }
+                      : null
+                  }
+                  onChange={(option) => {
+                    setSelectedEnpoint(
+                      (
+                        selectedPlugin?.rapid_api_plugin?.rapid_api_endpoints ??
+                        []
+                      ).find((e) => e.id == option?.value)
+                    );
+                  }}
+                  options={(
+                    selectedPlugin?.rapid_api_plugin?.rapid_api_endpoints ?? []
+                  ).map((endpoint) => ({
+                    label: endpoint.title,
+                    value: endpoint.id,
+                  }))}
+                  placeholder="Select a plugin"
+                />
+              </div>
+            )}
+            {selectedPlugin && selectedEnpoint && (
+              <div>
+                {pluginEndpointParams.map((e: any, i: number) => (
+                  <div className="flex flex-col gap-1 " key={i}>
+                    <Label htmlFor="plugin-name">{e["key"]}</Label>
+                    <TextInput
+                      value={e["value"]}
+                      placeholder={e["key"]}
+                      onChange={(el) => {
+                        setPluginEndpointParams([
+                          ...pluginEndpointParams.map((p, j) => {
+                            if (j == i) {
+                              return { ...p, value: el.target.value };
+                            }
+                            return p;
+                          }),
+                        ]);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="h-[160px]"></div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                addTaskPlugin(project!.id!, activeTask!.id!, {
+                  task_id: activeTask!.id,
+                  title: pluginTitle,
+                  rapid_api_endpoint_id: selectedEnpoint!.id,
+                  rapid_api_plugin_id: selectedPlugin!.rapid_api_plugin_id,
+                  params: JSON.stringify(pluginEndpointParams),
+                })
+                  .then((v) => {
+                    toast.success("Plugin added successfully");
+                    setAddPlugin(false);
+                    getTaskPlugins(project!.id!, activeTask!.id!).then(
+                      (resp: any) => {
+                        setPluginDatas(resp.data);
+                      }
+                    );
+                  })
+                  .catch(toast.error);
+              }}
+            >
+              Save
+            </Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

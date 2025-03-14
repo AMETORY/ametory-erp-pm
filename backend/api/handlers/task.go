@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	rapid_api_models "ametory-pm/models/rapid_api"
+	"ametory-pm/services"
 	"ametory-pm/services/app"
 	"encoding/json"
 	"fmt"
@@ -9,15 +11,17 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm/clause"
 )
 
 type TaskHandler struct {
-	ctx        *context.ERPContext
-	pmService  *project_management.ProjectManagementService
-	appService *app.AppService
+	ctx             *context.ERPContext
+	pmService       *project_management.ProjectManagementService
+	appService      *app.AppService
+	rapidApiService *services.RapidApiService
 }
 
 func NewTaskHandler(ctx *context.ERPContext) *TaskHandler {
@@ -30,10 +34,15 @@ func NewTaskHandler(ctx *context.ERPContext) *TaskHandler {
 	if !ok {
 		panic("AppService is not instance of app.AppService")
 	}
+	rapidApiService, ok := ctx.ThirdPartyServices["RapidAPI"].(*services.RapidApiService)
+	if !ok {
+		panic("RapidApiService is not instance of services.RapidApiService")
+	}
 	return &TaskHandler{
-		ctx:        ctx,
-		pmService:  pmService,
-		appService: appService,
+		ctx:             ctx,
+		pmService:       pmService,
+		appService:      appService,
+		rapidApiService: rapidApiService,
 	}
 }
 
@@ -335,4 +344,171 @@ func (h *TaskHandler) WatchedTaskHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"data": tasks, "message": "My Tasks retrieved successfully"})
+}
+func (h *TaskHandler) GetTaskPluginsHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	taskId := c.Param("taskId")
+
+	task, err := h.pmService.TaskService.GetTaskByID(taskId)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	if task.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Task not found in project"})
+		return
+	}
+
+	companyID := c.GetHeader("ID-Company")
+	var plugins []rapid_api_models.RapidApiData
+	err = h.ctx.DB.Preload("RapidApiEndpoint").Preload("RapidApiPlugin").Model(&rapid_api_models.RapidApiData{}).Find(&plugins, "company_id = ? and task_id = ? ", companyID, taskId).Error
+	if err != nil {
+		// c.JSON(500, gin.H{"error": err.Error()})
+		fmt.Println(err)
+		// return
+	}
+
+	for i, v := range plugins {
+		if v.Data != "" {
+			parsed := map[string]any{}
+			json.Unmarshal([]byte(v.Data), &parsed)
+			v.ParsedData = parsed
+		}
+		if v.Params != "" {
+			parsedParams := []map[string]any{}
+			json.Unmarshal([]byte(v.Params), &parsedParams)
+			v.ParsedParams = parsedParams
+		}
+		v.Data = ""
+		plugins[i] = v
+	}
+	c.JSON(200, gin.H{"data": plugins, "message": "Plugins retrieved successfully"})
+}
+func (h *TaskHandler) AddPluginHandler(c *gin.Context) {
+	input := rapid_api_models.RapidApiData{}
+
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	projectId := c.Param("id")
+	taskId := c.Param("taskId")
+
+	task, err := h.pmService.TaskService.GetTaskByID(taskId)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	if task.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Task not found in project"})
+		return
+	}
+	companyID := c.GetHeader("ID-Company")
+	input.ID = utils.Uuid()
+	input.Data = "{}"
+	input.CompanyID = companyID
+
+	err = h.ctx.DB.Save(&input).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	params := []map[string]any{}
+	err = json.Unmarshal([]byte(input.Params), &params)
+	if err != nil {
+		fmt.Println("ERROR #1", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	var plugin rapid_api_models.RapidApiPlugin
+	err = h.ctx.DB.Find(&plugin, "id = ?", input.RapidApiPluginID).Error
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	var pluginEndpoint rapid_api_models.RapidApiEndpoint
+	err = h.ctx.DB.Find(&pluginEndpoint, "id = ?", input.RapidApiEndpointID).Error
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := h.rapidApiService.GetData(plugin, pluginEndpoint, params, companyID)
+	if err != nil {
+		fmt.Println("ERROR #2", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	b, err := json.Marshal(resp)
+
+	if err != nil {
+		fmt.Println("ERROR #3", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	input.Data = string(b)
+
+	h.ctx.DB.Save(&input)
+
+	input.ParsedData = resp
+
+	c.JSON(200, gin.H{"data": task, "message": "Task retrieved successfully"})
+}
+
+func (h *TaskHandler) GetDataPluginHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	taskId := c.Param("taskId")
+	pluginDataId := c.Param("pluginId")
+
+	task, err := h.pmService.TaskService.GetTaskByID(taskId)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	if task.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Task not found in project"})
+		return
+	}
+
+	pluginData := rapid_api_models.RapidApiData{}
+	err = h.ctx.DB.Preload("RapidApiPlugin").Preload("RapidApiEndpoint").Find(&pluginData, "id = ?", pluginDataId).Error
+	if err != nil {
+		fmt.Println("ERROR #0", err)
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	params := []map[string]any{}
+	err = json.Unmarshal([]byte(pluginData.Params), &params)
+	if err != nil {
+		fmt.Println("ERROR #1", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	resp, err := h.rapidApiService.GetData(pluginData.RapidApiPlugin, pluginData.RapidApiEndpoint, params, pluginData.CompanyID)
+	if err != nil {
+		fmt.Println("ERROR #2", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	b, err := json.Marshal(resp)
+
+	if err != nil {
+		fmt.Println("ERROR #3", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	pluginData.Data = string(b)
+
+	h.ctx.DB.Save(&pluginData)
+
+	pluginData.ParsedData = resp
+	c.JSON(200, gin.H{"data": pluginData, "message": "Data retrieved successfully"})
 }

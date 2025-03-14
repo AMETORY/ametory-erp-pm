@@ -16,29 +16,31 @@ type RapidApiPlugin struct {
 
 type RapidApiEndpoint struct {
 	shared.BaseModel
-	Title            string                   `json:"title" gorm:"not null;type:varchar(100)"`
-	Key              string                   `json:"key" gorm:"not null;type:varchar(100)"`
-	Method           string                   `json:"method" gorm:"not null;type:varchar(100)"`
-	Params           string                   `json:"params" gorm:"not null;type:JSON"`
-	URL              string                   `json:"url" gorm:"not null;type:varchar(255)"`
-	RapidApiPluginID string                   `json:"rapid_api_plugin_id" gorm:"not null;foreignKey:RapidApiPluginID"`
-	ParamData        []RapidApiEndpointParams `gorm:"-"`
+	Title            string `json:"title" gorm:"not null;type:varchar(100)"`
+	Key              string `json:"key" gorm:"not null;type:varchar(100)"`
+	Method           string `json:"method" gorm:"not null;type:varchar(100)"`
+	Params           string `json:"params" gorm:"not null;type:JSON"`
+	URL              string `json:"url" gorm:"not null;type:varchar(255)"`
+	RapidApiPluginID string `json:"rapid_api_plugin_id" gorm:"not null;foreignKey:RapidApiPluginID"`
+	// ParamData        []RapidApiEndpointParams `gorm:"-"`
 }
 
 type RapidApiData struct {
 	shared.BaseModel
-	CompanyID          string              `json:"company_id" gorm:"not null"`
-	Company            models.CompanyModel `gorm:"foreignKey:CompanyID"`
-	Title              string              `json:"title" gorm:"not null;type:varchar(100)"`
-	RapidApiEndpointID string              `json:"rapid_api_endpoint_id" gorm:"not null;foreignKey:RapidApiEndpointID"`
-	RapidApiEndpoint   RapidApiEndpoint    `gorm:"foreignKey:RapidApiEndpointID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	RapidApiPluginID   string              `json:"rapid_api_plugin_id" gorm:"not null;foreignKey:RapidApiPluginID"`
-	RapidApiPlugin     RapidApiPlugin      `gorm:"foreignKey:RapidApiPluginID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Data               string              `json:"data" gorm:"type:JSON"`
-	Params             string              `json:"params" gorm:"type:JSON"`
-	TaskID             string              `json:"task_id" gorm:"not null"`
-	Task               models.TaskModel    `gorm:"foreignKey:TaskID" json:"task"`
-	ThumbnailURL       string              `json:"thumbnail_url"`
+	CompanyID          string              `json:"company_id,omitempty" gorm:"not null"`
+	Company            models.CompanyModel `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
+	Title              string              `json:"title,omitempty" gorm:"not null;type:varchar(100)"`
+	RapidApiEndpointID string              `json:"rapid_api_endpoint_id,omitempty" gorm:"not null;foreignKey:RapidApiEndpointID"`
+	RapidApiEndpoint   RapidApiEndpoint    `gorm:"foreignKey:RapidApiEndpointID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_endpoint,omitempty"`
+	RapidApiPluginID   string              `json:"rapid_api_plugin_id,omitempty" gorm:"not null;foreignKey:RapidApiPluginID"`
+	RapidApiPlugin     RapidApiPlugin      `gorm:"foreignKey:RapidApiPluginID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"rapid_api_plugin,omitempty"`
+	Data               string              `json:"data,omitempty" gorm:"type:JSON"`
+	Params             string              `json:"params,omitempty" gorm:"type:JSON"`
+	TaskID             string              `json:"task_id,omitempty" gorm:"not null"`
+	Task               models.TaskModel    `gorm:"foreignKey:TaskID" json:"task,omitempty"`
+	ThumbnailURL       string              `json:"thumbnail_url,omitempty"`
+	ParsedData         any                 `json:"parsed_data,omitempty" gorm:"-"`
+	ParsedParams       any                 `json:"parsed_params,omitempty" gorm:"-"`
 }
 
 type RapidApiEndpointParams struct {
