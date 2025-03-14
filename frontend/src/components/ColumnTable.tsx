@@ -44,14 +44,14 @@ const ColumnTable: FC<ColumnTableProps> = ({
   });
 
   return (
-    <div className="bg-white p-4 rounded-lg" {...attributes} ref={setNodeRef}>
+    <div className="bg-white p-4 rounded-lg" {...attributes} ref={setNodeRef} style={{ backgroundColor: column.color }}>
       <div className="flex gap-2">
-        <div className="w-3" style={{ backgroundColor: column.color }}></div>
+        <div >{column.icon}</div>
         <h3 className="text-lg font-semibold" {...listeners}>
           {column.name}
         </h3>
       </div>
-      <table className="w-full">
+      <table className="w-full ">
         <thead>
           <tr className="bg-gray-50">
             <td className="px-2 py-2 border w-1/4 font-semibold">Task Name</td>

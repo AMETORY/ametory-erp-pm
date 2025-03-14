@@ -164,67 +164,69 @@ const ProjectTable: FC<ProjectTableProps> = ({
   );
 
   return (
-    <DndContext
-      onDragEnd={handleDragEnd}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      sensors={sensors}
-    >
-      <SortableContext
-        items={columns.map((column) => ({
-          id: column.id as UniqueIdentifier,
-        }))}
-        strategy={horizontalListSortingStrategy}
+    <div className="h-[calc(100vh-240px)] overflow-y-auto">
+      <DndContext
+        onDragEnd={handleDragEnd}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        sensors={sensors}
       >
-        <div className="w-full px-4 space-y-4">
-          {columns.map((column, i) => (
-            <ColumnTable
-              key={i}
-              projectId={project!.id!}
-              column={column}
-              columns={columns}
-              onChange={setColumns}
-              onChangeColumn={(val) => {
-                setColumns([
-                  ...columns.map((c) => {
-                    if (c.id === val.id) {
-                      return val;
-                    }
-                    return c;
-                  }),
-                ]);
-              }}
-              onSelectTask={(val) => {
-                setActiveTask(val);
-                // console.log(val);
-              }}
-              onAddItem={(val) => {
-                getTask(project!.id!, val)
-                  .then((resp: any) => setActiveTask(resp.data))
-                  .catch(toast.error);
-              }}
-            />
-          ))}
-        </div>
-        <DragOverlay>
-          {dragColumn && activeColumn ? (
-            <ColumnTable
-              projectId={project!.id!}
-              column={activeColumn!}
-              columns={columns}
-              onChange={setColumns}
-              onChangeColumn={(val) => {}}
-              onSelectTask={(val) => {
-                // console.log(val);
-              }}
-              onAddItem={(val) => {}}
-            />
-          ) : (
-            <TaskTable task={activeCard!} onSelectTask={(val) => {}} />
-          )}
-        </DragOverlay>
-      </SortableContext>
-    </DndContext>
+        <SortableContext
+          items={columns.map((column) => ({
+            id: column.id as UniqueIdentifier,
+          }))}
+          strategy={horizontalListSortingStrategy}
+        >
+          <div className="w-full px-4 space-y-4">
+            {columns.map((column, i) => (
+              <ColumnTable
+                key={i}
+                projectId={project!.id!}
+                column={column}
+                columns={columns}
+                onChange={setColumns}
+                onChangeColumn={(val) => {
+                  setColumns([
+                    ...columns.map((c) => {
+                      if (c.id === val.id) {
+                        return val;
+                      }
+                      return c;
+                    }),
+                  ]);
+                }}
+                onSelectTask={(val) => {
+                  setActiveTask(val);
+                  // console.log(val);
+                }}
+                onAddItem={(val) => {
+                  getTask(project!.id!, val)
+                    .then((resp: any) => setActiveTask(resp.data))
+                    .catch(toast.error);
+                }}
+              />
+            ))}
+          </div>
+          <DragOverlay>
+            {dragColumn && activeColumn ? (
+              <ColumnTable
+                projectId={project!.id!}
+                column={activeColumn!}
+                columns={columns}
+                onChange={setColumns}
+                onChangeColumn={(val) => {}}
+                onSelectTask={(val) => {
+                  // console.log(val);
+                }}
+                onAddItem={(val) => {}}
+              />
+            ) : (
+              <TaskTable task={activeCard!} onSelectTask={(val) => {}} />
+            )}
+          </DragOverlay>
+        </SortableContext>
+      </DndContext>
+    </div>
   );
 };
 export default ProjectTable;
