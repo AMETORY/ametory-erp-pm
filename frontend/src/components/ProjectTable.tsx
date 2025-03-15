@@ -221,7 +221,7 @@ const ProjectTable: FC<ProjectTableProps> = ({
                 onAddItem={(val) => {}}
               />
             ) : (
-              <TaskTable task={activeCard!} onSelectTask={(val) => {}} />
+              <TaskTable column={activeColumn} task={activeCard!} onSelectTask={(val) => {}} />
             )}
           </DragOverlay>
         </SortableContext>

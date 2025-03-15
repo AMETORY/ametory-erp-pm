@@ -38,12 +38,12 @@ const ProjectHeader: FC<ProjectHeaderProps> = ({ project, onChange }) => {
       <div className="max-w-[70%] group/item">
         <div className="flex flex-row items-center gap-2">
           <h1 className="text-2xl font-bold">{project?.name}</h1>
-          <BsPencil
+          {/* <BsPencil
             className="group/edit invisible group-hover/item:visible text-gray-600 cursor-pointer"
             onClick={() => {
               setModalProjectEdit(true);
             }}
-          />
+          /> */}
         </div>
         <p className="line-clamp-1">{project?.description}</p>
       </div>

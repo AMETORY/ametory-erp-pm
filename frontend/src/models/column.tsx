@@ -8,4 +8,5 @@ export interface ColumnModel {
   order?: number;
   color?: string;
   tasks?: TaskModel[];
+  count_tasks?: number;
 }

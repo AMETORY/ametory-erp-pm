@@ -107,6 +107,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 		"column_id":        input.ColumnID,
 		"source_column_id": input.SourceColumnID,
 		"sender_id":        c.MustGet("userID").(string),
+		"project_id":       projectId,
 	}
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
@@ -185,9 +186,10 @@ func (h *TaskHandler) CreateTaskHandler(c *gin.Context) {
 	}
 
 	msg := gin.H{
-		"message":   "Task created successfully",
-		"column_id": input.ColumnID,
-		"sender_id": c.MustGet("userID").(string),
+		"message":    "Task created successfully",
+		"column_id":  input.ColumnID,
+		"sender_id":  c.MustGet("userID").(string),
+		"project_id": input.ProjectID,
 	}
 	b, _ := json.Marshal(msg)
 	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {

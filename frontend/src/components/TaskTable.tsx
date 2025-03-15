@@ -2,19 +2,21 @@ import type { FC } from "react";
 import { TaskModel } from "../models/task";
 import Moment from "react-moment";
 import { Avatar } from "flowbite-react";
-import { initial } from "../utils/helper";
+import { colorToStyle, getColor, initial } from "../utils/helper";
 import { useSortable } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { randomUUID } from "crypto";
 import { BsCheck2Circle } from "react-icons/bs";
 import { GoCommentDiscussion } from "react-icons/go";
+import { ColumnModel } from "../models/column";
 
 interface TaskTableProps {
+  column?: ColumnModel | null
   task: TaskModel | null;
   onSelectTask: (task: TaskModel) => void;
 }
 
-const TaskTable: FC<TaskTableProps> = ({ task, onSelectTask }) => {
+const TaskTable: FC<TaskTableProps> = ({ column, task, onSelectTask }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
       id: task ? (task?.id as UniqueIdentifier) : crypto.randomUUID(),
@@ -23,7 +25,14 @@ const TaskTable: FC<TaskTableProps> = ({ task, onSelectTask }) => {
   if (!task)
     return (
       <tr ref={setNodeRef} {...attributes}>
-        <td colSpan={4} className="text-center py-4 text-gray-500 border bg-white">
+        <td
+          colSpan={4}
+          className="text-center py-4 text-gray-500 border bg-white"
+          style={{
+            borderLeftColor: column?.color,
+            borderLeftWidth: "4px",
+          }}
+        >
           No tasks available.
         </td>
       </tr>
@@ -38,6 +47,10 @@ const TaskTable: FC<TaskTableProps> = ({ task, onSelectTask }) => {
       <td
         className="px-2 py-2 border min-w-[200px] hover:font-semibold"
         onClick={() => task && onSelectTask(task)}
+        style={{
+          borderLeftColor: colorToStyle(getColor(task?.percentage ?? 0)),
+          borderLeftWidth: "4px",
+        }}
       >
         <div className="flex justify-between">
           {task?.name}
@@ -53,7 +66,6 @@ const TaskTable: FC<TaskTableProps> = ({ task, onSelectTask }) => {
                 <GoCommentDiscussion />
               </div>
             )}
-            
           </div>
         </div>
       </td>

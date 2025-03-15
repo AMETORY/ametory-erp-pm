@@ -26,6 +26,16 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		projectGroup.PUT("/:id/add-column", projectHandler.AddNewColumnHandler)
 		projectGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:update"}), projectHandler.UpdateProjectHandler)
 		projectGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:delete"}), projectHandler.DeleteProjectHandler)
+		projectGroup.GET("/:id/count-completed", projectHandler.CountCompletedTasksHandler)
+		projectGroup.GET("/:id/count-updated", projectHandler.CountUpdatedTasksHandler)
+		projectGroup.GET("/:id/count-created", projectHandler.CountCreatedTasksHandler)
+		projectGroup.GET("/:id/count-due-tasks", projectHandler.CountDueTasksHandler)
+		projectGroup.GET("/:id/count-next-due-tasks", projectHandler.CountNextDueTasksHandler)
+		projectGroup.GET("/:id/recent-activities", projectHandler.GetRecentActivities)
+		projectGroup.GET("/:id/count-tasks-by-priority", projectHandler.CountTasksByPriorityHandler)
+		projectGroup.GET("/:id/count-tasks-by-severity", projectHandler.CountTasksBySeverityHandler)
+		projectGroup.GET("/:id/count-tasks-by-column", projectHandler.CountColumnTasksHandler)
+
 		projectTaskGroup := projectGroup.Group("/:id/task")
 		{
 			projectTaskGroup.GET("/:taskId/detail", taskHandler.GetTaskDetailHandler)

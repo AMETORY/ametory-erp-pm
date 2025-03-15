@@ -1,56 +1,50 @@
-import type { FC } from "react";
-import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   DndContext,
+  DragEndEvent,
+  DragOverEvent,
   DragOverlay,
-  closestCorners,
+  DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  UniqueIdentifier,
   useSensor,
   useSensors,
-  DragEndEvent,
-  useDroppable,
-  DragStartEvent,
-  DragOverEvent,
-  UniqueIdentifier,
-  closestCenter,
 } from "@dnd-kit/core";
-import { Droppable } from "../components/droppable";
 import {
   SortableContext,
-  verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
-  useSortable,
+  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import SortableItem from "../components/sortable";
-import AdminLayout from "../components/layouts/admin";
-import TaskCard from "../components/TaskCard";
-import { TaskModel } from "../models/task";
-import { ColumnModel } from "../models/column";
-import ColumnCard from "../components/ColumnCard";
 import { Drawer, Tabs, TabsRef } from "flowbite-react";
-import { BsListTask } from "react-icons/bs";
+import type { FC } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { BsGear, BsListTask } from "react-icons/bs";
+import { FaChartGantt } from "react-icons/fa6";
+import { IoStatsChartOutline } from "react-icons/io5";
+import { PiKanbanLight, PiTable } from "react-icons/pi";
+import { useLocation, useParams } from "react-router-dom";
+import ColumnCard from "../components/ColumnCard";
+import GanttChart from "../components/GanttChart";
+import AdminLayout from "../components/layouts/admin";
+import ProjectHeader from "../components/ProjectHeader";
+import ProjectSetting from "../components/ProjectSetting";
+import ProjectSummary from "../components/ProjectSummary";
+import ProjectTable from "../components/ProjectTable";
+import TaskCard from "../components/TaskCard";
+import TaskDetail from "../components/TaskDetail";
+import { ProfileContext } from "../contexts/ProfileContext";
+import { WebsocketContext } from "../contexts/WebsocketContext";
+import { ColumnModel } from "../models/column";
+import { ProjectModel } from "../models/project";
+import { TaskModel } from "../models/task";
 import {
   addNewColumn,
   getProject,
   rearrangeColumns,
 } from "../services/api/projectApi";
-import { useLocation, useParams } from "react-router-dom";
-import { ProjectModel } from "../models/project";
-import { WebsocketContext } from "../contexts/WebsocketContext";
-import { ProfileContext } from "../contexts/ProfileContext";
-import ProjectHeader from "../components/ProjectHeader";
 import { getTask, moveTask, rearrangeTask } from "../services/api/taskApi";
-import TaskDetail from "../components/TaskDetail";
 import { generateUUID } from "../utils/helper";
-import toast, { Toaster } from "react-hot-toast";
-import { PiKanbanLight, PiTable } from "react-icons/pi";
-import { IoStatsChartOutline } from "react-icons/io5";
-import ProjectSummary from "../components/ProjectSummary";
-import { FaChartGantt } from "react-icons/fa6";
-import GanttChart from "../components/GanttChart";
-import ProjectTable from "../components/ProjectTable";
 interface ProjectDetailProps {}
 
 const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
@@ -365,7 +359,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
         <Tabs.Item active={activeTab === 1} title="Kanban" icon={PiKanbanLight}>
           {renderKanban()}
         </Tabs.Item>
-        <Tabs.Item active={activeTab === 1} title="Table" icon={PiTable}>
+        <Tabs.Item active={activeTab === 2} title="Table" icon={PiTable}>
           {project && (
             <ProjectTable
               setActiveTask={setActiveTask}
@@ -376,11 +370,25 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           )}
         </Tabs.Item>
         <Tabs.Item
-          active={activeTab === 1}
+          active={activeTab === 3}
           title="Gantt Chart"
           icon={FaChartGantt}
         >
           {project && <GanttChart project={project} />}
+        </Tabs.Item>
+        <Tabs.Item
+          active={activeTab === 4}
+          title="Preference & Setting"
+          icon={BsGear}
+        >
+          {project && (
+            <ProjectSetting
+              project={project}
+              onChangeProject={(val) => {
+                setProject(val);
+              }}
+            />
+          )}
         </Tabs.Item>
       </Tabs>
       {activeTask && project && (

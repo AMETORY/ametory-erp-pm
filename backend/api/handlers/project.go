@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
@@ -285,4 +287,244 @@ func (h *ProjectHandler) GetMembersHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"data": members})
+}
+func (h *ProjectHandler) CountCompletedTasksHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	var count int64
+
+	days, _ := strconv.Atoi(c.Query("days"))
+	if days == 0 {
+		days = 7
+	}
+	// Query to count tasks completed in the last days for the given project
+	err := h.ctx.DB.Model(&models.TaskModel{}).
+		Where("project_id = ? AND completed = ? AND completed_date >= ?", projectId, true, time.Now().AddDate(0, 0, -days)).
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"count": count, "message": "Completed tasks counted successfully"})
+}
+
+func (h *ProjectHandler) CountUpdatedTasksHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	var count int64
+
+	days, _ := strconv.Atoi(c.Query("days"))
+	if days == 0 {
+		days = 7
+	}
+	// Query to count tasks updated in the last days for the given project
+	err := h.ctx.DB.Model(&models.TaskModel{}).
+		Where("project_id = ? AND updated_at >= ?", projectId, time.Now().AddDate(0, 0, -days)).
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"count": count, "message": "Updated tasks counted successfully"})
+}
+
+func (h *ProjectHandler) CountCreatedTasksHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	var count int64
+
+	days, _ := strconv.Atoi(c.Query("days"))
+	if days == 0 {
+		days = 7
+	}
+	// Query to count tasks created in the last days for the given project
+	err := h.ctx.DB.Model(&models.TaskModel{}).
+		Where("project_id = ? AND created_at >= ?", projectId, time.Now().AddDate(0, 0, -days)).
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"count": count, "message": "Created tasks counted successfully"})
+}
+
+func (h *ProjectHandler) CountDueTasksHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	var count int64
+
+	days, _ := strconv.Atoi(c.Query("days"))
+	if days == 0 {
+		days = 7
+	}
+	// Query to count tasks whose due date is in the last days for the given project
+	err := h.ctx.DB.Model(&models.TaskModel{}).
+		Where("project_id = ? AND end_date <= ?", projectId, time.Now().AddDate(0, 0, days)).
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"count": count, "message": "Due tasks counted successfully"})
+}
+
+func (h *ProjectHandler) CountNextDueTasksHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	var count int64
+
+	days, _ := strconv.Atoi(c.Query("days"))
+	if days == 0 {
+		days = 7
+	}
+	// Query to count tasks whose due date is in the next days for the given project
+	err := h.ctx.DB.Model(&models.TaskModel{}).
+		Where("project_id = ? AND end_date > ? AND end_date <= ?", projectId, time.Now(), time.Now().AddDate(0, 0, days)).
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"count": count, "message": "Next due tasks counted successfully"})
+}
+
+func (h *ProjectHandler) CountColumnTasksHandler(c *gin.Context) {
+	projectId := c.Param("id")
+
+	var columns []models.ColumnModel
+
+	// Query to retrieve columns in the given project
+	err := h.ctx.DB.Model(&models.ColumnModel{}).
+		Where("project_id = ?", projectId).
+		Find(&columns).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	for i, column := range columns {
+		var count int64
+
+		// Query to count tasks in the given column
+		err := h.ctx.DB.Model(&models.TaskModel{}).
+			Where("project_id = ? AND column_id = ?", projectId, column.ID).
+			Count(&count).Error
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		column.CountTasks = count
+		columns[i] = column
+	}
+
+	c.JSON(200, gin.H{"data": columns, "message": "Tasks in the columns counted successfully"})
+
+}
+
+func (h *ProjectHandler) GetRecentActivities(c *gin.Context) {
+	projectId := c.Param("id")
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if limit == 0 {
+		limit = 10
+	}
+	activities, err := h.pmService.ProjectService.GetRecentActivities(projectId, limit)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": activities, "message": "Recent activities retrieved successfully"})
+}
+
+func (h *ProjectHandler) CountTasksByPriorityHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	priorities := []string{"LOW", "MEDIUM", "HIGH", "URGENT"}
+	var result []map[string]any
+
+	// Query to count tasks based on priority for the given project
+	for _, priority := range priorities {
+		var count int64
+		err := h.ctx.DB.Model(&models.TaskModel{}).
+			Where("project_id = ? AND priority = ?", projectId, priority).
+			Count(&count).Error
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		result = append(result, map[string]any{
+			"value": priority,
+			"label": strings.ToTitle(priority),
+			"color": getPriorityColor(priority),
+			"count": count,
+		})
+	}
+
+	c.JSON(200, gin.H{"data": result, "message": "Tasks counted by priority successfully"})
+}
+
+func getPriorityColor(priority string) string {
+	switch priority {
+	case "LOW":
+		return "#8BC34A"
+	case "MEDIUM":
+		return "#F7DC6F"
+	case "HIGH":
+		return "#FFC107"
+	case "URGENT":
+		return "#F44336"
+	default:
+		return "#000000"
+	}
+}
+
+func (h *ProjectHandler) CountTasksBySeverityHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	severities := []string{"LOW", "MEDIUM", "HIGH", "CRITICAL"}
+	var result []map[string]any
+
+	// Query to count tasks based on severity for the given project
+	for _, severity := range severities {
+		var count int64
+		err := h.ctx.DB.Model(&models.TaskModel{}).
+			Where("project_id = ? AND severity = ?", projectId, severity).
+			Count(&count).Error
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		result = append(result, map[string]any{
+			"value": severity,
+			"label": strings.ToTitle(severity),
+			"color": getSeverityColor(severity),
+			"count": count,
+		})
+	}
+
+	c.JSON(200, gin.H{"data": result, "message": "Tasks counted by severity successfully"})
+}
+
+func getSeverityColor(severity string) string {
+	switch severity {
+	case "LOW":
+		return "#8BC34A"
+	case "MEDIUM":
+		return "#F7DC6F"
+	case "HIGH":
+		return "#FFC107"
+	case "CRITICAL":
+		return "#F44336"
+	default:
+		return "#000000"
+	}
 }
