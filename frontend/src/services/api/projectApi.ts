@@ -1,5 +1,5 @@
 import { customFetch } from "./baseApi";
-import { ProjectModel } from "../../models/project";
+import { ProjectModel, ProjectPreference } from "../../models/project";
 import { PaginationRequest } from "../../objects/pagination";
 
 export const createProject = async (project: ProjectModel) => {
@@ -72,6 +72,15 @@ export const updateProject = async (id: string, project: ProjectModel) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(project),
+  });
+};
+export const updateProjectPreference = async (id: string, data: ProjectPreference) => {
+  return await customFetch(`api/v1/project/${id}/preference`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
   });
 };
 

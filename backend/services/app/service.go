@@ -2,6 +2,7 @@ package app
 
 import (
 	"ametory-pm/config"
+	"ametory-pm/models/project"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
@@ -17,6 +18,11 @@ type AppService struct {
 }
 
 func NewAppService(erpContext *context.ERPContext, config *config.Config, redis *redis.Client, ws *melody.Melody) *AppService {
+	if !erpContext.SkipMigration {
+		erpContext.DB.AutoMigrate(
+			&project.ProjectPreferenceModel{},
+		)
+	}
 	return &AppService{
 		ctx:       erpContext,
 		Config:    config,

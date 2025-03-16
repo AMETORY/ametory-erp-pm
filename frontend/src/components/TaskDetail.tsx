@@ -31,7 +31,7 @@ import { MdClose, MdComment, MdDashboard, MdDone } from "react-icons/md";
 import { RiFullscreenFill } from "react-icons/ri";
 import Select, { InputActionMeta } from "react-select";
 import { WebsocketContext } from "../contexts/WebsocketContext";
-import { ProjectModel } from "../models/project";
+import { ProjectModel, ProjectPreference } from "../models/project";
 import { TaskCommentModel, TaskModel } from "../models/task";
 import {
   addComment,
@@ -84,6 +84,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   project,
   onSwitchFullscreen,
 }) => {
+  const [preference, setPreference] = useState<ProjectPreference>();
   const { loading, setLoading } = useContext(LoadingContext);
   const { profile, setProfile } = useContext(ProfileContext);
   const tabsRef = useRef<TabsRef>(null);
@@ -145,7 +146,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
       // console.log(task != activeTask)
       //   setIsEditted(true);
     }
-    if (mounted) {
+    if (mounted && preference?.rapid_api_enabled) {
       getAllCompanyPlugins();
       if (project && activeTask) {
         getTaskPlugins(project!.id!, activeTask!.id!).then((resp: any) => {
@@ -153,7 +154,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
         });
       }
     }
-  }, [activeTask, mounted]);
+  }, [activeTask, mounted, preference]);
 
   useEffect(() => {
     setPluginEndpointParams(JSON.parse(selectedEnpoint?.params ?? "[]"));
@@ -198,7 +199,10 @@ const TaskDetail: FC<TaskDetailProps> = ({
 
   const getDetail = (id: string) => {
     getTask(task.project_id!, id)
-      .then((resp: any) => setActiveTask(resp.data))
+      .then((resp: any) => {
+        setActiveTask(resp.data)
+        setPreference(resp.preference)
+      })
       .catch(toast.error);
   };
 
@@ -718,7 +722,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
             />
           </div>
         )}
-        {companyPlugins.length > 0 && (
+        {companyPlugins.length > 0 && preference?.rapid_api_enabled && (
           <div>
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-xl">Plugins</h3>

@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	prj "ametory-pm/models/project"
 	rapid_api_models "ametory-pm/models/rapid_api"
 	"ametory-pm/services"
 	"ametory-pm/services/app"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -59,7 +62,16 @@ func (h *TaskHandler) GetTaskDetailHandler(c *gin.Context) {
 		c.JSON(404, gin.H{"error": "Task not found in project"})
 		return
 	}
-	c.JSON(200, gin.H{"data": task, "message": "Task retrieved successfully"})
+
+	var preference prj.ProjectPreferenceModel
+	err = h.ctx.DB.First(&preference, "project_id = ?", projectId).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			preference.ProjectID = projectId
+			h.ctx.DB.Create(&preference)
+		}
+	}
+	c.JSON(200, gin.H{"data": task, "message": "Task retrieved successfully", "preference": preference})
 }
 func (h *TaskHandler) GetTasksHandler(c *gin.Context) {
 	projectId := c.Param("id")

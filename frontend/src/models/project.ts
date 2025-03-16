@@ -11,6 +11,7 @@ export interface ProjectModel {
     columns?: ColumnModel[];
     members?: MemberModel[];
     tasks?: TaskModel[];
+    preference?: ProjectPreference;
 }
 export interface IndustryColumn {
     name: string;
@@ -38,4 +39,13 @@ export interface ProjectActivityModel {
     task_id?: string;
     task?: TaskModel;
     activity_date?: Date;
+}
+
+
+export interface ProjectPreference {
+    project_id: string;
+    rapid_api_enabled: boolean;
+    contact_enabled: boolean;
+    custom_attribute_enabled: boolean;
+    gemini_enabled: boolean;
 }

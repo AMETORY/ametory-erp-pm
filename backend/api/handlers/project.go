@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	prj "ametory-pm/models/project"
 	"ametory-pm/services/app"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,6 +16,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -62,7 +65,16 @@ func (h *ProjectHandler) GetProjectHandler(c *gin.Context) {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": project})
+
+	var preference prj.ProjectPreferenceModel
+	err = h.ctx.DB.First(&preference, "project_id = ?", project.ID).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			preference.ProjectID = project.ID
+			h.ctx.DB.Create(&preference)
+		}
+	}
+	c.JSON(200, gin.H{"data": project, "preference": preference})
 }
 
 func (h *ProjectHandler) CreateProjectHandler(c *gin.Context) {
@@ -119,6 +131,34 @@ func (h *ProjectHandler) CreateProjectHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Project created successfully", "project": project})
 }
 
+func (h *ProjectHandler) UpdateProjectPreferenceHandler(c *gin.Context) {
+	memberID := c.MustGet("memberID").(string)
+	id := c.Param("id")
+	project, err := h.pmService.ProjectService.GetProjectByID(id, &memberID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	var preference prj.ProjectPreferenceModel
+	if err := c.ShouldBindJSON(&preference); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	// fmt.Println(preference)
+	if err := h.ctx.DB.Where("project_id = ?", project.ID).Model(&prj.ProjectPreferenceModel{}).Updates(map[string]any{
+		"rapid_api_enabled":        preference.RapidApiEnabled.Bool,
+		"contact_enabled":          preference.ContactEnabled.Bool,
+		"custom_attribute_enabled": preference.CustomAttributeEnabled.Bool,
+		"gemini_enabled":           preference.GeminiEnabled.Bool,
+	}).Error; err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Project preference updated successfully"})
+
+}
 func (h *ProjectHandler) UpdateProjectHandler(c *gin.Context) {
 	id := c.Param("id")
 	var project models.ProjectModel

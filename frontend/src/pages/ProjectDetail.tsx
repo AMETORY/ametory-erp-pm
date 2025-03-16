@@ -36,7 +36,7 @@ import TaskDetail from "../components/TaskDetail";
 import { ProfileContext } from "../contexts/ProfileContext";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ColumnModel } from "../models/column";
-import { ProjectModel } from "../models/project";
+import { ProjectModel, ProjectPreference } from "../models/project";
 import { TaskModel } from "../models/task";
 import {
   addNewColumn,
@@ -65,6 +65,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
   const queryParams = new URLSearchParams(location.search);
   const tabsRef = useRef<TabsRef>(null);
   const [activeTab, setActiveTab] = useState(1);
+  const [preference, setPreference] = useState<ProjectPreference>();
 
   // Example usage:
   const taskId = queryParams.get("task_id");
@@ -94,6 +95,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
       if (wsMsg.command == "RELOAD") {
         getProject(projectId).then((resp: any) => {
           setProject(resp.data);
+          setPreference(resp.preference);
           setColumns(
             resp.data.columns.map((column: any) => {
               return {
@@ -111,6 +113,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
     if (!projectId) return;
     getProject(projectId).then((resp: any) => {
       setProject(resp.data);
+      setPreference(resp.preference);
       setColumns(
         resp.data.columns.map((column: any) => {
           return {
@@ -381,11 +384,15 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           title="Preference & Setting"
           icon={BsGear}
         >
-          {project && (
+          {project && preference && (
             <ProjectSetting
               project={project}
+              preference={preference}
               onChangeProject={(val) => {
                 setProject(val);
+              }}
+              onChangePreference={(val) => {
+                setPreference(val);
               }}
             />
           )}

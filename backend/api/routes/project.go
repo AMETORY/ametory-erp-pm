@@ -25,6 +25,7 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		projectGroup.PUT("/:id/rearrange-columns", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:update"}), projectHandler.RearrangeColumnsHandler)
 		projectGroup.PUT("/:id/add-column", projectHandler.AddNewColumnHandler)
 		projectGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:update"}), projectHandler.UpdateProjectHandler)
+		projectGroup.PUT("/:id/preference", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:update"}), projectHandler.UpdateProjectPreferenceHandler)
 		projectGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:project:delete"}), projectHandler.DeleteProjectHandler)
 		projectGroup.GET("/:id/count-completed", projectHandler.CountCompletedTasksHandler)
 		projectGroup.GET("/:id/count-updated", projectHandler.CountUpdatedTasksHandler)
