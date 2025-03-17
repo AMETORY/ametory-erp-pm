@@ -256,7 +256,7 @@ func (h *FormHandler) FormResponseHandler(c *gin.Context) {
 		section := s.(map[string]any)
 		for j, f := range section["fields"].([]any) {
 			field := f.(map[string]any)
-			if field["type"].(string) == string(models.FileUpload) {
+			if field["type"].(string) == string(models.FileUpload) && field["value"] != nil {
 				file := models.FileModel{
 					FileName: utils.RandString(8, false),
 				}

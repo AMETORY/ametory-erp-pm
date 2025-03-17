@@ -27,3 +27,5 @@ yarn-error.log*
 
 build
 config.yaml
+frontend/.env.staging
+ametory-pm.zip
