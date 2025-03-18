@@ -19,6 +19,7 @@ type ProjectPreferenceModel struct {
 	ContactEnabled         sql.NullBool        `json:"contact_enabled,omitempty" gorm:"type:bool;default:false"`
 	CustomAttributeEnabled sql.NullBool        `json:"custom_attribute_enabled,omitempty" gorm:"type:bool;default:false"`
 	GeminiEnabled          sql.NullBool        `json:"gemini_enabled,omitempty" gorm:"type:bool;default:false"`
+	FormEnabled            sql.NullBool        `json:"form_enabled,omitempty" gorm:"type:bool;default:false"`
 }
 
 func (ProjectPreferenceModel) TableName() string {
@@ -42,12 +43,14 @@ func (p ProjectPreferenceModel) MarshalJSON() ([]byte, error) {
 		ContactEnabled         bool   `json:"contact_enabled"`
 		CustomAttributeEnabled bool   `json:"custom_attribute_enabled"`
 		GeminiEnabled          bool   `json:"gemini_enabled"`
+		FormEnabled            bool   `json:"form_enabled"`
 	}{
 		ProjectID:              p.ProjectID,
 		RapidApiEnabled:        p.RapidApiEnabled.Bool,
 		ContactEnabled:         p.ContactEnabled.Bool,
 		CustomAttributeEnabled: p.CustomAttributeEnabled.Bool,
 		GeminiEnabled:          p.GeminiEnabled.Bool,
+		FormEnabled:            p.FormEnabled.Bool,
 	})
 }
 
@@ -60,6 +63,7 @@ func (p *ProjectPreferenceModel) UnmarshalJSON(data []byte) error {
 		ContactEnabled         bool   `json:"contact_enabled"`
 		CustomAttributeEnabled bool   `json:"custom_attribute_enabled"`
 		GeminiEnabled          bool   `json:"gemini_enabled"`
+		FormEnabled            bool   `json:"form_enabled"`
 	}
 	if err := json.Unmarshal(data, &a); err != nil {
 		return err
@@ -81,6 +85,10 @@ func (p *ProjectPreferenceModel) UnmarshalJSON(data []byte) error {
 	p.GeminiEnabled = sql.NullBool{
 		Bool:  a.GeminiEnabled,
 		Valid: a.GeminiEnabled,
+	}
+	p.FormEnabled = sql.NullBool{
+		Bool:  a.FormEnabled,
+		Valid: a.FormEnabled,
 	}
 
 	return nil

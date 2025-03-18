@@ -3,6 +3,7 @@ import AdminLayout from "../components/layouts/admin";
 import {
   Button,
   FileInput,
+  HR,
   Label,
   Modal,
   Table,
@@ -21,7 +22,7 @@ import {
   updateSetting,
   uploadFile,
 } from "../services/api/commonApi";
-import { SettingModel } from "../models/setting";
+import { CompanyModel } from "../models/company";
 import toast from "react-hot-toast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import { FileModel } from "../models/file";
@@ -32,13 +33,15 @@ import {
 import Select, { InputActionMeta } from "react-select";
 import { LuLink, LuLink2 } from "react-icons/lu";
 import { Link } from "react-router-dom";
+import { ActiveCompanyContext } from "../contexts/CompanyContext";
 
 interface SettingPageProps {}
 
 const SettingPage: FC<SettingPageProps> = ({}) => {
+  const { activeCompany, setActiveCompany } = useContext(ActiveCompanyContext);
   const tabsRef = useRef<TabsRef>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [setting, setSetting] = useState<SettingModel>();
+  const [company, setCompany] = useState<CompanyModel>();
   const [mounted, setMounted] = useState(false);
   const { loading, setLoading } = useContext(LoadingContext);
   const [file, setFile] = useState<FileModel>();
@@ -68,7 +71,8 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
     try {
       setLoading(true);
       const resp: any = await getSetting();
-      setSetting(resp.data);
+      setCompany(resp.data);
+      setActiveCompany(resp.data);
     } catch (error: any) {
       toast.error(`${error}`);
     } finally {
@@ -91,7 +95,21 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
       setLoading(true);
       const resp: any = await getCompanyRapidAPIPlugins();
       setCompanyPlugins(resp.data);
+      
     } catch (error: any) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateCompanySetting = async () => {
+    try {
+      setLoading(true);
+      //   await updateProfile(profile!);
+      await updateSetting(company!);
+      toast.success("Company updated successfully");
+    } catch (error) {
       toast.error(`${error}`);
     } finally {
       setLoading(false);
@@ -103,11 +121,11 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
       <h1 className="text-3xl font-bold">Edit Company</h1>
       <div className="bg-white rounded-lg p-4">
         <div className="flex flex-col gap-2 space-y-4">
-          {setting?.logo && (
+          {company?.logo && (
             <div className="flex justify-center py-4 items-center">
               <img
                 className="w-64 h-64 aspect-square object-cover rounded-full"
-                src={setting?.logo}
+                src={company?.logo}
                 alt="profile"
               />
             </div>
@@ -126,8 +144,8 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
                     console.log(val);
                   }).then((v: any) => {
                     setFile(v.data);
-                    setSetting({
-                      ...setting!,
+                    setCompany({
+                      ...company!,
                       logo: v.data.url,
                     });
                   });
@@ -139,10 +157,10 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
             <label className="text-sm font-medium">Name</label>
             <TextInput
               type="text"
-              value={setting?.name}
+              value={company?.name}
               name="company_name"
               onChange={(e) =>
-                setSetting({ ...setting!, name: e.target.value })
+                setCompany({ ...company!, name: e.target.value })
               }
               placeholder="Enter company name"
             />
@@ -150,10 +168,10 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Address</label>
             <Textarea
-              value={setting?.address}
+              value={company?.address}
               name="address"
               onChange={(e) =>
-                setSetting({ ...setting!, address: e.target.value })
+                setCompany({ ...company!, address: e.target.value })
               }
               placeholder="Enter company address"
             />
@@ -162,10 +180,10 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
             <label className="text-sm font-medium">Email</label>
             <TextInput
               type="email"
-              value={setting?.email}
+              value={company?.email}
               name="email"
               onChange={(e) =>
-                setSetting({ ...setting!, email: e.target.value })
+                setCompany({ ...company!, email: e.target.value })
               }
               placeholder="Enter company email"
             />
@@ -175,9 +193,9 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
             <TextInput
               type="text"
               name="phone"
-              value={setting?.phone}
+              value={company?.phone}
               onChange={(e) =>
-                setSetting({ ...setting!, phone: e.target.value })
+                setCompany({ ...company!, phone: e.target.value })
               }
               placeholder="Enter company phone"
             />
@@ -186,18 +204,7 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
             <Button
               type="submit"
               className="mt-8 w-32"
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  //   await updateProfile(profile!);
-                  await updateSetting(setting!);
-                  toast.success("Company updated successfully");
-                } catch (error) {
-                  toast.error(`${error}`);
-                } finally {
-                  setLoading(false);
-                }
-              }}
+              onClick={updateCompanySetting}
             >
               Save
             </Button>
@@ -243,7 +250,13 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
             >
               <Table.Cell>{plugin.rapid_api_plugin?.name}</Table.Cell>
               <Table.Cell>
-                <Link className=" hover:text-blue-400 hover:underline" target="_blank" to={plugin.rapid_api_plugin?.url}>{plugin.rapid_api_plugin?.url}</Link>
+                <Link
+                  className=" hover:text-blue-400 hover:underline"
+                  target="_blank"
+                  to={plugin.rapid_api_plugin?.url}
+                >
+                  {plugin.rapid_api_plugin?.url}
+                </Link>
               </Table.Cell>
               <Table.Cell>{plugin.rapid_api_key}</Table.Cell>
               <Table.Cell>{plugin.rapid_api_host}</Table.Cell>
@@ -279,6 +292,36 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
           ))}
         </Table.Body>
       </Table>
+      <HR />
+      <h1 className="text-3xl font-bold">Gemini</h1>
+      <div className="flex flex-row  items-center">
+        <label className="text-sm font-medium w-1/4">API Key</label>
+
+        <TextInput
+          type="text"
+          placeholder="Gemini API Key"
+          className="w-3/4"
+          value={company?.setting?.gemini_api_key ?? ""}
+          onChange={(el) => {
+            setCompany({
+              ...company!,
+              setting: {
+                ...company!.setting!,
+                gemini_api_key: el.target.value,
+                company_id: company?.id!,
+              },
+            });
+          }}
+        />
+      </div>
+
+      <div>
+        <Button type="submit" className="mt-6" onClick={updateCompanySetting}>
+          Submit
+        </Button>
+      </div>
+
+      <HR />
     </div>
   );
 
@@ -358,9 +401,12 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
             {selectedPlugin?.url && (
               <div className="flex flex-col gap-1 ">
                 <Label htmlFor="plugin-name">URL</Label>
-                <div className="flex gap-2 items-center hover:underline cursor-pointer hover:text-blue-600" onClick={() => window.open(selectedPlugin?.url)}>
+                <div
+                  className="flex gap-2 items-center hover:underline cursor-pointer hover:text-blue-600"
+                  onClick={() => window.open(selectedPlugin?.url)}
+                >
                   {selectedPlugin?.url}{" "}
-                  <LuLink2  className="cursor-pointer text-gray-400 hover:text-gray-600" />
+                  <LuLink2 className="cursor-pointer text-gray-400 hover:text-gray-600" />
                 </div>
               </div>
             )}

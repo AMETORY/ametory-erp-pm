@@ -16,3 +16,12 @@ export const CompaniesContext = createContext<{
   companies: null,
   setCompanies: () => {},
 });
+
+export const ActiveCompanyContext = createContext<{
+  activeCompany: CompanyModel | null;
+  setActiveCompany: (activeCompany: CompanyModel | null) => void;
+}>({
+  activeCompany: null,
+  setActiveCompany: () => {},
+});
+

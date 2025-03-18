@@ -137,7 +137,7 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
         data: fields
       });
     }
-    console.log(records);
+    // console.log(records);
     return (
       <div className="overflow-x-auto w-[calc(100% - 300px)]">
         <table className="bg-white min-w-full">

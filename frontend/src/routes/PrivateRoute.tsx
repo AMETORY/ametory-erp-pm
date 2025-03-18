@@ -14,6 +14,8 @@ import FormDetail from "../pages/FormDetail";
 import FormPublicPage from "../pages/FormPublicPage";
 import ContactPage from "../pages/ContactPage";
 import SettingPage from "../pages/SettingPage";
+import GeminiAgentPage from "../pages/GeminiAgentPage";
+import GeminiAgentDetail from "../pages/GeminiAgentDetail";
 
 interface PrivateRouteProps {}
 
@@ -38,6 +40,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/project/:projectId" element={<ProjectDetail />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/setting" element={<SettingPage />} />
+      <Route path="/gemini-agent" element={<GeminiAgentPage />} />
+      <Route path="/gemini-agent/:agentId" element={<GeminiAgentDetail/>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

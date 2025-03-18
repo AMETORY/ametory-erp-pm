@@ -151,6 +151,7 @@ func (h *ProjectHandler) UpdateProjectPreferenceHandler(c *gin.Context) {
 		"contact_enabled":          preference.ContactEnabled.Bool,
 		"custom_attribute_enabled": preference.CustomAttributeEnabled.Bool,
 		"gemini_enabled":           preference.GeminiEnabled.Bool,
+		"form_enabled":             preference.FormEnabled.Bool,
 	}).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

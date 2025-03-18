@@ -48,4 +48,5 @@ export interface ProjectPreference {
     contact_enabled: boolean;
     custom_attribute_enabled: boolean;
     gemini_enabled: boolean;
+    form_enabled: boolean;
 }

@@ -159,6 +159,18 @@ const ProjectSetting: FC<ProjectSettingProps> = ({
               }}
             />
           </div>
+          <div className="flex justify-between item">
+            <Label className="text-md">Form</Label>
+            <ToggleSwitch
+              checked={preference!.form_enabled}
+              onChange={(enabled) => {
+                onChangePreference({
+                  ...preference!,
+                  form_enabled: enabled,
+                });
+              }}
+            />
+          </div>
         </div>
         <div>
           <Button

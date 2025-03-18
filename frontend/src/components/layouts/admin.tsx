@@ -12,6 +12,7 @@ import { CollapsedContext } from "../../contexts/CollapsedContext";
 import Sidebar from "../sidebar";
 import { getProfile } from "../../services/api/authApi";
 import {
+  ActiveCompanyContext,
   CompaniesContext,
   CompanyIDContext,
 } from "../../contexts/CompanyContext";
@@ -26,12 +27,14 @@ import { MemberContext, ProfileContext } from "../../contexts/ProfileContext";
 import { Toaster } from "react-hot-toast";
 import Loading from "../Loading";
 import { LoadingContext } from "../../contexts/LoadingContext";
+import { getSetting } from "../../services/api/commonApi";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
 const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
+  const { activeCompany, setActiveCompany } = useContext(ActiveCompanyContext);
   const { profile, setProfile } = useContext(ProfileContext);
   const { member, setMember } = useContext(MemberContext);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
@@ -73,8 +76,11 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
     getProfile().then((res: any) => {
       setProfile(res.user);
       setCompanies(res.user.companies);
-      setMember(res.member)
+      setMember(res.member);
     });
+    getSetting()
+      .then((val: any) => setActiveCompany(val.data))
+      .catch((err) => {});
     asyncStorage.getItem(LOCAL_STORAGE_TOKEN).then((token) => {
       setToken(token);
       asyncStorage.getItem(LOCAL_STORAGE_COMPANY_ID).then((id) => {

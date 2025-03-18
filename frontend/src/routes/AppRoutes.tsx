@@ -7,7 +7,11 @@ import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 import { CollapsedContext } from "../contexts/CollapsedContext";
 import { CompanyModel } from "../models/company";
-import { CompaniesContext, CompanyIDContext } from "../contexts/CompanyContext";
+import {
+  ActiveCompanyContext,
+  CompaniesContext,
+  CompanyIDContext,
+} from "../contexts/CompanyContext";
 import { asyncStorage } from "../utils/async_storage";
 import {
   LOCAL_STORAGE_COLLAPSED,
@@ -34,6 +38,7 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
   const [companies, setCompanies] = useState<CompanyModel[] | null>(null);
   const [profile, setProfile] = useState<UserModel | null>(null);
   const [member, setMember] = useState<MemberModel | null>(null);
+  const [activeCompany, setActiveCompany] = useState<CompanyModel | null>(null);
 
   useEffect(() => {
     // console.log("token", token);
@@ -80,25 +85,28 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
         <ProfileContext.Provider value={{ profile, setProfile }}>
           <MemberContext.Provider value={{ member, setMember }}>
             <CompaniesContext.Provider value={{ companies, setCompanies }}>
-              <CompanyIDContext.Provider
-                value={{
-                  companyID,
-                  setCompanyID: (val) => {
-                    asyncStorage.setItem(LOCAL_STORAGE_COMPANY_ID, val);
-                    setCompanyID(val);
-                  },
-                }}
+              <ActiveCompanyContext.Provider
+                value={{ activeCompany, setActiveCompany }}
               >
-                <WebsocketContext.Provider
-                  value={{ isWsConnected, setWsConnected, wsMsg, setWsMsg }}
+                <CompanyIDContext.Provider
+                  value={{
+                    companyID,
+                    setCompanyID: (val) => {
+                      asyncStorage.setItem(LOCAL_STORAGE_COMPANY_ID, val);
+                      setCompanyID(val);
+                    },
+                  }}
                 >
-                  <BrowserRouter>
-                    
-                    {token && <PrivateRoute />}
-                    {!token && <PublicRoute />}
-                  </BrowserRouter>
-                </WebsocketContext.Provider>
-              </CompanyIDContext.Provider>
+                  <WebsocketContext.Provider
+                    value={{ isWsConnected, setWsConnected, wsMsg, setWsMsg }}
+                  >
+                    <BrowserRouter>
+                      {token && <PrivateRoute />}
+                      {!token && <PublicRoute />}
+                    </BrowserRouter>
+                  </WebsocketContext.Provider>
+                </CompanyIDContext.Provider>
+              </ActiveCompanyContext.Provider>
             </CompaniesContext.Provider>
           </MemberContext.Provider>
         </ProfileContext.Provider>

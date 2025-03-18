@@ -10,6 +10,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Email    EmailConfig
+	Google   GoogleConfig
 }
 
 var App = &Config{}

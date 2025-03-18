@@ -1270,7 +1270,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
               </ul>
             </div>
           </Tabs.Item>
-          {activeTask?.form_response && (
+          {activeTask?.form_response &&  preference?.form_enabled && (
             <Tabs.Item title="Form Response" icon={SiGoogleforms}>
               {(activeTask?.form_response?.sections ?? []).map((e) => (
                 <div className="" key={e.id}>

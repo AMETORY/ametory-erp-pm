@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	com "ametory-pm/models/company"
+
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
 	"github.com/AMETORY/ametory-erp-modules/context"
@@ -282,19 +284,53 @@ func (h *CommonHandler) CompanySettingHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"message": "Get company setting successfully", "data": data})
+	var companySetting com.CompanySetting
+	err = h.ctx.DB.First(&companySetting, "company_id = ?", data.ID).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			companySetting.ID = utils.Uuid()
+			companySetting.CompanyID = &data.ID
+			if err := h.ctx.DB.Create(&companySetting).Error; err != nil {
+				c.JSON(500, gin.H{"error": "Failed to create company setting"})
+				return
+			}
+
+		}
+	}
+	var response = struct {
+		models.CompanyModel
+		Setting com.CompanySetting `json:"setting"`
+	}{
+		CompanyModel: *data,
+		Setting:      companySetting,
+	}
+
+	c.JSON(200, gin.H{"message": "Get company setting successfully", "data": response})
 }
 func (h *CommonHandler) UpdateCompanySettingHandler(c *gin.Context) {
-	var input models.CompanyModel
+	var input struct {
+		models.CompanyModel
+		Setting com.CompanySetting `json:"setting"`
+	}
 	err := c.ShouldBindJSON(&input)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	h.ctx.Request = c.Request
-	err = h.companyService.UpdateCompany(c.GetHeader("ID-Company"), &input)
+	err = h.companyService.UpdateCompany(c.GetHeader("ID-Company"), &input.CompanyModel)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.ctx.DB.Model(&input.Setting).Where("company_id = ?", input.CompanyModel.ID).Updates(map[string]any{
+		"gemini_api_key":           input.Setting.GeminiAPIKey,
+		"whatsapp_web_host":        input.Setting.WhatsappWebHost,
+		"whatsapp_web_mock_number": input.Setting.WhatsappWebMockNumber,
+		"whatsapp_web_is_mocked":   input.Setting.WhatsappWebIsMocked,
+	}).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to update company setting"})
 		return
 	}
 	c.JSON(200, gin.H{"message": " company setting update successfully"})

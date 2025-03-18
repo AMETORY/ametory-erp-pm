@@ -7,7 +7,6 @@ import (
 	"ametory-pm/services/app"
 	"ametory-pm/worker"
 	ctx "context"
-	"fmt"
 	"net/mail"
 	"os"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
@@ -112,7 +112,19 @@ func main() {
 
 	erpContext.AddThirdPartyService("RapidAPI", rapidApiService)
 
-	fmt.Println(erpContext.ThirdPartyServices)
+	// fmt.Println(erpContext.ThirdPartyServices)
+
+	// GEMINI
+	geminiSrv := google.NewGeminiService(erpContext, cfg.Google.GeminiAPIKey)
+	geminiSrv.SetupModel(
+		1,
+		40,
+		0.95,
+		8192,
+		"application/json",
+		"gemini-2.0-flash-exp",
+	)
+	erpContext.AddThirdPartyService("GEMINI", geminiSrv)
 
 	routes.NewCommonRoutes(r, erpContext)
 	v1 := r.Group("/api/v1")
@@ -123,6 +135,7 @@ func main() {
 	routes.SetChatRoutes(v1, erpContext)
 	routes.SetFormRoutes(v1, erpContext)
 	routes.SetContactRoutes(v1, erpContext)
+	routes.SetupGeminiRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {
