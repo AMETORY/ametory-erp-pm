@@ -1,9 +1,10 @@
-import { useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import { useParams } from "react-router-dom";
 import {
   generateContent,
   getGeminiAgentDetail,
+  getGeminiAgentHistories,
   updateGeminiAgent,
 } from "../services/api/geminiApi";
 import {
@@ -14,18 +15,32 @@ import {
   ToggleSwitch,
 } from "flowbite-react";
 import Select, { InputActionMeta } from "react-select";
-import { GeminiAgent } from "../models/gemini";
+import { GeminiAgent, GeminiAgentHistory } from "../models/gemini";
 import toast from "react-hot-toast";
 import { Mention, MentionsInput } from "react-mentions";
 import { RiAttachment2 } from "react-icons/ri";
+import { error } from "console";
+import {
+  allExpanded,
+  darkStyles,
+  defaultStyles,
+  JsonView,
+} from "react-json-view-lite";
+import "react-json-view-lite/dist/index.css";
+import { LoadingContext } from "../contexts/LoadingContext";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 interface GeminiAgentDetailProps {}
 
 const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
+  const { loading, setLoading } = useContext(LoadingContext);
   const { agentId } = useParams();
   const [agent, setAgent] = useState<GeminiAgent>();
   const [emojis, setEmojis] = useState([]);
   const [content, setContent] = useState("");
   const [openAttachment, setOpenAttachment] = useState(false);
+  const [histories, setHistories] = useState<GeminiAgentHistory[]>([]);
+  const [showHtml, setShowHtml] = useState(false);
 
   const emojiStyle = {
     control: {
@@ -85,6 +100,18 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
         setEmojis(jsonData.emojis);
       });
   }, []);
+
+  useEffect(() => {
+    if (agent) {
+      getGeminiAgentHistories(agent.id!)
+        .then((resp: any) => {
+          setHistories(resp.data);
+          setTimeout(scrollToBottom, 300);
+        })
+        .catch(toast.error);
+    }
+  }, [agent]);
+
   const neverMatchingRegex = /($a)/;
   const queryEmojis = (query: any, callback: (emojis: any) => void) => {
     if (query.length === 0) return;
@@ -104,6 +131,16 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
     { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
     { label: "Gemini 2.0 Flash Exp", value: "gemini-2.0-flash-exp" },
   ];
+
+  const scrollToBottom = () => {
+    const element = document.getElementById("messages");
+    if (element) {
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  };
 
   return (
     <AdminLayout>
@@ -274,12 +311,21 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                 required={true}
               />
             </div>
+            <div className="mb-2 block">
+              <Label htmlFor="html" value="View HTML" />
+              <ToggleSwitch
+                id="html"
+                checked={showHtml}
+                onChange={(checked) => setShowHtml(checked)}
+              />
+            </div>
           </form>
           <div className="flex justify-end gap-2 w-full">
             <Button
               onClick={() => {
                 updateGeminiAgent(agentId!, agent)
                   .then(() => {
+                    toast.success("Agent updated");
                     getGeminiAgentDetail(agentId!)
                       .then((resp: any) => setAgent(resp.data))
                       .catch(toast.error);
@@ -287,15 +333,50 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                   .catch(toast.error);
               }}
             >
-              Create
+              Save
             </Button>
           </div>
         </div>
         <div className="w-[calc(100%-300px)] border-l relative bg-gray-50">
           <div
-            id="channel-messages"
-            className="messages h-[calc(100vh-120px)] overflow-y-auto p-4 bg-red-50 "
-          ></div>
+            id="messages"
+            className="messages h-[calc(100vh-120px)] overflow-y-auto p-4 "
+          >
+            {histories.map((e) => (
+              <div key={e.id} className="space-y-8">
+                <div className="flex flex-row justify-start  ">
+                  <div>
+                    <small className="ml-2">User</small>
+                    <div className="bg-white rounded-lg  p-4 max-w-[600px]">
+                      {e.input}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-row justify-end">
+                  <div className="flex flex-col  items-end">
+                    <small className="mr-2">Model</small>
+                    <div className="bg-white rounded-lg  p-4 max-w-[600px]">
+                      <div className=" bg-white rounded-lg p-4 max-w-[600px] json-container">
+                        {showHtml ? (
+                          <Markdown remarkPlugins={[remarkGfm]}>
+                            {JSON.parse(e.output).response ?? ""}
+                          </Markdown>
+                        ) : (
+                          <JsonView
+                            data={JSON.parse(e.output!)}
+                            shouldExpandNode={allExpanded}
+                            style={{
+                              ...defaultStyles,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
           <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2 bg-white">
             <MentionsInput
               value={content}
@@ -317,17 +398,23 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                     // });
                     // setOpenAttachment(false);
                     // setFiles([]);
+                    setLoading(true);
+                    setTimeout(() => {
+                      setContent("");
+                    }, 300);
                     await generateContent(content, agentId!).then(
                       (resp: any) => {
-                        toast.success(resp.data.response);
+                        // toast.success(resp.data.response);
+                        getGeminiAgentHistories(agentId!)
+                          .then((resp: any) => setHistories(resp.data))
+                          .catch(toast.error)
+                          .finally(() => setLoading(false));
                       }
                     );
                   } catch (error) {
                     toast.error(`${error}`);
                   } finally {
-                    setTimeout(() => {
-                      setContent("");
-                    }, 300);
+                    setTimeout(scrollToBottom, 300);
                   }
 
                   return;

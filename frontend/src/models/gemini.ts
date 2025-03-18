@@ -12,4 +12,12 @@ export interface GeminiAgent {
   response_mimetype?: string;
 }
 
-
+export interface GeminiAgentHistory {
+  id?: string;
+  input?: string;
+  output?: any;
+  file_url?: string;
+  mime_type?: string;
+  agent_id?: string;
+  is_model?: boolean;
+}

@@ -16,6 +16,7 @@ func SetupGeminiRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		geminiGroup.POST("/generate", geminiHandler.GenerateContentHandler)
 		geminiGroup.GET("/agent", geminiHandler.GetAgentHandler)
 		geminiGroup.GET("/agent/:id", geminiHandler.GetAgentDetailHandler)
+		geminiGroup.GET("/agent/:id/histories", geminiHandler.GetAgentHistoriesHandler)
 		geminiGroup.POST("/agent", geminiHandler.CreateAgentHandler)
 		geminiGroup.PUT("/agent/:id", geminiHandler.UpdateAgentHandler)
 		geminiGroup.DELETE("/agent/:id", geminiHandler.DeleteAgentHandler)

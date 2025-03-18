@@ -36,6 +36,11 @@ export const getGeminiAgentDetail = async (agentId: string) => {
     method: "GET",
   });
 };
+export const getGeminiAgentHistories = async (agentId: string) => {
+  return await customFetch(`api/v1/gemini/agent/${agentId}/histories`, {
+    method: "GET",
+  });
+};
 
 export const generateContent = async (content: string, agentId: string) => {
   return await customFetch(`api/v1/gemini/generate?agent_id=${agentId}`, {

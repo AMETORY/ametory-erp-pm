@@ -59,8 +59,27 @@ func (h *GeminiHandler) GenerateContentHandler(c *gin.Context) {
 		agentID = &agentId
 	}
 
+	var histories []models.GeminiHistoryModel
+	err = h.ctx.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ?", agentId).Error
+	if err != nil {
+		c.JSON(404, gin.H{"error": "Agent histories is not found"})
+		return
+	}
+
+	chatHistories := []map[string]any{}
+	for _, v := range histories {
+		chatHistories = append(chatHistories, map[string]any{
+			"role":    "user",
+			"content": v.Input,
+		})
+		chatHistories = append(chatHistories, map[string]any{
+			"role":    "model",
+			"content": v.Output,
+		})
+	}
+
 	// h.geminiService.SetupModel(companySetting.GeminiAPIKey)
-	output, err := h.geminiService.GenerateContent(*h.ctx.Ctx, input.Content, []map[string]any{}, "", "")
+	output, err := h.geminiService.GenerateContent(*h.ctx.Ctx, input.Content, chatHistories, "", "")
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -112,6 +131,24 @@ func (h *GeminiHandler) GetAgentDetailHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"data": agent})
+
+}
+func (h *GeminiHandler) GetAgentHistoriesHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	// agent, err := h.geminiService.GetAgent(id)
+	// if err != nil {
+	// 	c.JSON(500, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
+	var histories []models.GeminiHistoryModel
+	err := h.ctx.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ?", id).Error
+	if err != nil {
+		c.JSON(404, gin.H{"error": "Agent histories is not found"})
+		return
+	}
+	c.JSON(200, gin.H{"data": histories})
 
 }
 

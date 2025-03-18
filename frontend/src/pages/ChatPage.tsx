@@ -53,6 +53,8 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
       getAllChannels();
     }
   }, [mounted, page, size, search]);
+
+ 
   const processNew = async () => {
     try {
       setLoading(true);
