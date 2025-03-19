@@ -85,3 +85,18 @@ input[type=number] {
 .json-container div {
   @apply bg-white
 }
+
+code {
+  @apply text-sm 
+  
+}
+
+pre:has(code[class*='language-']) {
+  @apply text-sm bg-black text-white p-2
+  
+}
+
+
+.json-container a {
+  @apply text-blue-500 hover:text-blue-700 hover:underline transition-all
+}

@@ -97,7 +97,7 @@ const ChatPage: FC<ChatPageProps> = ({}) => {
     <AdminLayout>
       <div className="p-4 flex flex-col h-full ">
         <div className="flex justify-between items-center mb-2 border-b pb-4">
-          <h1 className="text-3xl font-bold ">Chat</h1>
+          <h1 className="text-3xl font-bold ">Chats</h1>
           <div className="flex gap-2">
             <Button
               gradientDuoTone="purpleToBlue"

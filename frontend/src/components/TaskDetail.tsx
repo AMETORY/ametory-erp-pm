@@ -9,6 +9,7 @@ import {
   Progress,
   Tabs,
   TabsRef,
+  Textarea,
   TextInput,
   Tooltip,
 } from "flowbite-react";
@@ -46,6 +47,7 @@ import {
   BsActivity,
   BsCheck2Circle,
   BsCollection,
+  BsFloppy,
   BsPencil,
   BsQuote,
   BsYoutube,
@@ -72,6 +74,8 @@ import { AiOutlineLike } from "react-icons/ai";
 import { PiBookmark, PiPlay, PiPlayCircle } from "react-icons/pi";
 import { IoShareOutline } from "react-icons/io5";
 import { FaDigg, FaRetweet } from "react-icons/fa6";
+import { ActiveCompanyContext } from "../contexts/CompanyContext";
+import { generateContent } from "../services/api/geminiApi";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -84,6 +88,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   project,
   onSwitchFullscreen,
 }) => {
+  const { activeCompany, setActiveCompany } = useContext(ActiveCompanyContext);
   const [preference, setPreference] = useState<ProjectPreference>();
   const { loading, setLoading } = useContext(LoadingContext);
   const { profile, setProfile } = useContext(ProfileContext);
@@ -115,6 +120,8 @@ const TaskDetail: FC<TaskDetailProps> = ({
     { key: string; type: string; value: string }[]
   >([]);
   const [pluginDatas, setPluginDatas] = useState<RapidApiDataModel[]>([]);
+  const [modalAi, setModalAi] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
   useEffect(() => {
     fetch(
       "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
@@ -200,8 +207,8 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const getDetail = (id: string) => {
     getTask(task.project_id!, id)
       .then((resp: any) => {
-        setActiveTask(resp.data)
-        setPreference(resp.preference)
+        setActiveTask(resp.data);
+        setPreference(resp.preference);
       })
       .catch(toast.error);
   };
@@ -430,6 +437,24 @@ const TaskDetail: FC<TaskDetailProps> = ({
             }}
           />
           <div className="flex flex-row gap-2 items-center">
+            <Tooltip content={`Save`} placement="left">
+              <BsFloppy
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                onClick={() => {
+                  updateTask(task!.project_id!, task.id!, {
+                    ...activeTask,
+                    watchers: watchers.map((watcher) => ({
+                      id: watcher.value,
+                    })),
+                  })
+                    .catch(toast.error)
+                    .then(() => {
+                      toast.success("Task updated successfully");
+                      setIsEditted(false);
+                    });
+                }}
+              />
+            </Tooltip>
             {!activeTask?.completed && (
               <div className="relative">
                 <TextInput
@@ -668,7 +693,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
               plugins:
                 "anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount ",
               toolbar:
-                "closeButton saveButton | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat ",
+                "closeButton saveButton aiButton | undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat ",
               setup: (editor: any) => {
                 editor.ui.registry.addButton("closeButton", {
                   icon: "close",
@@ -681,6 +706,17 @@ const TaskDetail: FC<TaskDetailProps> = ({
                   tooltip: "Save Task",
                   onAction: (_: any) => {
                     saveTask();
+                  },
+                });
+                editor.ui.registry.addButton("aiButton", {
+                  icon: "ai",
+                  tooltip: "Ai",
+                  onAction: (_: any) => {
+                    if (activeCompany?.setting?.gemini_api_key) {
+                      setModalAi(true);
+                    } else {
+                      toast.error("Please add gemini api key");
+                    }
                   },
                 });
 
@@ -1270,7 +1306,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
               </ul>
             </div>
           </Tabs.Item>
-          {activeTask?.form_response &&  preference?.form_enabled && (
+          {activeTask?.form_response && preference?.form_enabled && (
             <Tabs.Item title="Form Response" icon={SiGoogleforms}>
               {(activeTask?.form_response?.sections ?? []).map((e) => (
                 <div className="" key={e.id}>
@@ -1295,7 +1331,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
           )}
         </Tabs>
       </div>
-      {isEditted && (
+      {/* {isEditted && (
         <div className="bg-red border-t pt-2 flex flex-row justify-end gap-2">
           <Button
             className="w-32"
@@ -1317,7 +1353,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
             Save
           </Button>
         </div>
-      )}
+      )} */}
       <Modal show={addPlugin} onClose={() => setAddPlugin(false)}>
         <Modal.Header>Add Plugin</Modal.Header>
         <Modal.Body>
@@ -1440,6 +1476,52 @@ const TaskDetail: FC<TaskDetailProps> = ({
               }}
             >
               Save
+            </Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={modalAi} onClose={() => setModalAi(false)}>
+        <Modal.Header>AI Prompt</Modal.Header>
+        <Modal.Body>
+          <div className="flex flex-col gap-4">
+            <Label htmlFor="ai-prompt">Enter AI Prompt</Label>
+            <Textarea
+              id="ai-prompt"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="Type your AI prompt here"
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                // Handle the AI prompt submission logic here
+                // setModalAi(false);
+
+                // toast.success("AI prompt submitted successfully");
+                let prompt = `${aiPrompt} 
+pastikan format responsenya :
+{
+    "description": "ini deskripsi",
+}
+            
+                `;
+                generateContent(prompt, "", true, true).then((resp: any) => {
+                  if (resp.data.description) {
+                    // toast.success(resp.data.description)
+                    setActiveTask({
+                      ...activeTask,
+                      description: resp.data.description,
+                    });
+                    setModalAi(false);
+                    toast.success("AI prompt submitted successfully");
+                  }
+                });
+              }}
+            >
+              Submit
             </Button>
           </div>
         </Modal.Footer>

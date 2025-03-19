@@ -41,9 +41,26 @@ export const getGeminiAgentHistories = async (agentId: string) => {
     method: "GET",
   });
 };
+export const deleteGeminiAgentHistory = async (agentId: string, historyId: string) => {
+  return await customFetch(`api/v1/gemini/agent/${agentId}/history/${historyId}`, {
+    method: "DELETE",
+  });
+};
+export const toggleGeminiAgentHistoryModel = async (agentId: string, historyId: string) => {
+  return await customFetch(`api/v1/gemini/agent/${agentId}/history/${historyId}/toggle-model`, {
+    method: "PUT",
+  });
+};
+export const updateGeminiAgentHistory = async (agentId: string, historyId: string, data: any) => {
+  return await customFetch(`api/v1/gemini/agent/${agentId}/history/${historyId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
 
-export const generateContent = async (content: string, agentId: string) => {
-  return await customFetch(`api/v1/gemini/generate?agent_id=${agentId}`, {
+
+export const generateContent = async (content: string, agentId: string, skipHistory: boolean, skipSave: boolean) => {
+  return await customFetch(`api/v1/gemini/generate?agent_id=${agentId}&skip_history=${skipHistory}&skip_save=${skipSave}`, {
     method: "POST",
     body: JSON.stringify({ content }),
   });

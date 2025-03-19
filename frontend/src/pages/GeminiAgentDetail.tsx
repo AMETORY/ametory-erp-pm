@@ -2,9 +2,11 @@ import { useContext, useEffect, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import { useParams } from "react-router-dom";
 import {
+  deleteGeminiAgentHistory,
   generateContent,
   getGeminiAgentDetail,
   getGeminiAgentHistories,
+  toggleGeminiAgentHistoryModel,
   updateGeminiAgent,
 } from "../services/api/geminiApi";
 import {
@@ -30,6 +32,7 @@ import "react-json-view-lite/dist/index.css";
 import { LoadingContext } from "../contexts/LoadingContext";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { BsTrash } from "react-icons/bs";
 interface GeminiAgentDetailProps {}
 
 const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
@@ -343,13 +346,51 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
             className="messages h-[calc(100vh-120px)] overflow-y-auto p-4 "
           >
             {histories.map((e) => (
-              <div key={e.id} className="space-y-8">
-                <div className="flex flex-row justify-start  ">
+              <div
+                key={e.id}
+                className="space-y-8 group/item hover:bg-yellow-50 p-2"
+              >
+                <div className="flex flex-row justify-between  items-center">
                   <div>
                     <small className="ml-2">User</small>
                     <div className="bg-white rounded-lg  p-4 max-w-[600px]">
                       {e.input}
                     </div>
+                  </div>
+                  <div className="flex flex-row gap-2 group/edit invisible group-hover/item:visible">
+                    <ToggleSwitch
+                      sizing="sm"
+                      label={(e.is_model && "Active") || "Inactive"}
+                      checked={e.is_model ?? false}
+                      onChange={(checked) => {
+                        toggleGeminiAgentHistoryModel(agentId!, e.id!);
+                        setHistories(
+                          histories.map((item) => {
+                            if (item.id === e.id) {
+                              return { ...item, is_model: checked };
+                            }
+                            return item;
+                          })
+                        );
+                      }}
+                    />
+
+                    <BsTrash
+                      className="text-red-400 hover:text-red-600 cursor-pointer "
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Are you sure you want to delete this history?"
+                          )
+                        ) {
+                          deleteGeminiAgentHistory(agentId!, e.id!).then(() => {
+                            setHistories([
+                              ...histories.filter((item) => item.id !== e.id),
+                            ]);
+                          });
+                        }
+                      }}
+                    />
                   </div>
                 </div>
                 <div className="flex flex-row justify-end">
@@ -402,7 +443,7 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                     setTimeout(() => {
                       setContent("");
                     }, 300);
-                    await generateContent(content, agentId!).then(
+                    await generateContent(content, agentId!, false, false).then(
                       (resp: any) => {
                         // toast.success(resp.data.response);
                         getGeminiAgentHistories(agentId!)

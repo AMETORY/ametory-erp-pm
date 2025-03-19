@@ -62,4 +62,14 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		taskGroup.GET("/watched", taskHandler.WatchedTaskHandler)
 	}
 
+	taskAttributeHandler := handlers.NewTasAttributekHandler(erpContext)
+	taskAttributeGroup := r.Group("/task-attribute")
+	taskAttributeGroup.Use(middlewares.AuthMiddleware(erpContext, true))
+	{
+		taskAttributeGroup.GET("/list", taskAttributeHandler.GetTaskAttributesHandler)
+		taskAttributeGroup.GET("/:id", taskAttributeHandler.GetTaskAttributeDetailHandler)
+		taskAttributeGroup.POST("/create", taskAttributeHandler.CreateTaskAttributeHandler)
+		taskAttributeGroup.PUT("/:id", taskAttributeHandler.UpdateTaskAttributeHandler)
+		taskAttributeGroup.DELETE("/:id", taskAttributeHandler.DeleteTaskAttributeHandler)
+	}
 }

@@ -26,9 +26,12 @@ export const enum FormFieldType {
   DateRangePicker = "date_range",
   NumberField = "number",
   Currency = "currency",
+  Price = "price",
   EmailField = "email",
   PasswordField = "password",
   FileUpload = "file",
+  Product = "product",
+  Contact = "contact",
   ToggleSwitch = "toggle",
 }
 

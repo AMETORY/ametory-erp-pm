@@ -11,7 +11,7 @@ import {
   SortableContext,
   useSortable,
 } from "@dnd-kit/sortable";
-import { UniqueIdentifier } from "@dnd-kit/core";
+import { DragOverlay, UniqueIdentifier } from "@dnd-kit/core";
 import { BsTrash } from "react-icons/bs";
 import { Dropdown, Label } from "flowbite-react";
 import { IoMove } from "react-icons/io5";
@@ -123,6 +123,7 @@ const FormSectionComponent: FC<FormSectionComponentProps> = ({
                 section={section}
               />
             ))}
+         
           </SortableContext>
         </div>
       )}

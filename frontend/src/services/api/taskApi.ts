@@ -109,6 +109,3 @@ export const getTaskPluginData = async (
   );
 };
 
-
-// /api/v1/project/:id/task/:taskId/plugin/:pluginId
-//  /api/v1/project/5f9bdc52-c556-4d69-8f1f-e3b52b626094/task/78b71d13-a06a-471d-8252-9e9294ede71b/plugin/05e9ff1e-d3ef-4bae-b49a-a10870ccf5d7
