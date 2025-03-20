@@ -3,15 +3,20 @@ import {
   Avatar,
   Button,
   Carousel,
+  Checkbox,
   Datepicker,
+  FileInput,
   Label,
   Modal,
   Progress,
+  Radio,
   Tabs,
   TabsRef,
   Textarea,
   TextInput,
+  ToggleSwitch,
   Tooltip,
+  Select as SelectFlowBite,
 } from "flowbite-react";
 import {
   ReactNode,
@@ -45,6 +50,7 @@ import {
 import { getColor, initial, invert, money, nl2br } from "../utils/helper";
 import {
   BsActivity,
+  BsAsterisk,
   BsCheck2Circle,
   BsCollection,
   BsFloppy,
@@ -60,7 +66,7 @@ import Moment from "react-moment";
 import moment from "moment";
 import { SiGoogleforms } from "react-icons/si";
 import { priorityOptions, severityOptions } from "../utils/constants";
-import { FormFieldType } from "../models/form";
+import { FormField, FormFieldType } from "../models/form";
 import { Link } from "react-router-dom";
 import { LoadingContext } from "../contexts/LoadingContext";
 import { getCompanyRapidAPIPlugins } from "../services/api/commonApi";
@@ -76,6 +82,8 @@ import { IoShareOutline } from "react-icons/io5";
 import { FaDigg, FaRetweet } from "react-icons/fa6";
 import { ActiveCompanyContext } from "../contexts/CompanyContext";
 import { generateContent } from "../services/api/geminiApi";
+import { TaskAttributeModel } from "../models/task_attribute";
+import { getTaskAttributes } from "../services/api/taskAttributeApi";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -122,6 +130,9 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const [pluginDatas, setPluginDatas] = useState<RapidApiDataModel[]>([]);
   const [modalAi, setModalAi] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [taskAttributes, setTaskAttributes] = useState<TaskAttributeModel[]>(
+    []
+  );
   useEffect(() => {
     fetch(
       "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
@@ -161,7 +172,12 @@ const TaskDetail: FC<TaskDetailProps> = ({
         });
       }
     }
-  }, [activeTask, mounted, preference]);
+    if (mounted && preference?.custom_attribute_enabled) {
+      getTaskAttributes({ page: 1, size: 20 }).then((v: any) =>
+        setTaskAttributes(v.data.items)
+      );
+    }
+  }, [ mounted, preference]);
 
   useEffect(() => {
     setPluginEndpointParams(JSON.parse(selectedEnpoint?.params ?? "[]"));
@@ -419,6 +435,431 @@ const TaskDetail: FC<TaskDetailProps> = ({
     </div>
   );
 
+  const renderAttributeField = (field: FormField) => {
+    switch (field.type) {
+      case FormFieldType.TextField:
+        return (
+          <div key={field.id}>
+            <TextInput
+              sizing={"sm"}
+              placeholder={field.placeholder}
+              required={field.required}
+              value={field?.value}
+              onChange={(e) => {
+                field.value = e.target.value;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return { ...f, value: e.target.value };
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.PasswordField:
+        return (
+          <div key={field.id}>
+            <TextInput
+              type="password"
+              sizing={"sm"}
+              placeholder={field.placeholder}
+              required={field.required}
+              value={field?.value}
+              onChange={(e) => {
+                field.value = e.target.value;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return { ...f, value: e.target.value };
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.FileUpload:
+        return (
+          <div key={field.id}>
+            <FileInput
+              sizing={"sm"}
+              placeholder={field.placeholder}
+              required={field.required}
+              onChange={(e) => {
+                const file = e.target.files;
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    field.value = event.target?.result as string;
+
+                    setActiveTask({
+                      ...activeTask,
+                      task_attribute: {
+                        ...activeTask!.task_attribute!,
+                        fields:
+                          activeTask!.task_attribute?.fields.map((f) => {
+                            if (f.id === field.id) {
+                              return { ...f, value: e.target.value };
+                            }
+                            return f;
+                          }) ?? [],
+                      },
+                    });
+                  };
+                  reader.readAsDataURL(file[0]);
+                }
+
+                // field?.value = e.target.value
+                // setSectionValues(sectionValues)
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.EmailField:
+        return (
+          <div key={field.id}>
+            <TextInput
+              type={"email"}
+              sizing={"sm"}
+              name={field.label}
+              placeholder={field.placeholder}
+              required={field.required}
+              value={field?.value}
+              onChange={(e) => {
+                field.value = e.target.value;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return { ...f, value: e.target.value };
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.NumberField:
+      case FormFieldType.Currency:
+      case FormFieldType.Price:
+        return (
+          <div key={field.id}>
+            <TextInput
+              type={"number"}
+              sizing={"sm"}
+              placeholder={field.placeholder}
+              required={field.required}
+              value={field?.value}
+              onChange={(e) => {
+                field.value = e.target.value;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return { ...f, value: e.target.value };
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+
+      case FormFieldType.TextArea:
+        return (
+          <div key={field.id}>
+            <Textarea
+              placeholder={field.placeholder}
+              required={field.required}
+              value={field?.value}
+              onChange={(e) => {
+                field.value = e.target.value;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return { ...f, value: e.target.value };
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.DatePicker:
+        return (
+          <div key={field.id}>
+            <Datepicker
+              placeholder={field.placeholder}
+              required={field.required}
+              value={field?.value}
+              onChange={(e) => {
+                field.value = e;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return { ...f, value: e };
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.DateRangePicker:
+        if (!field?.value) {
+          field.value = [new Date(), new Date()];
+        }
+        return (
+          <div className="">
+            <div className="grid grid-cols-2 gap-2">
+              <Datepicker
+                placeholder={field.placeholder}
+                required={field.required}
+                value={moment(field?.value[0]).toDate()}
+                onChange={(e) => {
+                  // let val = [...field?.value];
+                  setActiveTask({
+                    ...activeTask,
+                    task_attribute: {
+                      ...activeTask!.task_attribute!,
+                      fields:
+                        activeTask!.task_attribute?.fields.map((f) => {
+                          if (f.id === field.id) {
+                            return { ...f, value: [e, field.value[1]] };
+                          }
+                          return f;
+                        }) ?? [],
+                    },
+                  });
+                }}
+              />
+              <Datepicker
+                placeholder={field.placeholder}
+                required={field.required}
+                value={moment(field?.value[1]).toDate()}
+                onChange={(e) => {
+                  setActiveTask({
+                    ...activeTask,
+                    task_attribute: {
+                      ...activeTask!.task_attribute!,
+                      fields:
+                        activeTask!.task_attribute?.fields.map((f) => {
+                          if (f.id === field.id) {
+                            return { ...f, value: [field.value[0], e] };
+                          }
+                          return f;
+                        }) ?? [],
+                    },
+                  });
+                }}
+              />
+            </div>
+            {field.help_text && (
+              <small className="text-gray-400">{field.help_text}</small>
+            )}
+          </div>
+        );
+      case FormFieldType.RadioButton:
+        return (
+          <div key={field.id}>
+            <fieldset className="flex max-w-md flex-col gap-4">
+              {field.help_text && (
+                <legend className="mb-4 text-sm text-gray-400">
+                  {field.help_text}
+                </legend>
+              )}
+              {field.options.map((option, i) => (
+                <div className="flex items-center gap-2" key={i}>
+                  <Radio
+                    id={`${field.label}-${i}`}
+                    value={option.value}
+                    checked={field?.value == option.value}
+                    onChange={(val) => {
+                      // field?.value =
+                      //   val.target.value;
+
+                      setActiveTask({
+                        ...activeTask,
+                        task_attribute: {
+                          ...activeTask!.task_attribute!,
+                          fields:
+                            activeTask!.task_attribute?.fields.map((f) => {
+                              if (f.id === field.id) {
+                                return { ...f, value: val.target.value };
+                              }
+                              return f;
+                            }) ?? [],
+                        },
+                      });
+                    }}
+                  />
+                  <Label htmlFor={option.value}>{option.label}</Label>
+                </div>
+              ))}
+            </fieldset>
+          </div>
+        );
+      case FormFieldType.Checkbox:
+        if (!field?.value) {
+          field.value = [];
+        }
+        return (
+          <div key={field.id}>
+            <fieldset className="flex max-w-md flex-col gap-4">
+              {field.help_text && (
+                <legend className="mb-4 text-sm text-gray-400">
+                  {field.help_text}
+                </legend>
+              )}
+
+              {field.options.map((option, i) => (
+                <div className="flex items-center gap-2" key={i}>
+                  <Checkbox
+                    id={`${field.label}-${i}`}
+                    value={option.value}
+                    checked={field.value.includes(option.value)}
+                    onChange={(val) => {
+                      if (!field.value.includes(option.value)) {
+                        field.value.push(option.value);
+                      } else {
+                        field.value = [
+                          ...field.value.filter(
+                            (val: any) => val != option.value
+                          ),
+                        ];
+                      }
+
+                      setActiveTask({
+                        ...activeTask,
+                        task_attribute: {
+                          ...activeTask!.task_attribute!,
+                          fields:
+                            activeTask!.task_attribute?.fields.map((f) => {
+                              if (f.id === field.id) {
+                                return field;
+                              }
+                              return f;
+                            }) ?? [],
+                        },
+                      });
+                    }}
+                  />
+                  <Label htmlFor={option.value}>{option.label}</Label>
+                </div>
+              ))}
+            </fieldset>
+          </div>
+        );
+      case FormFieldType.ToggleSwitch:
+        if (!field?.value) {
+          field.value = false;
+        }
+        return (
+          <div key={field.id}>
+            <ToggleSwitch
+              sizing="sm"
+              checked={field?.value}
+              label={field.help_text}
+              onChange={(val) => {
+                field.value = val;
+                setActiveTask({
+                  ...activeTask,
+                  task_attribute: {
+                    ...activeTask!.task_attribute!,
+                    fields:
+                      activeTask!.task_attribute?.fields.map((f) => {
+                        if (f.id === field.id) {
+                          return field;
+                        }
+                        return f;
+                      }) ?? [],
+                  },
+                });
+              }}
+            />
+          </div>
+        );
+      case FormFieldType.Dropdown:
+        return (
+          <div key={field.id}>
+            <SelectFlowBite
+              value={field?.value}
+              onChange={(val) => {
+                field.value = val.target.value;
+              }}
+            >
+              {field.options.map((option, i) => (
+                <option
+                  selected={field?.value == option.value}
+                  key={i}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </SelectFlowBite>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex-1 space-y-2 overflow-y-auto">
@@ -446,6 +887,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
                     watchers: watchers.map((watcher) => ({
                       id: watcher.value,
                     })),
+                    task_attribute_data: activeTask?.task_attribute ? JSON.stringify(activeTask?.task_attribute) : "{}"
                   })
                     .catch(toast.error)
                     .then(() => {
@@ -1327,6 +1769,50 @@ const TaskDetail: FC<TaskDetailProps> = ({
                   </table>
                 </div>
               ))}
+            </Tabs.Item>
+          )}
+          {preference?.custom_attribute_enabled && (
+            <Tabs.Item title="Attributes" icon={BsAsterisk}>
+              <table className="w-full">
+                <tr>
+                  <td className="px-2 py-1 w-1/3"> Attribute</td>
+                  <td className="px-2 py-1">
+                    <Select
+                      className="w-full"
+                      isSearchable={false}
+                      defaultValue={{
+                        label: activeTask?.task_attribute?.title,
+                        value: activeTask?.task_attribute_id,
+                      }}
+                      // value={activeTask?.task_attribute_id}
+                      onChange={(val) => {
+                        setIsEditted(true);
+                        setActiveTask({
+                          ...activeTask,
+                          task_attribute_id: val?.value,
+                        });
+                      }}
+                      options={taskAttributes.map((e) => ({
+                        label: e.title,
+                        value: e.id,
+                      }))}
+                      inputValue={""}
+                      onInputChange={(
+                        newValue: string,
+                        actionMeta: InputActionMeta
+                      ) => {
+                        // console.log(newValue, actionMeta);
+                      }}
+                    />
+                  </td>
+                </tr>
+                {(activeTask?.task_attribute?.fields ?? []).map((e) => (
+                  <tr>
+                    <td className="px-2 py-1 w-1/3"> {e.label}</td>
+                    <td className="px-2 py-1">{renderAttributeField(e)} </td>
+                  </tr>
+                ))}
+              </table>
             </Tabs.Item>
           )}
         </Tabs>

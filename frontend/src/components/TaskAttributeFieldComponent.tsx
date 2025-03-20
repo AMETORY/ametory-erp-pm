@@ -5,6 +5,7 @@ import { IoMove } from "react-icons/io5";
 import { Button, Label, ToggleSwitch } from "flowbite-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
+import { RxDrawingPin, RxDrawingPinFilled } from "react-icons/rx";
 
 interface TaskAttributeFieldComponentProps {
   field: FormField;
@@ -36,7 +37,6 @@ const TaskAttributeFieldComponent: FC<TaskAttributeFieldComponentProps> = ({
       className="flex gap-2 flex-col space-y-2 bg-gray-50 p-4 rounded-lg hover:bg-gray-100 cursor-pointer"
       {...attributes}
       ref={setNodeRef}
-      
     >
       <div className="flex items-center gap-2 justify-between">
         <div className="flex flex-row gap-2 items-center">
@@ -51,6 +51,26 @@ const TaskAttributeFieldComponent: FC<TaskAttributeFieldComponentProps> = ({
           />
         </div>
         <div className="flex gap-2">
+          {field.is_pinned ? (
+            <RxDrawingPinFilled
+              style={{}}
+              className=" cursor-pointer text-green-400"
+              onClick={() => {
+                field.is_pinned = !field.is_pinned;
+                onChange(field);
+              }}
+            />
+          ) : (
+            <RxDrawingPin
+              style={{}}
+              className=" cursor-pointer"
+              onClick={() => {
+                field.is_pinned = !field.is_pinned;
+                onChange(field);
+              }}
+            />
+          )}
+
           <BsTrash
             className="cursor-pointer text-red-400 hover:text-red-600"
             onClick={() => {

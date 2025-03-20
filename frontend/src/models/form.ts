@@ -47,6 +47,7 @@ export interface FormField {
   options: FormFieldOption[];
   required: boolean;
   is_multi: boolean;
+  is_pinned?: boolean;
   placeholder: string;
   default_value: string;
   help_text: string;

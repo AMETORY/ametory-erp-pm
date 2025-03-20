@@ -22,6 +22,8 @@ const FormPublicPage: FC<FormPublicPageProps> = ({}) => {
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
   };
+
+  
   return (
     <form
       onSubmit={handleSubmitForm}

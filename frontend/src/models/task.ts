@@ -3,6 +3,7 @@ import { FileModel } from "./file";
 import { FormSection } from "./form";
 import { MemberModel } from "./member";
 import { ProjectActivityModel, ProjectModel } from "./project";
+import { TaskAttributeModel } from "./task_attribute";
 
 export interface TaskModel {
   id?: string;
@@ -11,6 +12,8 @@ export interface TaskModel {
   project_id?: string;
   project?: ProjectModel;
   column_id?: string;
+  task_attribute_id?: string | null;
+  task_attribute?: TaskAttributeModel;
   column?: ColumnModel;
   created_by_id?: string;
   created_by?: MemberModel;
