@@ -20,6 +20,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
@@ -125,6 +126,10 @@ func main() {
 		"gemini-2.0-flash-exp",
 	)
 	erpContext.AddThirdPartyService("GEMINI", geminiSrv)
+
+	// WA
+	waSrv := whatsmeow_client.NewWhatsmeowService(cfg.Whatsapp.BaseURL, cfg.Whatsapp.MockNumber, cfg.Whatsapp.IsMock, "")
+	erpContext.AddThirdPartyService("WA", waSrv)
 
 	routes.NewCommonRoutes(r, erpContext)
 	v1 := r.Group("/api/v1")

@@ -405,3 +405,8 @@ func (h *CommonHandler) DeleteCompanyPluginHandler(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"message": "delete plugin successfully"})
 }
+
+func (h *CommonHandler) WhatsappWebhookHandler(c *gin.Context) {
+
+	c.JSON(200, gin.H{"message": "ok"})
+}

@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig
 	Email    EmailConfig
 	Google   GoogleConfig
+	Whatsapp WhatsappConfig
 }
 
 var App = &Config{}
