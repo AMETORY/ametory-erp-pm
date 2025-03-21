@@ -5,7 +5,7 @@ import { BsAsterisk, BsGear, BsKanban, BsPeople } from "react-icons/bs";
 import { GoTasklist } from "react-icons/go";
 import { HiOutlineChat } from "react-icons/hi";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
-import { LuContact2, LuPowerOff } from "react-icons/lu";
+import { LuContact2, LuLink2, LuPowerOff } from "react-icons/lu";
 import { SiGoogleforms } from "react-icons/si";
 import { useNavigate } from "react-router-dom";
 import { CollapsedContext } from "../contexts/CollapsedContext";
@@ -17,7 +17,7 @@ import { MdOutlineAssistant } from "react-icons/md";
 interface SidebarProps {}
 
 const Sidebar: FC<SidebarProps> = ({}) => {
-  const { collapsed, setCollapsed } = useContext(CollapsedContext);
+  const { collapsed } = useContext(CollapsedContext);
   const [mounted, setMounted] = useState(false);
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
   const [sentUnreadCount, setSentUnreadCount] = useState(0);
@@ -47,21 +47,19 @@ const Sidebar: FC<SidebarProps> = ({}) => {
     <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-800 flex flex-col">
       <ul className="space-y-2 font-medium flex-1">
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/")}
           >
             <Tooltip content="Dashboard">
               <AiOutlineDashboard />
             </Tooltip>
             {!collapsed && <span className="ms-3">Dashboard</span>}
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/task")}
           >
             <Tooltip content="Task">
@@ -70,12 +68,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             {!collapsed && (
               <span className="flex-1 ms-3 whitespace-nowrap">Task</span>
             )}
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/project")}
           >
             <Tooltip content="Project">
@@ -84,12 +81,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             {!collapsed && (
               <span className="flex-1 ms-3 whitespace-nowrap">Project</span>
             )}
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/inbox")}
           >
             <Tooltip content="Inbox">
@@ -103,12 +99,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
                 {inboxUnreadCount + sentUnreadCount}
               </span>
             )}
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={async () => {
               let channelID = await asyncStorage.getItem(LOCAL_STORAGE_DEFAULT_CHANNEL)
               if (channelID) {
@@ -130,13 +125,12 @@ const Sidebar: FC<SidebarProps> = ({}) => {
                 {indexUnreadChat }
               </span>
             )}
-          </a>
+          </span>
         </li>
         <HR />
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/member")}
           >
             <Tooltip content="Member">
@@ -146,12 +140,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <span className="flex-1 ms-3 whitespace-nowrap">Member</span>
             )}
            
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/form")}
           >
             <Tooltip content="Form">
@@ -161,12 +154,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <span className="flex-1 ms-3 whitespace-nowrap">Form</span>
             )}
            
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/task-attribute")}
           >
             <Tooltip content="Task Attribute">
@@ -176,12 +168,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <span className="flex-1 ms-3 whitespace-nowrap">Task Attribute</span>
             )}
            
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/gemini-agent")}
           >
             <Tooltip content="Gemini Agent">
@@ -191,12 +182,11 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <span className="flex-1 ms-3 whitespace-nowrap">Gemini Agent</span>
             )}
            
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/contact")}
           >
             <Tooltip content="Contact">
@@ -206,12 +196,25 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <span className="flex-1 ms-3 whitespace-nowrap">Contact</span>
             )}
            
-          </a>
+          </span>
         </li>
         <li className="" style={{ }}>
-          <a
-            href="#"
-            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+            onClick={handleNavigation("/connection")}
+          >
+            <Tooltip content="Connection">
+              <LuLink2 />
+            </Tooltip>
+            {!collapsed && (
+              <span className="flex-1 ms-3 whitespace-nowrap">Connection</span>
+            )}
+           
+          </span>
+        </li>
+        <li className="" style={{ }}>
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/setting")}
           >
             <Tooltip content="Setting">
@@ -221,7 +224,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               <span className="flex-1 ms-3 whitespace-nowrap">Setting</span>
             )}
            
-          </a>
+          </span>
         </li>
        
       </ul>

@@ -13,10 +13,10 @@ export interface PaginationRequest {
 export interface PaginationResponse {
     page: number;
     size: number;
-    max_page: number;
+    max_page?: number;
     total_pages: number;
     total: number;
-    last: boolean;
-    first: boolean;
-    visible: number;
+    last?: boolean;
+    first?: boolean;
+    visible?: number;
   }

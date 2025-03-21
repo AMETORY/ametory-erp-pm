@@ -3,6 +3,7 @@ package app
 import (
 	"ametory-pm/config"
 	"ametory-pm/models/company"
+	con "ametory-pm/models/connection"
 	"ametory-pm/models/project"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
@@ -12,10 +13,11 @@ import (
 )
 
 type AppService struct {
-	ctx       *context.ERPContext
-	Config    *config.Config
-	Redis     *redis.Client
-	Websocket *melody.Melody
+	ctx               *context.ERPContext
+	Config            *config.Config
+	Redis             *redis.Client
+	Websocket         *melody.Melody
+	ConnectionService *ConnectionService
 }
 
 func NewAppService(erpContext *context.ERPContext, config *config.Config, redis *redis.Client, ws *melody.Melody) *AppService {
@@ -23,13 +25,15 @@ func NewAppService(erpContext *context.ERPContext, config *config.Config, redis 
 		erpContext.DB.AutoMigrate(
 			&project.ProjectPreferenceModel{},
 			&company.CompanySetting{},
+			&con.ConnectionModel{},
 		)
 	}
 	return &AppService{
-		ctx:       erpContext,
-		Config:    config,
-		Redis:     redis,
-		Websocket: ws,
+		ctx:               erpContext,
+		Config:            config,
+		Redis:             redis,
+		Websocket:         ws,
+		ConnectionService: NewConnectionService(erpContext),
 	}
 }
 

@@ -18,6 +18,8 @@ import GeminiAgentPage from "../pages/GeminiAgentPage";
 import GeminiAgentDetail from "../pages/GeminiAgentDetail";
 import TaskAttributePage from "../pages/TaskAttributePage";
 import TaskAttributeDetail from "../pages/TaskAttributeDetail";
+import ConnectionPage from "../pages/ConnectionPage";
+import ConnectionDetail from "../pages/ConnectionDetail";
 
 interface PrivateRouteProps {}
 
@@ -41,6 +43,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/chat/:channelId" element={<ChatPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/connection" element={<ConnectionPage />} />
+      <Route path="/connection/:connectionId" element={<ConnectionDetail />} />
       <Route path="/setting" element={<SettingPage />} />
       <Route path="/gemini-agent" element={<GeminiAgentPage />} />
       <Route path="/task-attribute" element={<TaskAttributePage />} />

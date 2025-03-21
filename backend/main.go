@@ -140,6 +140,7 @@ func main() {
 	routes.SetChatRoutes(v1, erpContext)
 	routes.SetFormRoutes(v1, erpContext)
 	routes.SetContactRoutes(v1, erpContext)
+	routes.SetupConnectionRoutes(v1, erpContext)
 	routes.SetupGeminiRoutes(v1, erpContext)
 
 	// RUN WORKER
