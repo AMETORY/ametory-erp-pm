@@ -3,6 +3,7 @@ package handlers
 import (
 	com "ametory-pm/models/company"
 	"encoding/json"
+	"fmt"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
@@ -68,7 +69,24 @@ func (h *GeminiHandler) GenerateContentHandler(c *gin.Context) {
 			return
 		}
 		h.geminiService.SetupModel(agent.SetTemperature, agent.SetTopK, agent.SetTopP, agent.SetMaxOutputTokens, agent.ResponseMimetype, agent.Model)
-		h.geminiService.SetUpSystemInstruction(agent.SystemInstruction)
+		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
+		
+%s`, agent.SystemInstruction, `
+Tolong jawab dalam format : 
+{
+  "response": string,
+  "type": string,
+  "command": string,
+  "params": object
+}
+
+Keterangan:
+response: jawaban bila tipe nya pertanyaan
+type: command atau question
+command: jika tipe command
+params: jika tipe command dibutuhkan parameter
+
+`))
 		agentID = &agentId
 	}
 

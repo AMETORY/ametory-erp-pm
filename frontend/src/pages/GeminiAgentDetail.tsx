@@ -8,10 +8,12 @@ import {
   getGeminiAgentHistories,
   toggleGeminiAgentHistoryModel,
   updateGeminiAgent,
+  updateGeminiAgentHistory,
 } from "../services/api/geminiApi";
 import {
   Button,
   Label,
+  Modal,
   Textarea,
   TextInput,
   ToggleSwitch,
@@ -33,6 +35,7 @@ import { LoadingContext } from "../contexts/LoadingContext";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { BsTrash } from "react-icons/bs";
+import { JsonEditor } from "json-edit-react";
 interface GeminiAgentDetailProps {}
 
 const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
@@ -44,6 +47,7 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
   const [openAttachment, setOpenAttachment] = useState(false);
   const [histories, setHistories] = useState<GeminiAgentHistory[]>([]);
   const [showHtml, setShowHtml] = useState(false);
+  const [activeHistory, setActiveHistory] = useState<GeminiAgentHistory>();
 
   const emojiStyle = {
     control: {
@@ -298,7 +302,7 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                 required={true}
               />
             </div>
-            <div className="mb-2 block">
+            {/* <div className="mb-2 block">
               <Label htmlFor="response-mimetype" value="Response Mimetype" />
               <TextInput
                 id="response-mimetype"
@@ -313,7 +317,7 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                 placeholder="Response Mimetype"
                 required={true}
               />
-            </div>
+            </div> */}
             <div className="mb-2 block">
               <Label htmlFor="html" value="View HTML" />
               <ToggleSwitch
@@ -395,7 +399,17 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
                 </div>
                 <div className="flex flex-row justify-end">
                   <div className="flex flex-col  items-end">
-                    <small className="mr-2">Model</small>
+                    <div className="flex gap-2">
+                      <small className="mr-2">Model</small>
+                      <small
+                        className="mr-2 cursor-pointer hover:underline"
+                        onClick={() => {
+                          setActiveHistory(e);
+                        }}
+                      >
+                        Edit
+                      </small>
+                    </div>
                     <div className="bg-white rounded-lg  p-4 max-w-[600px]">
                       <div className=" bg-white rounded-lg p-4 max-w-[600px] json-container">
                         {showHtml ? (
@@ -486,6 +500,71 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
           </div>
         </div>
       </div>
+      {activeHistory && (
+        <Modal
+          show={activeHistory !== undefined}
+          onClose={() => setActiveHistory(undefined)}
+        >
+          <Modal.Header>Edit History</Modal.Header>
+          <Modal.Body>
+            <div className="flex flex-col space-y-4">
+              <div>
+                <Label>Input</Label>
+                <TextInput
+                  value={activeHistory.input}
+                  onChange={(e) => {
+                    setActiveHistory({
+                      ...activeHistory,
+                      input: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+              <div>
+                <Label>Input</Label>
+                <JsonEditor
+                  data={JSON.parse(activeHistory!.output!)}
+                  setData={(val) => {
+                    setActiveHistory({
+                      ...activeHistory!,
+                      output: JSON.stringify(val),
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <div className="flex w-full justify-end">
+              <Button
+                onClick={() => {
+                  setLoading(true);
+                  updateGeminiAgentHistory(
+                    agentId!,
+                    activeHistory!.id!,
+                    activeHistory
+                  )
+                    .catch(toast.error)
+                    .finally(() => {
+                      setLoading(false);
+                      setHistories([
+                        ...histories.map((item) => {
+                          if (item.id == activeHistory.id) {
+                            return activeHistory;
+                          }
+                          return item;
+                        }),
+                      ]);
+                      setActiveHistory(undefined);
+                    });
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </Modal.Footer>
+        </Modal>
+      )}
     </AdminLayout>
   );
 };

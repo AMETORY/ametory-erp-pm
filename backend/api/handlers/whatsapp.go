@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"ametory-pm/config"
+	"ametory-pm/models/connection"
 	"ametory-pm/models/whatsapp"
 	"ametory-pm/services"
 	"ametory-pm/services/app"
@@ -15,6 +16,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
@@ -25,6 +27,7 @@ type WhatsappHandler struct {
 	waService                   *whatsmeow_client.WhatsmeowService
 	appService                  *app.AppService
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
+	geminiService               *google.GeminiService
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -46,11 +49,17 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 	if ok {
 		customerRelationshipService = customerRelationshipSrv
 	}
+	geminiService, ok := erpContext.ThirdPartyServices["GEMINI"].(*google.GeminiService)
+	if !ok {
+		panic("GeminiService is not found")
+	}
+
 	return &WhatsappHandler{
 		erpContext:                  erpContext,
 		waService:                   waService,
 		appService:                  appService,
 		customerRelationshipService: customerRelationshipService,
+		geminiService:               geminiService,
 	}
 }
 
@@ -408,9 +417,108 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 		sessionAuth = session
 
+		if *body.Message.Conversation == "LOGIN" && session == nil {
+			err := doLogin(h.erpContext, body.JID, body.Sender, conn)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			return
+		}
+
+		if session == nil {
+			sendWAMessage(h.erpContext, body.JID, body.Sender, "Anda belum Login, silakan ketik *LOGIN* lalu kirim untuk melakukan login")
+			return
+		}
+
 	}
 
 	fmt.Println("session", sessionAuth)
+
+	if body.Sender == "status" {
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+		return
+	}
+
+	if conn.GeminiAgent != nil {
+		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
+		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
+		
+%s`, conn.GeminiAgent.SystemInstruction, `
+
+Tolong jawab dalam format : 
+{
+  "response": string,
+  "type": string,
+  "command": string,
+  "params": object
+}
+
+Keterangan:
+response: jawaban bila tipe nya pertanyaan
+type: command atau question
+command: jika tipe command
+params: jika tipe command dibutuhkan parameter
+
+`))
+
+		var histories []models.GeminiHistoryModel
+		err = h.erpContext.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ? and is_model = ?", conn.GeminiAgent.ID, true).Error
+		if err != nil {
+			c.JSON(404, gin.H{"error": "Agent histories is not found"})
+			return
+		}
+		chatHistories := []map[string]any{}
+		for _, v := range histories {
+			chatHistories = append(chatHistories, map[string]any{
+				"role":    "user",
+				"content": v.Input,
+			})
+			chatHistories = append(chatHistories, map[string]any{
+				"role":    "model",
+				"content": v.Output,
+			})
+		}
+
+		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, *body.Message.Conversation, chatHistories, "", "")
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		var response geminiResponse
+		err = json.Unmarshal([]byte(output), &response)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
+		return
+	}
+}
+
+func doLogin(erpContext *context.ERPContext, jid, sender string, conn *connection.ConnectionModel) error {
+	var member *models.ContactModel
+	err := erpContext.DB.Find(&member, "phone = ?", sender).Error
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(member)
+	if err != nil {
+		return err
+	}
+	services.REDIS.Set(*erpContext.Ctx, fmt.Sprintf("session:%s", *member.Phone), string(b), 7*24*time.Hour)
+	msgContent := fmt.Sprintf(`
+Hallo %s
+Selamat datang di %s
+
+Session anda akan berlaku selama 7 hari:
+
+*ADMIN*
+			`, member.Name, conn.Name)
+	sendWAMessage(erpContext, jid, sender, msgContent)
+	return nil
 }
 
 // func (h *WhatsappHandler) WebhookHandler(c *gin.Context) {
@@ -786,4 +894,11 @@ func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) {
 		IsGroup: false,
 	}
 	erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
+}
+
+type geminiResponse struct {
+	Response string         `json:"response"`
+	Type     string         `json:"type"`
+	Command  string         `json:"command"`
+	Params   map[string]any `json:"params"`
 }
