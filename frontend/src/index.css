@@ -100,3 +100,11 @@ pre:has(code[class*='language-']) {
 .json-container a {
   @apply text-blue-500 hover:text-blue-700 hover:underline transition-all
 }
+
+.grey {
+  @apply bg-gray-200
+}
+
+.less-pad {
+  @apply pb-4
+}

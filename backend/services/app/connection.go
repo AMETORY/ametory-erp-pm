@@ -2,10 +2,16 @@ package app
 
 import (
 	"ametory-pm/models/connection"
+	srv "ametory-pm/services"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"math"
 	"net/http"
+	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"gorm.io/gorm"
 )
 
@@ -22,7 +28,7 @@ func NewConnectionService(erpContext *context.ERPContext) *ConnectionService {
 func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest http.Request, search string) ([]connection.ConnectionModel, error) {
 	var connections []connection.ConnectionModel
 
-	if err := c.ctx.DB.Scopes(paginate(connections, pagination, c.ctx.DB)).Find(&connections).Error; err != nil {
+	if err := c.ctx.DB.Scopes(paginate(connections, pagination, c.ctx.DB)).Preload("GeminiAgent").Find(&connections).Error; err != nil {
 		return nil, err
 	}
 	return connections, nil
@@ -30,7 +36,15 @@ func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest h
 
 func (c *ConnectionService) GetConnection(id string) (*connection.ConnectionModel, error) {
 	var con connection.ConnectionModel
-	if err := c.ctx.DB.Where("id = ?", id).First(&con).Error; err != nil {
+	if err := c.ctx.DB.Where("id = ?", id).Preload("GeminiAgent").First(&con).Error; err != nil {
+		return nil, err
+	}
+	return &con, nil
+}
+
+func (c *ConnectionService) GetConnectionBySession(session string) (*connection.ConnectionModel, error) {
+	var con connection.ConnectionModel
+	if err := c.ctx.DB.Where("session_name = ?", session).Preload("GeminiAgent").First(&con).Error; err != nil {
 		return nil, err
 	}
 	return &con, nil
@@ -56,6 +70,53 @@ func (c *ConnectionService) DeleteConnection(id string) error {
 	}
 
 	return nil
+}
+
+func (c *ConnectionService) GetActiveSession(phoneNumber string) (*models.ContactModel, error) {
+	sessionStr, err := srv.REDIS.Get(*c.ctx.Ctx, fmt.Sprintf("session:%s", phoneNumber)).Result()
+	if err != nil {
+		return nil, err
+	}
+	session := models.ContactModel{}
+	err = json.Unmarshal([]byte(sessionStr), &session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+func (c *ConnectionService) RemoveSession(phoneNumber string) error {
+	return srv.REDIS.Del(*c.ctx.Ctx, fmt.Sprintf("session:%s", phoneNumber)).Err()
+}
+func (c *ConnectionService) SetSession(phoneNumber string) error {
+	var member *models.ContactModel
+	err := c.ctx.DB.Model(&models.ContactModel{}).Where("phone = ?", phoneNumber).First(&member).Error
+	if err != nil {
+		return err
+	}
+	sessionJson, err := json.Marshal(member)
+	if err != nil {
+		return err
+	}
+	err = srv.REDIS.Set(*c.ctx.Ctx, fmt.Sprintf("session:%s", phoneNumber), string(sessionJson), 7*24*time.Hour).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ConnectionService) IsPhoneNumberRegistered(phoneNumber string) bool {
+	var member models.ContactModel
+	err := c.ctx.DB.Model(&member).Where("phone = ?", phoneNumber).First(&member).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func paginate(value any, pagination *Pagination, db *gorm.DB) func(db *gorm.DB) *gorm.DB {

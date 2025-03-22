@@ -102,3 +102,16 @@ export const addRapidAPIPlugins = async (data: any) => {
     body: JSON.stringify(data),
   });
 };
+export const whatsappSessionAuthRegister = async (data: any) => {
+  return await customFetch(`api/v1/whatsapp/register`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
+
+export const getNumber = async (code: string) => {
+  return await customFetch(`api/v1/whatsapp/get-number/${code}`, {
+    method: "GET",
+  });
+};

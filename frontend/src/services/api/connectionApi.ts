@@ -40,5 +40,7 @@ export const getQr = async (id: string, sessionName: string) => {
 };
  
 export const deleteConnection = async (id: string) => {
-    await customFetch(`api/v1/connection/${id}`);
+    await customFetch(`api/v1/connection/${id}`, {
+        method: "DELETE",
+    });
 };

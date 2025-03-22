@@ -25,5 +25,7 @@ func NewWhatsappRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 
 	}
 
-	r.POST("/api/v1/whatsapp-webhook", waHandler.WhatsappWebhookHandler)
+	r.POST("/whatsapp-webhook", waHandler.WhatsappWebhookHandler)
+	r.POST("/whatsapp/register", waHandler.WhatsappRegisterHandler)
+	r.GET("/whatsapp/get-number/:code", waHandler.WhatsappGetNumberHandler)
 }

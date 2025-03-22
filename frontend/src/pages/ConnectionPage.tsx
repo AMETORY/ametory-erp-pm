@@ -3,6 +3,7 @@ import AdminLayout from "../components/layouts/admin";
 import {
   Badge,
   Button,
+  Drawer,
   Label,
   Modal,
   Pagination,
@@ -14,13 +15,16 @@ import Select, { InputActionMeta } from "react-select";
 import {
   createConnection,
   deleteConnection,
+  getConnection,
   getConnections,
+  updateConnection,
 } from "../services/api/connectionApi";
 import { useNavigate } from "react-router-dom";
 import { LoadingContext } from "../contexts/LoadingContext";
 import toast from "react-hot-toast";
 import { ConnectionModel } from "../models/connection";
 import { PaginationResponse } from "../objects/pagination";
+import ConnectionDrawer from "../components/ConnectionDrawer";
 interface ConnectionPageProps {}
 
 const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
@@ -33,9 +37,10 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   const [name, setName] = useState("");
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
   const [mounted, setMounted] = useState(false);
-
+  const [showDetailOpen, setShowDetailOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [sessionName, setSessionName] = useState("");
+  const [activeConnection, setActiveConnection] = useState<ConnectionModel>();
   const [selectedConnection, setSelectedConnection] = useState<{
     label: string;
     value: string;
@@ -64,7 +69,12 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
         type: selectedConnection.value,
         session_name: sessionName,
       });
-      nav(`/connection/${resp.id}`);
+      getConnection(resp.id).then((resp: any) => {
+        setActiveConnection(resp.data);
+        setShowDetailOpen(true);
+        setShowModal(false);
+        getAllConnections();
+      });
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -157,7 +167,12 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
                   <a
                     className="font-medium text-cyan-600 hover:underline dark:text-cyan-500 cursor-pointer"
                     onClick={() => {
-                      nav(`/connection/${connection.id}`);
+                      // nav(`/connection/${connection.id}`);
+
+                      getConnection(connection.id!).then((res: any) => {
+                        setShowDetailOpen(true);
+                        setActiveConnection(res.data);
+                      });
                     }}
                   >
                     View
@@ -246,6 +261,40 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
           </div>
         </Modal.Footer>
       </Modal>
+      {activeConnection && (
+        <Drawer
+          style={{ width: "600px" }}
+          position="right"
+          open={showDetailOpen}
+          onClose={() => {
+            setShowDetailOpen(false);
+            setActiveConnection(undefined);
+          }}
+        >
+          <ConnectionDrawer
+            connection={activeConnection}
+            onUpdate={(connection) => {
+              setActiveConnection(connection);
+              // console.log(connection);
+              // updateConnection(connection.id!, connection).then(() => {
+              //   getAllConnections();
+              // })
+            }}
+            onFinish={() => {
+              // setShowDetailOpen(false);
+              getAllConnections();
+              setActiveConnection(undefined);
+            }}
+            onSave={() => {
+              updateConnection(activeConnection.id!, activeConnection).then(
+                () => {
+                  getAllConnections();
+                }
+              );
+            }}
+          />
+        </Drawer>
+      )}
     </AdminLayout>
   );
 };

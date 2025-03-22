@@ -142,6 +142,7 @@ func main() {
 	routes.SetContactRoutes(v1, erpContext)
 	routes.SetupConnectionRoutes(v1, erpContext)
 	routes.SetupGeminiRoutes(v1, erpContext)
+	routes.NewWhatsappRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {
