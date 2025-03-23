@@ -447,13 +447,13 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 
 	}
 
-	fmt.Println("session", sessionAuth)
+	// fmt.Println("session", sessionAuth)
 
 	if body.Sender == "status" {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 		return
 	}
-
+	var replyResponse *models.WhatsappMessageModel
 	if conn.GeminiAgent != nil {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
 		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
@@ -494,6 +494,9 @@ params: jika tipe command dibutuhkan parameter
 			})
 		}
 
+		userHistories := []models.WhatsappMessageModel{}
+		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.SessionID).Order("created_at desc").Limit(10).Find(&userHistories)
+
 		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -508,6 +511,15 @@ params: jika tipe command dibutuhkan parameter
 		}
 
 		sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
+		replyResponse = &models.WhatsappMessageModel{
+			Receiver: body.Sender,
+			Message:  response.Response,
+			MimeType: body.MimeType,
+			Session:  body.SessionID,
+			JID:      body.JID,
+			IsFromMe: true,
+			IsGroup:  body.Info["IsGroup"].(bool),
+		}
 	}
 
 	var whatsappSession *models.WhatsappMessageSession
@@ -554,6 +566,19 @@ params: jika tipe command dibutuhkan parameter
 		// log.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	if replyResponse != nil {
+		if sessionAuth != nil {
+			replyResponse.ContactID = &sessionAuth.ID
+			replyResponse.CompanyID = sessionAuth.CompanyID
+		}
+		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
+		if err != nil {
+			// log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 }
