@@ -7,6 +7,7 @@ import (
 	"ametory-pm/services"
 	"ametory-pm/services/app"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type WhatsappHandler struct {
@@ -340,6 +342,10 @@ func (h *WhatsappHandler) WhatsappRegisterHandler(c *gin.Context) {
 		return
 	}
 	phone := data["phone_number"].(string)
+	companyID, ok := data["company_id"].(string)
+	if !ok {
+		companyID = ""
+	}
 
 	if phone != input.Phone {
 		c.JSON(400, gin.H{"error": "invalid code"})
@@ -353,6 +359,7 @@ func (h *WhatsappHandler) WhatsappRegisterHandler(c *gin.Context) {
 		Email:      input.Email,
 		Phone:      &phoneNumber,
 		Address:    input.Address,
+		CompanyID:  &companyID,
 		IsCustomer: true,
 	}
 	member.ID = utils.Uuid()
@@ -367,6 +374,7 @@ func (h *WhatsappHandler) WhatsappRegisterHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Registration has been completed"})
 }
 func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
+
 	var body whatsapp.MsgObject
 
 	err := c.ShouldBindJSON(&body)
@@ -382,6 +390,11 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
+	convMsg := ""
+	if body.Message.Conversation != nil {
+		convMsg = *body.Message.Conversation
+	}
+
 	var sessionAuth *models.ContactModel
 	if conn.SessionAuth {
 		// CHECK IS PHONE NUMBER REGISTERED
@@ -391,6 +404,7 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 			data := map[string]interface{}{
 				"phone_number": body.Sender,
 				"jid":          body.JID,
+				"company_id":   conn.CompanyID,
 			}
 
 			b, _ := json.Marshal(data)
@@ -417,7 +431,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 		sessionAuth = session
 
-		if *body.Message.Conversation == "LOGIN" && session == nil {
+		if convMsg == "LOGIN" && session == nil {
 			err := doLogin(h.erpContext, body.JID, body.Sender, conn)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -480,7 +494,7 @@ params: jika tipe command dibutuhkan parameter
 			})
 		}
 
-		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, *body.Message.Conversation, chatHistories, "", "")
+		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -494,8 +508,54 @@ params: jika tipe command dibutuhkan parameter
 		}
 
 		sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
+	}
+
+	var whatsappSession *models.WhatsappMessageSession
+	err = h.erpContext.DB.First(&whatsappSession, "session = ?", body.SessionID).Error
+	if err != nil {
+		now := time.Now()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			sessionData := models.WhatsappMessageSession{
+				JID:          body.JID,
+				Session:      body.SessionID,
+				SessionName:  body.SessionName,
+				LastOnlineAt: &now,
+				LastMessage:  convMsg,
+			}
+			if sessionAuth != nil {
+				sessionData.CompanyID = sessionAuth.CompanyID
+			}
+			h.erpContext.DB.Create(&sessionData)
+		}
+	}
+	infoByte, err := json.Marshal(body.Info)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	var waData models.WhatsappMessageModel = models.WhatsappMessageModel{
+		Sender:   body.Sender,
+		Message:  convMsg,
+		MimeType: body.MimeType,
+		Info:     string(infoByte),
+		Session:  body.SessionID,
+		JID:      body.JID,
+		IsFromMe: body.Info["IsFromMe"].(bool),
+		IsGroup:  body.Info["IsGroup"].(bool),
+	}
+
+	if sessionAuth != nil {
+		waData.ContactID = &sessionAuth.ID
+		waData.CompanyID = sessionAuth.CompanyID
+	}
+	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waData)
+	if err != nil {
+		// log.Println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 }
 
 func doLogin(erpContext *context.ERPContext, jid, sender string, conn *connection.ConnectionModel) error {
