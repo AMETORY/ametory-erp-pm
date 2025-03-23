@@ -536,6 +536,7 @@ params: jika tipe command dibutuhkan parameter
 			}
 			if sessionAuth != nil {
 				sessionData.CompanyID = sessionAuth.CompanyID
+				sessionData.ContactID = &sessionAuth.ID
 			}
 			h.erpContext.DB.Create(&sessionData)
 		}
@@ -581,6 +582,66 @@ params: jika tipe command dibutuhkan parameter
 		}
 	}
 
+}
+
+func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
+	session := c.Params.ByName("session")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	sessions, err := h.customerRelationshipService.WhatsappService.GetSessionMessageBySessionName(session, *c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": sessions})
+}
+
+func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
+	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	var session models.WhatsappMessageSession
+	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session})
+}
+func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
+	sessionId := c.Query("session_id") // c.Params.ByName("sessionId")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	var session *models.WhatsappMessageSession
+	err := h.erpContext.DB.First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, *c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	messages.Items = reverse(*messages.Items.(*[]models.WhatsappMessageModel))
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": messages})
 }
 
 func doLogin(erpContext *context.ERPContext, jid, sender string, conn *connection.ConnectionModel) error {

@@ -20,6 +20,7 @@ import TaskAttributePage from "../pages/TaskAttributePage";
 import TaskAttributeDetail from "../pages/TaskAttributeDetail";
 import ConnectionPage from "../pages/ConnectionPage";
 import ConnectionDetail from "../pages/ConnectionDetail";
+import WhatsappPage from "../pages/WhatsappPage";
 
 interface PrivateRouteProps {}
 
@@ -48,6 +49,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/setting" element={<SettingPage />} />
       <Route path="/gemini-agent" element={<GeminiAgentPage />} />
       <Route path="/task-attribute" element={<TaskAttributePage />} />
+      <Route path="/whatsapp" element={<WhatsappPage />} />
+      <Route path="/whatsapp/:sessionId" element={<WhatsappPage />} />
       <Route
         path="/task-attribute/:attributeId"
         element={<TaskAttributeDetail />}

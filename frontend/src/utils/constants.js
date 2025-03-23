@@ -5,6 +5,7 @@ export const LOCAL_STORAGE_COMPANY = "company";
 export const LOCAL_STORAGE_COMPANY_ID = "companyID";
 export const LOCAL_STORAGE_COLLAPSED = "collapsed";
 export const LOCAL_STORAGE_DEFAULT_CHANNEL = "defaultChannel";
+export const LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION = "defaultWhatsappSession";
 
 
 export const severityOptions = [

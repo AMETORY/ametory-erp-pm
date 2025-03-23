@@ -1,7 +1,7 @@
 import { HR, Tooltip } from "flowbite-react";
 import { useContext, useEffect, useState, type FC } from "react";
 import { AiOutlineDashboard } from "react-icons/ai";
-import { BsAsterisk, BsGear, BsKanban, BsPeople } from "react-icons/bs";
+import { BsAsterisk, BsGear, BsKanban, BsPeople, BsWhatsapp } from "react-icons/bs";
 import { GoTasklist } from "react-icons/go";
 import { HiOutlineChat } from "react-icons/hi";
 import { HiOutlineInboxArrowDown } from "react-icons/hi2";
@@ -22,6 +22,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
   const [sentUnreadCount, setSentUnreadCount] = useState(0);
   const [indexUnreadChat, setIndexUnreadChat] = useState(0);
+  const [waUnreadChat, setWaUnreadChat] = useState(0);
 
   useEffect(() => {
     setMounted(true)
@@ -57,6 +58,8 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             {!collapsed && <span className="ms-3">Dashboard</span>}
           </span>
         </li>
+        <HR />
+        <li className="text-xs text-gray-300" style={{ }}>Feature</li>
         <li className="" style={{ }}>
           <span
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
@@ -128,6 +131,27 @@ const Sidebar: FC<SidebarProps> = ({}) => {
           </span>
         </li>
         <HR />
+        <li className="text-xs text-gray-300" style={{ }}>Omni Channel</li>
+        <li className="" style={{ }}>
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+            onClick={handleNavigation("/whatsapp")}
+          >
+            <Tooltip content="Whatsapp">
+              <BsWhatsapp />
+            </Tooltip>
+            {!collapsed && (
+              <span className="flex-1 ms-3 whitespace-nowrap">Whatsapp</span>
+            )}
+            {!collapsed && waUnreadChat  > 0 && (
+              <span className="inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                {waUnreadChat }
+              </span>
+            )}
+          </span>
+        </li>
+        <HR />
+        <li className="text-xs text-gray-300" style={{ }}>Preferences</li>
         <li className="" style={{ }}>
           <span
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
