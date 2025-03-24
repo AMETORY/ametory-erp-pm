@@ -21,6 +21,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
 )
 
@@ -66,27 +67,34 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 }
 
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
-	if h.waService == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
-		return
-	}
 	var input struct {
-		JID      string `json:"jid"`
-		Session  string `json:"session"`
-		Message  string `json:"message"`
-		Receiver string `json:"receiver"`
+		Message string             `json:"message"`
+		Files   []models.FileModel `json:"files"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(input.JID, input.Session)
+	sessionId := c.Params.ByName("session_id")
+	var session *models.WhatsappMessageSession
+	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if h.waService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	splitJID := strings.Split(input.JID, "@")
+	splitJID := strings.Split(session.JID, "@")
 	splitSep := strings.Split(splitJID[0], ":")
 
 	info := make(map[string]interface{})
@@ -97,18 +105,23 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	b, _ := json.Marshal(info)
 	msg.Info = string(b)
 
+	isGroup, ok := msg.MessageInfo["IsGroup"].(bool)
+	if !ok {
+		isGroup = false
+	}
+
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
 		Sender:   splitSep[0],
-		Receiver: input.Receiver,
+		Receiver: *session.Contact.Phone,
 		Message:  input.Message,
 		// MediaURL: mediaURLSaved,
 		// MimeType: msg.MimeType,
 		MessageInfo: info,
 		Info:        msg.Info,
-		Session:     input.Session,
-		JID:         input.JID,
+		Session:     session.Session,
+		JID:         session.JID,
 		IsFromMe:    true,
-		IsGroup:     msg.MessageInfo["IsGroup"].(bool),
+		IsGroup:     isGroup,
 	}
 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
 	if err != nil {
@@ -117,6 +130,17 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
+	msgNotif := gin.H{
+		"message":    input.Message,
+		"command":    "WHATSAPP_RECEIVED",
+		"session_id": session.ID,
+		"data":       waDataReply,
+	}
+	msgNotifStr, _ := json.Marshal(msgNotif)
+	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
 	to := waDataReply.Receiver
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
@@ -132,7 +156,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	msg, err = h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(input.JID, input.Session)
+	msg, err = h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -453,6 +477,74 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 		return
 	}
+
+	infoByte, err := json.Marshal(body.Info)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var waData models.WhatsappMessageModel = models.WhatsappMessageModel{
+		Sender:   body.Sender,
+		Message:  convMsg,
+		MimeType: body.MimeType,
+		Info:     string(infoByte),
+		Session:  body.SessionID,
+		JID:      body.JID,
+		IsFromMe: body.Info["IsFromMe"].(bool),
+		IsGroup:  body.Info["IsGroup"].(bool),
+	}
+
+	if sessionAuth != nil {
+		waData.ContactID = &sessionAuth.ID
+		waData.CompanyID = sessionAuth.CompanyID
+	}
+	now := time.Now()
+	var whatsappSession *models.WhatsappMessageSession
+	err = h.erpContext.DB.First(&whatsappSession, "session = ?", body.SessionID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		refType := "connection"
+		sessionData := models.WhatsappMessageSession{
+			JID:          body.JID,
+			Session:      body.SessionID,
+			SessionName:  body.SessionName,
+			LastOnlineAt: &now,
+			LastMessage:  convMsg,
+			RefID:        &conn.ID,
+			RefType:      &refType,
+		}
+		if sessionAuth != nil {
+			sessionData.CompanyID = sessionAuth.CompanyID
+			sessionData.ContactID = &sessionAuth.ID
+		}
+		fmt.Println("CREATE SESSION")
+		h.erpContext.DB.Create(&sessionData)
+	} else {
+		whatsappSession.LastMessage = convMsg
+		whatsappSession.LastOnlineAt = &now
+		h.erpContext.DB.Save(&whatsappSession)
+	}
+
+	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waData)
+	if err != nil {
+		// log.Println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	waData.Contact = sessionAuth
+	waData.SentAt = &now
+	msg := gin.H{
+		"message":    convMsg,
+		"command":    "WHATSAPP_RECEIVED",
+		"session_id": whatsappSession.ID,
+		"data":       waData,
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
 	var replyResponse *models.WhatsappMessageModel
 	if conn.GeminiAgent != nil {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
@@ -497,6 +589,24 @@ params: jika tipe command dibutuhkan parameter
 		userHistories := []models.WhatsappMessageModel{}
 		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.SessionID).Order("created_at desc").Limit(10).Find(&userHistories)
 
+		userHistories = reverse(userHistories)
+
+		for _, v := range userHistories {
+			if v.IsFromMe {
+				chatHistories = append(chatHistories, map[string]any{
+					"role":    "user",
+					"content": v.Message,
+				})
+			} else {
+				chatHistories = append(chatHistories, map[string]any{
+					"role":    "model",
+					"content": v.Message,
+				})
+			}
+
+		}
+
+		utils.LogJson(chatHistories)
 		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -522,53 +632,6 @@ params: jika tipe command dibutuhkan parameter
 		}
 	}
 
-	var whatsappSession *models.WhatsappMessageSession
-	err = h.erpContext.DB.First(&whatsappSession, "session = ?", body.SessionID).Error
-	if err != nil {
-		now := time.Now()
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			sessionData := models.WhatsappMessageSession{
-				JID:          body.JID,
-				Session:      body.SessionID,
-				SessionName:  body.SessionName,
-				LastOnlineAt: &now,
-				LastMessage:  convMsg,
-			}
-			if sessionAuth != nil {
-				sessionData.CompanyID = sessionAuth.CompanyID
-				sessionData.ContactID = &sessionAuth.ID
-			}
-			h.erpContext.DB.Create(&sessionData)
-		}
-	}
-	infoByte, err := json.Marshal(body.Info)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	var waData models.WhatsappMessageModel = models.WhatsappMessageModel{
-		Sender:   body.Sender,
-		Message:  convMsg,
-		MimeType: body.MimeType,
-		Info:     string(infoByte),
-		Session:  body.SessionID,
-		JID:      body.JID,
-		IsFromMe: body.Info["IsFromMe"].(bool),
-		IsGroup:  body.Info["IsGroup"].(bool),
-	}
-
-	if sessionAuth != nil {
-		waData.ContactID = &sessionAuth.ID
-		waData.CompanyID = sessionAuth.CompanyID
-	}
-	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waData)
-	if err != nil {
-		// log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	if replyResponse != nil {
 		if sessionAuth != nil {
 			replyResponse.ContactID = &sessionAuth.ID
@@ -580,6 +643,24 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
+		replyResponse.SentAt = &now
+		msg := gin.H{
+			"message":    replyResponse.Message,
+			"command":    "WHATSAPP_RECEIVED",
+			"session_id": whatsappSession.ID,
+			"data":       replyResponse,
+		}
+		b, _ := json.Marshal(msg)
+		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
+
+		now = time.Now()
+		whatsappSession.LastMessage = replyResponse.Message
+		whatsappSession.LastOnlineAt = &now
+		h.erpContext.DB.Where("id = ?", whatsappSession.ID).Model(&models.WhatsappMessageSession{}).Updates(&whatsappSession)
 	}
 
 }
@@ -597,6 +678,11 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// waSessions := sessions.Items.(*[]models.WhatsappMessageSession)
+	// for _, v := range *waSessions {
+	// 	var conn connection.ConnectionModel
+	// }
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": sessions})
 }

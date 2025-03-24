@@ -30,3 +30,11 @@ export const getWhatsappMessages = async (session_id: string, req: PaginationReq
     method: "GET",
   });
 };
+
+
+export const createWAMessage = async (sessionId: string, message: any) => {
+  return customFetch(`api/v1/whatsapp/${sessionId}/message`, {
+    method: "POST",
+    body: JSON.stringify(message),
+  });
+};

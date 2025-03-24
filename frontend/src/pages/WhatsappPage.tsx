@@ -48,6 +48,12 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     }
   }, [mounted, sessionId]);
 
+  useEffect(() => {
+    if (wsMsg?.command == "WHATSAPP_RECEIVED") {
+      getAllSessions()
+    }
+  }, [wsMsg, profile, sessionId]);
+
   const getAllSessions = async () => {
     try {
       setLoading(true);
@@ -106,7 +112,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     )}
                     <div className="flex flex-col">
                       <span className="font-semibold">{e.contact?.name}</span>
-                      <small className="">{e.last_message}</small>
+                      <small className="line-clamp-2 overflow-hidden text-ellipsis">{e.last_message}</small>
                     </div>
                   </div>
                 </li>

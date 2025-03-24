@@ -9,11 +9,16 @@ import {
 import Moment from "react-moment";
 import { HiOutlineUserGroup } from "react-icons/hi";
 import {
+    createWAMessage,
   getWhatsappMessages,
   getWhatsappSessionDetail,
 } from "../services/api/whatsappApi";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import toast from "react-hot-toast";
+import { Mention, MentionsInput } from "react-mentions";
+import { Button } from "flowbite-react";
+import { RiAttachment2 } from "react-icons/ri";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -60,6 +65,96 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     });
   }, [session, sessionId]);
 
+  useEffect(() => {
+    if (!sessionId) return;
+    if (wsMsg?.session_id == sessionId && wsMsg?.command == "WHATSAPP_RECEIVED") {
+      setMessages([...messages, wsMsg.data]);
+      setTimeout(() => {
+        scrollToBottom()
+        setSession({
+            ...session,
+            last_online_at: new Date()
+        })
+      }, 300);
+     
+    }
+  }, [wsMsg, profile, sessionId]);
+  useEffect(() => {
+    fetch(
+      "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
+    )
+      .then((response) => {
+        return response.json();
+      })
+      .then((jsonData) => {
+        setEmojis(jsonData.emojis);
+      });
+  }, []);
+  const emojiStyle = {
+    control: {
+      fontSize: 16,
+      lineHeight: 1.2,
+      minHeight: 30,
+      maxHeight: 80,
+    },
+
+    highlighter: {
+      padding: 9,
+      border: "1px solid transparent",
+    },
+
+    input: {
+      fontSize: 16,
+      lineHeight: 1.2,
+      padding: 9,
+      border: "1px solid silver",
+      borderRadius: 10,
+    },
+
+    suggestions: {
+      list: {
+        backgroundColor: "white",
+        border: "1px solid rgba(0,0,0,0.15)",
+        fontSize: 16,
+      },
+
+      item: {
+        padding: "5px 15px",
+        borderBottom: "1px solid rgba(0,0,0,0.15)",
+
+        "&focused": {
+          backgroundColor: "#cee4e5",
+        },
+      },
+    },
+  };
+
+  const neverMatchingRegex = /($a)/;
+  const queryEmojis = (query: any, callback: (emojis: any) => void) => {
+    if (query.length === 0) return;
+
+    const matches = emojis
+      .filter((emoji: any) => {
+        return emoji.name.indexOf(query.toLowerCase()) > -1;
+      })
+      .slice(0, 10);
+    return matches.map(({ emoji }) => ({ id: emoji }));
+  };
+
+  const scrollToBottom = () => {
+    const element = document.getElementById("channel-messages");
+    if (element) {
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+  
   return (
     <div className="flex flex-col h-full ">
       <div className="shoutbox border-b py-2 min-h-[40px] flex justify-between items-center">
@@ -85,7 +180,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       </div>
       <div
         id="channel-messages"
-        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 "
+        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-4"
       >
         {messages.map((msg) => (
           <div
@@ -127,19 +222,68 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   } w-[300px] h-[300px] object-cover`}
                 />
               )}
+              {!msg.is_from_me && <small>{msg.contact?.name}</small>}
               {msg.is_group && !msg.is_from_me && (
                 <small>{msg.message_info?.PushName}</small>
               )}
 
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px]">
-                {msg.sent_at && (
-                  <Moment fromNow>{msg.sent_at}</Moment>
-                )}
+                {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
               </div>
             </div>
           </div>
         ))}
+      </div>
+      {files.length > 0 && (
+        <div className="absolute bottom-[100px] flex w-full bg-red-50 p-4 z-50">
+          {files.length} Attachments
+        </div>
+      )}
+      <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
+        <MentionsInput
+          value={content}
+          onChange={(val: any) => {
+            setContent(val.target.value);
+          }}
+          style={emojiStyle}
+          placeholder={
+            "Press ':' for emojis and shift+enter to send"
+          }
+          className="w-full"
+          autoFocus
+          onKeyDown={async (val: any) => {
+            if (val.key === "Enter" && val.shiftKey) {
+              try {
+                await createWAMessage(sessionId!, {
+                  message: content,
+                  files: files,
+                });
+                setOpenAttachment(false);
+                setFiles([]);
+              } catch (error) {
+                toast.error(`${error}`);
+              } finally {
+                setTimeout(() => {
+                  setContent("");
+                }, 300);
+              }
+
+              return;
+            }
+          }}
+        >
+          
+          <Mention
+            trigger=":"
+            markup="__id__"
+            regex={neverMatchingRegex}
+            data={queryEmojis}
+          />
+        </MentionsInput>
+        <Button color="gray" onClick={() => setOpenAttachment(true)}>
+          <RiAttachment2 />
+        </Button>
       </div>
     </div>
   );
