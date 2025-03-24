@@ -108,3 +108,32 @@ pre:has(code[class*='language-']) {
 .less-pad {
   @apply pb-4
 }
+
+#channel-messages ul {
+  @apply list-disc ml-6
+}
+
+#channel-messages h1 {
+  @apply m-0 text-3xl
+}
+
+#channel-messages h2 {
+  @apply m-0 text-2xl
+}
+
+#channel-messages h3 {
+  @apply m-0 text-xl
+}
+
+#channel-messages h4 {
+  @apply m-0 text-lg
+}
+
+#channel-messages h5 {
+  @apply m-0 text-base
+}
+
+#channel-messages h6 {
+  @apply m-0 text-sm
+}
+

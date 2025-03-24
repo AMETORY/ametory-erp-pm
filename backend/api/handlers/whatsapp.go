@@ -469,6 +469,24 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			return
 		}
 
+	} else {
+		// CHECK IS PHONE NUMBER REGISTERED
+		var contact models.ContactModel
+		err := h.erpContext.DB.Where("phone = ?", body.Sender).First(&contact).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			contact.Phone = &body.Sender
+			pushName, ok := body.Info["PushName"].(string)
+			if ok {
+				contact.Name = pushName
+			}
+			err := h.erpContext.DB.Create(&contact).Error
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
+		sessionAuth = &contact
 	}
 
 	// fmt.Println("session", sessionAuth)
@@ -546,7 +564,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	})
 
 	var replyResponse *models.WhatsappMessageModel
-	if conn.GeminiAgent != nil {
+	if conn.GeminiAgent != nil && conn.IsAutoPilot {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
 		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
 		
@@ -619,7 +637,14 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-
+		info := map[string]interface{}{
+			"Timestamp": time.Now().Format(time.RFC3339),
+		}
+		infoByte, err := json.Marshal(info)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 		sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
 		replyResponse = &models.WhatsappMessageModel{
 			Receiver: body.Sender,
@@ -628,6 +653,7 @@ params: jika tipe command dibutuhkan parameter
 			Session:  body.SessionID,
 			JID:      body.JID,
 			IsFromMe: true,
+			Info:     string(infoByte),
 			IsGroup:  body.Info["IsGroup"].(bool),
 		}
 	}
@@ -702,7 +728,14 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session})
+	var connection connection.ConnectionModel
+	err = h.erpContext.DB.First(&connection, "id = ?", session.RefID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session, "connection": connection})
 }
 func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 	sessionId := c.Query("session_id") // c.Params.ByName("sessionId")

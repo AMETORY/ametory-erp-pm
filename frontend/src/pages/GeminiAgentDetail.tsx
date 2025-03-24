@@ -91,7 +91,10 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
   useEffect(() => {
     if (agentId) {
       getGeminiAgentDetail(agentId)
-        .then((resp: any) => setAgent(resp.data))
+        .then((resp: any) => {
+          setAgent(resp.data);
+          getDetail();
+        })
         .catch(toast.error);
     }
   }, [agentId]);
@@ -110,14 +113,17 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
 
   useEffect(() => {
     if (agent) {
-      getGeminiAgentHistories(agent.id!)
-        .then((resp: any) => {
-          setHistories(resp.data);
-          setTimeout(scrollToBottom, 300);
-        })
-        .catch(toast.error);
     }
   }, [agent]);
+
+  const getDetail = () => {
+    getGeminiAgentHistories(agentId!)
+      .then((resp: any) => {
+        setHistories(resp.data);
+        setTimeout(scrollToBottom, 300);
+      })
+      .catch(toast.error);
+  };
 
   const neverMatchingRegex = /($a)/;
   const queryEmojis = (query: any, callback: (emojis: any) => void) => {

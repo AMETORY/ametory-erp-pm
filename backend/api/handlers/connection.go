@@ -89,12 +89,20 @@ func (h *ConnectionHandler) CreateConnectionHandler(c *gin.Context) {
 }
 
 func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
-	var connection connection.ConnectionModel
-	if err := c.ShouldBindJSON(&connection); err != nil {
+	id := c.Param("id")
+	_, err := h.appService.ConnectionService.GetConnection(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var input connection.ConnectionModel
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.appService.ConnectionService.UpdateConnection(&connection); err != nil {
+
+	if err := h.appService.ConnectionService.UpdateConnection(&input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

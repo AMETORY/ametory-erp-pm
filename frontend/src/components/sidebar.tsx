@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { CollapsedContext } from "../contexts/CollapsedContext";
 import { getInboxMessagesCount, getSentMessagesCount } from "../services/api/inboxApi";
 import { asyncStorage } from "../utils/async_storage";
-import { LOCAL_STORAGE_COMPANIES, LOCAL_STORAGE_COMPANY_ID, LOCAL_STORAGE_DEFAULT_CHANNEL, LOCAL_STORAGE_TOKEN } from "../utils/constants";
+import { LOCAL_STORAGE_COMPANIES, LOCAL_STORAGE_COMPANY_ID, LOCAL_STORAGE_DEFAULT_CHANNEL, LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION, LOCAL_STORAGE_TOKEN } from "../utils/constants";
 import { MdOutlineAssistant } from "react-icons/md";
 
 interface SidebarProps {}
@@ -135,7 +135,15 @@ const Sidebar: FC<SidebarProps> = ({}) => {
         <li className="" style={{ }}>
           <span
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
-            onClick={handleNavigation("/whatsapp")}
+            onClick={async() => {
+              let sessionID = await asyncStorage.getItem(LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION)
+              if (sessionID) {
+                nav(`/whatsapp/${sessionID}`)
+              } else {
+                nav(`/whatsapp`)
+
+              }
+            }}
           >
             <Tooltip content="Whatsapp">
               <BsWhatsapp />

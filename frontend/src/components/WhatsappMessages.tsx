@@ -9,7 +9,7 @@ import {
 import Moment from "react-moment";
 import { HiOutlineUserGroup } from "react-icons/hi";
 import {
-    createWAMessage,
+  createWAMessage,
   getWhatsappMessages,
   getWhatsappSessionDetail,
 } from "../services/api/whatsappApi";
@@ -17,8 +17,11 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import toast from "react-hot-toast";
 import { Mention, MentionsInput } from "react-mentions";
-import { Button } from "flowbite-react";
+import { Button, ToggleSwitch } from "flowbite-react";
 import { RiAttachment2 } from "react-icons/ri";
+import { ConnectionModel } from "../models/connection";
+import { connect } from "node:http2";
+import { updateConnection } from "../services/api/connectionApi";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -42,6 +45,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const closeModal = () => setShowModal(false);
   const [files, setFiles] = useState<FileModel[]>([]);
   const [openAttachment, setOpenAttachment] = useState(false);
+  const [connection, setConnection] = useState<ConnectionModel>();
 
   useEffect(() => {
     setMounted(true);
@@ -51,6 +55,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     if (mounted) {
       getWhatsappSessionDetail(sessionId).then((res: any) => {
         setSession(res.data);
+        setConnection(res.connection);
       });
     }
   }, [mounted, sessionId]);
@@ -67,16 +72,18 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
   useEffect(() => {
     if (!sessionId) return;
-    if (wsMsg?.session_id == sessionId && wsMsg?.command == "WHATSAPP_RECEIVED") {
+    if (
+      wsMsg?.session_id == sessionId &&
+      wsMsg?.command == "WHATSAPP_RECEIVED"
+    ) {
       setMessages([...messages, wsMsg.data]);
       setTimeout(() => {
-        scrollToBottom()
+        scrollToBottom();
         setSession({
-            ...session,
-            last_online_at: new Date()
-        })
+          ...session,
+          last_online_at: new Date(),
+        });
       }, 300);
-     
     }
   }, [wsMsg, profile, sessionId]);
   useEffect(() => {
@@ -154,7 +161,15 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  
+
+  useEffect(() => {
+    if (connection?.id) {
+      updateConnection(connection!.id!, {
+        ...connection,
+      });
+    }
+  }, [connection?.is_auto_pilot]);
+
   return (
     <div className="flex flex-col h-full ">
       <div className="shoutbox border-b py-2 min-h-[40px] flex justify-between items-center">
@@ -177,10 +192,20 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               size={24}
               onClick={openModal}
             /> */}
+        <ToggleSwitch
+          checked={connection?.is_auto_pilot ?? false}
+          label="Auto Pilot"
+          onChange={(val) => {
+            setConnection({
+              ...connection,
+              is_auto_pilot: val,
+            });
+          }}
+        />
       </div>
       <div
         id="channel-messages"
-        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-4"
+        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-8"
       >
         {messages.map((msg) => (
           <div
@@ -247,9 +272,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             setContent(val.target.value);
           }}
           style={emojiStyle}
-          placeholder={
-            "Press ':' for emojis and shift+enter to send"
-          }
+          placeholder={"Press ':' for emojis and shift+enter to send"}
           className="w-full"
           autoFocus
           onKeyDown={async (val: any) => {
@@ -273,7 +296,6 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             }
           }}
         >
-          
           <Mention
             trigger=":"
             markup="__id__"
