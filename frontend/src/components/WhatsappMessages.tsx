@@ -23,6 +23,7 @@ import {
   updateWhatsappSession,
 } from "../services/api/whatsappApi";
 import { debounce } from "../utils/helper";
+import { IoCheckmarkDone } from "react-icons/io5";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -229,9 +230,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           )}
           <div className="flex flex-col">
             <span className="font-semibold">{session?.contact?.name}</span>
+            <div className="flex justify-between">
+
             <Moment className="text-xs" fromNow>
               {session?.last_online_at}
             </Moment>
+            
+            </div>
           </div>
         </div>
         {/* <HiOutlineUserGroup
@@ -323,8 +328,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               )}
 
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
-              <div className="text-[10px]">
+              <div className="text-[10px] justify-between flex items-center">
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
+                {msg.is_read &&
+                <IoCheckmarkDone size={16} style={{ 
+                  color: msg.is_from_me ? 'green' : 'white',
+                 }} />
+                }
               </div>
             </div>
           </div>
