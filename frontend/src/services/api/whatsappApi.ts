@@ -44,6 +44,12 @@ export const getWhatsappMessages = async (session_id: string, req: PaginationReq
 };
 
 
+export const markAsRead = async ( message_id: string) => {
+  return customFetch(`api/v1/whatsapp/messages/${message_id}/read`, {
+    method: "PUT",
+  });
+};
+
 export const createWAMessage = async (sessionId: string, message: any) => {
   return customFetch(`api/v1/whatsapp/${sessionId}/message`, {
     method: "POST",

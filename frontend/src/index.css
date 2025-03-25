@@ -112,6 +112,12 @@ pre:has(code[class*='language-']) {
 #channel-messages ul {
   @apply list-disc ml-6
 }
+#channel-messages ol {
+  @apply list-decimal ml-6
+}
+#channel-messages ol li, #channel-messages ul li {
+  @apply mb-2
+}
 
 #channel-messages h1 {
   @apply m-0 text-3xl

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import {
+  Badge,
   Button,
   Drawer,
   Dropdown,
@@ -21,7 +22,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
 import { PaginationResponse } from "../objects/pagination";
 import { getPagination } from "../utils/helper";
-import { deleteWhatsappSession, getWhatsappSessions } from "../services/api/whatsappApi";
+import {
+  deleteWhatsappSession,
+  getWhatsappSessions,
+} from "../services/api/whatsappApi";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import toast from "react-hot-toast";
@@ -136,7 +140,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   key={e.id}
                   style={{ background: sessionId == e.id ? "#e5e7eb" : "" }}
                 >
-                  <div className="flex justify-between w-full">
+                  <div className="flex justify-between w-full items-center">
                     <div
                       className="flex gap-2 items-center"
                       onClick={() => {
@@ -160,33 +164,38 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         </small>
                       </div>
                     </div>
-                    <div className="group/edit invisible group-hover/item:visible">
-                      <Dropdown label="" inline>
-                        <Dropdown.Item
-                          className="flex gap-2"
-                          onClick={() => {}}
-                        >
-                          Clear Chat
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          className="flex gap-2"
-                          onClick={() => {
-                          if (
-                            window.confirm(
-                              "Are you sure you want to delete this chat?"
-                            )
-                          ) {
-                            deleteWhatsappSession(e.id!).then(() => {
-                              toast.success("Chat deleted");
-                              getAllSessions();
-                              window.location.href = "/whatsapp"
-                            });
-                          }
-                          }}
-                        >
-                          Delete Chat
-                        </Dropdown.Item>
-                      </Dropdown>
+                    <div className="flex flex-col items-end">
+                      {(e.count_unread ?? 0) > 0 && (
+                        <div  className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"  color="red">{e.count_unread}</div>
+                      )}
+                      <div className="group/edit invisible group-hover/item:visible">
+                        <Dropdown label="" inline>
+                          <Dropdown.Item
+                            className="flex gap-2"
+                            onClick={() => {}}
+                          >
+                            Clear Chat
+                          </Dropdown.Item>
+                          <Dropdown.Item
+                            className="flex gap-2"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to delete this chat?"
+                                )
+                              ) {
+                                deleteWhatsappSession(e.id!).then(() => {
+                                  toast.success("Chat deleted");
+                                  getAllSessions();
+                                  window.location.href = "/whatsapp";
+                                });
+                              }
+                            }}
+                          >
+                            Delete Chat
+                          </Dropdown.Item>
+                        </Dropdown>
+                      </div>
                     </div>
                   </div>
                 </li>

@@ -19,6 +19,7 @@ export interface WhatsappMessageModel {
   is_from_me?: boolean;
   is_group?: boolean;
   sent_at?: Date;
+  is_read?: boolean;
 }
 
 export interface WhatsappMessageSessionModel {
@@ -33,4 +34,5 @@ export interface WhatsappMessageSessionModel {
   contact_id?: string;
   contact?: ContactModel;
   is_human_agent?: boolean;
+  count_unread?: number;
 }

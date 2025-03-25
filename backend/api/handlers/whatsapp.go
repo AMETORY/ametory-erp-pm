@@ -766,10 +766,17 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 		return
 	}
 
-	// waSessions := sessions.Items.(*[]models.WhatsappMessageSession)
-	// for _, v := range *waSessions {
-	// 	var conn connection.ConnectionModel
-	// }
+	waSessions := sessions.Items.(*[]models.WhatsappMessageSession)
+	newWaSessions := []models.WhatsappMessageSession{}
+	for _, v := range *waSessions {
+		var totalUnread int64
+		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ?", v.Session, false).Count(&totalUnread)
+		v.CountUnread = int(totalUnread)
+		newWaSessions = append(newWaSessions, v)
+		// 	var conn connection.ConnectionModel
+	}
+
+	sessions.Items = &newWaSessions
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": sessions})
 }
@@ -852,6 +859,15 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session, "connection": connection})
+}
+func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
+	messageId := c.Param("messageId")
+	err := h.customerRelationshipService.WhatsappService.MarkMessageAsRead(messageId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 	sessionId := c.Query("session_id") // c.Params.ByName("sessionId")

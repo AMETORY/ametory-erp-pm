@@ -1,5 +1,5 @@
 import { Button, Popover, ToggleSwitch } from "flowbite-react";
-import { useContext, useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useRef, useState, type FC } from "react";
 import toast from "react-hot-toast";
 import { RiAttachment2 } from "react-icons/ri";
 import Markdown from "react-markdown";
@@ -19,8 +19,10 @@ import {
   createWAMessage,
   getWhatsappMessages,
   getWhatsappSessionDetail,
+  markAsRead,
   updateWhatsappSession,
 } from "../services/api/whatsappApi";
+import { debounce } from "../utils/helper";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -28,6 +30,7 @@ interface WhatsappMessagesProps {
 }
 
 const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
+  const timeout = useRef<number | null>(null);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
   const { profile, setProfile } = useContext(ProfileContext);
@@ -58,6 +61,46 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       });
     }
   }, [mounted, sessionId]);
+
+  const handleScroll = () => {
+    const messageElements = document.querySelectorAll(".message");
+
+    messageElements.forEach((el) => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // const messageId = parseInt(entry.target.dataset.id);
+              // markAsRead(messageId);
+              let message = messages.find(
+                (m) => m.id == entry.target.getAttribute("id")
+              );
+              // console.log(message?.message)
+              if (message && !message.is_read) {
+                message.is_read = true;
+                setMessages([
+                  ...messages.map((m) => {
+                    if (m.id == message?.id) {
+                      return { ...m, is_read: true };
+                    }
+                    return m;
+                  }),
+                ]);
+
+
+                timeout.current = window.setTimeout(() => {
+                  markAsRead(message!.id!);
+                }, 500);
+              }
+            }
+          });
+        },
+        { threshold: 0.3 } // Minimal 50% pesan terlihat
+      );
+
+      observer.observe(el);
+    });
+  };
 
   useEffect(() => {
     getWhatsappMessages(sessionId, {
@@ -217,18 +260,21 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       <div
         id="channel-messages"
         className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-8"
+        onScroll={handleScroll}
       >
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex flex-row items-end mb-2  ${
+            className={`message flex flex-row items-end mb-2  ${
               msg.is_from_me ? "justify-end" : "justify-start"
             }`}
+            id={msg.id}
           >
             <div
               className={`min-w-[300px] max-w-[600px] ${
                 !msg.is_from_me ? "bg-green-500 text-white" : "bg-gray-200"
               } p-2 rounded-md`}
+              data-id={msg.id}
             >
               {msg.media_url && msg.mime_type?.includes("video") && (
                 <video
