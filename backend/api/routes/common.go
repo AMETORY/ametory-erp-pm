@@ -12,6 +12,7 @@ import (
 func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.Static("/static", "../frontend/build/static")
 	r.Static("/assets/files", "../backend/assets/files")
+	r.Static("/assets/static", "../backend/assets/static")
 	r.StaticFile("/android-chrome-192x192.png", "../frontend/build/android-chrome-192x192.png")
 	r.StaticFile("/android-chrome-512x512.png", "../frontend/build/android-chrome-512x512.png")
 	r.StaticFile("/apple-touch-icon.png", "../frontend/build/apple-touch-icon.png")

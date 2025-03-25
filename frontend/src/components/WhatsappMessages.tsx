@@ -1,27 +1,26 @@
+import { Button, Popover, ToggleSwitch } from "flowbite-react";
 import { useContext, useEffect, useState, type FC } from "react";
-import { WebsocketContext } from "../contexts/WebsocketContext";
+import toast from "react-hot-toast";
+import { RiAttachment2 } from "react-icons/ri";
+import Markdown from "react-markdown";
+import { Mention, MentionsInput } from "react-mentions";
+import Moment from "react-moment";
+import remarkGfm from "remark-gfm";
 import { ProfileContext } from "../contexts/ProfileContext";
+import { WebsocketContext } from "../contexts/WebsocketContext";
+import { ConnectionModel } from "../models/connection";
 import { FileModel } from "../models/file";
 import {
   WhatsappMessageModel,
   WhatsappMessageSessionModel,
 } from "../models/whatsapp_message";
-import Moment from "react-moment";
-import { HiOutlineUserGroup } from "react-icons/hi";
+import { updateConnection } from "../services/api/connectionApi";
 import {
   createWAMessage,
   getWhatsappMessages,
   getWhatsappSessionDetail,
+  updateWhatsappSession,
 } from "../services/api/whatsappApi";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import toast from "react-hot-toast";
-import { Mention, MentionsInput } from "react-mentions";
-import { Button, ToggleSwitch } from "flowbite-react";
-import { RiAttachment2 } from "react-icons/ri";
-import { ConnectionModel } from "../models/connection";
-import { connect } from "node:http2";
-import { updateConnection } from "../services/api/connectionApi";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -116,6 +115,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       padding: 9,
       border: "1px solid silver",
       borderRadius: 10,
+      backgroundColor: !session?.is_human_agent ? "#f0f0f0" : "white",
     },
 
     suggestions: {
@@ -169,6 +169,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       });
     }
   }, [connection?.is_auto_pilot]);
+  useEffect(() => {
+    if (session?.id) {
+    }
+  }, [session?.is_human_agent]);
 
   return (
     <div className="flex flex-col h-full ">
@@ -192,16 +196,23 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               size={24}
               onClick={openModal}
             /> */}
-        <ToggleSwitch
-          checked={connection?.is_auto_pilot ?? false}
-          label="Auto Pilot"
-          onChange={(val) => {
-            setConnection({
-              ...connection,
-              is_auto_pilot: val,
-            });
-          }}
-        />
+        {connection?.is_auto_pilot && (
+          <ToggleSwitch
+            checked={session?.is_human_agent ?? false}
+            label="Human Agent"
+            onChange={(val) => {
+              setSession({
+                ...session,
+                is_human_agent: val,
+              });
+
+              updateWhatsappSession(session!.id!, {
+                ...session,
+                is_human_agent: val,
+              });
+            }}
+          />
+        )}
       </div>
       <div
         id="channel-messages"
@@ -239,13 +250,26 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               )}
 
               {msg.media_url && msg.mime_type?.includes("image") && (
-                <img
-                  src={msg.media_url}
-                  alt=""
-                  className={` rounded-md mb-2 ${
-                    msg.is_from_me ? "ml-auto" : "mr-auto"
-                  } w-[300px] h-[300px] object-cover`}
-                />
+                <Popover
+                  placement="bottom"
+                  content={
+                    <div className="bg-white p-4 rounded-md w-[600px]">
+                      <img
+                        src={msg.media_url}
+                        alt=""
+                        className="w-full h-full object-cover rounded-md"
+                      />
+                    </div>
+                  }
+                >
+                  <img
+                    src={msg.media_url}
+                    alt=""
+                    className={` rounded-md mb-2 ${
+                      msg.is_from_me ? "ml-auto" : "mr-auto"
+                    } w-[300px] h-[300px] object-cover`}
+                  />
+                </Popover>
               )}
               {!msg.is_from_me && <small>{msg.contact?.name}</small>}
               {msg.is_group && !msg.is_from_me && (
@@ -267,12 +291,17 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       )}
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
         <MentionsInput
+          disabled={!session?.is_human_agent}
           value={content}
           onChange={(val: any) => {
             setContent(val.target.value);
           }}
           style={emojiStyle}
-          placeholder={"Press ':' for emojis and shift+enter to send"}
+          placeholder={
+            !session?.is_human_agent
+              ? "Input disabled for auto pilot mode"
+              : "Press ':' for emojis and shift+enter to send"
+          }
           className="w-full"
           autoFocus
           onKeyDown={async (val: any) => {

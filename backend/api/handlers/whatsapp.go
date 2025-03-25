@@ -9,8 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -507,6 +510,52 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		return
 	}
 
+	var fileUrl, mimeType string
+	if body.Message.Conversation != nil {
+		convMsg = *body.Message.Conversation
+	}
+	if body.Message.ImageMessage != nil {
+		convMsg = body.Message.ImageMessage.Caption
+		mimeType = body.Message.ImageMessage.Mimetype
+	}
+	if body.Message.VideoMessage != nil {
+		convMsg = body.Message.VideoMessage.Caption
+		mimeType = body.Message.VideoMessage.Mimetype
+	}
+
+	if body.Message.DocumentMessage != nil {
+		convMsg = body.Message.DocumentMessage.Caption
+		mimeType = body.Message.DocumentMessage.Mimetype
+	}
+	var mediaURLSaved string
+	if body.MediaPath != "" {
+		mediaURL := config.App.Whatsapp.BaseURL + body.MediaPath
+
+		resp, err := http.Get(mediaURL)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		defer resp.Body.Close()
+		byteValue, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		path := filepath.Join("assets", body.MediaPath)
+		os.MkdirAll(filepath.Dir(path), os.ModePerm)
+		if err := os.WriteFile(path, byteValue, 0644); err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		mediaURLSaved = config.App.Server.FrontendURL + "/" + path
+		fileUrl = mediaURLSaved
+
+	}
+
 	infoByte, err := json.Marshal(body.Info)
 	if err != nil {
 		log.Println(err)
@@ -516,7 +565,8 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	var waData models.WhatsappMessageModel = models.WhatsappMessageModel{
 		Sender:   body.Sender,
 		Message:  convMsg,
-		MimeType: body.MimeType,
+		MimeType: mimeType,
+		MediaURL: fileUrl,
 		Info:     string(infoByte),
 		Session:  body.SessionID,
 		JID:      body.JID,
@@ -575,7 +625,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	})
 
 	var replyResponse *models.WhatsappMessageModel
-	if conn.GeminiAgent != nil && conn.IsAutoPilot {
+	if conn.GeminiAgent != nil && conn.IsAutoPilot && !whatsappSession.IsHumanAgent {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
 		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
 		
@@ -635,7 +685,7 @@ params: jika tipe command dibutuhkan parameter
 
 		}
 
-		utils.LogJson(chatHistories)
+		// utils.LogJson(chatHistories)
 		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -722,6 +772,37 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 	// }
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": sessions})
+}
+
+func (h *WhatsappHandler) UpdateSessionHandler(c *gin.Context) {
+	var input models.WhatsappMessageSession
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+	var session models.WhatsappMessageSession
+	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.erpContext.DB.Model(&models.WhatsappMessageSession{}).Where("id = ?", sessionId).Updates(map[string]any{
+		"is_human_agent": input.IsHumanAgent,
+		"session":        input.Session,
+		"session_name":   input.SessionName,
+	}).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Session updated successfully"})
 }
 
 func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {

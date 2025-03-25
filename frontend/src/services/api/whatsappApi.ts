@@ -19,6 +19,13 @@ export const getWhatsappSessionDetail = async (session_id: string) => {
   });
 };
 
+export const updateWhatsappSession = async (session_id: string, data: any) => {
+  return await customFetch(`api/v1/whatsapp/sessions/${session_id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+
 
 export const getWhatsappMessages = async (session_id: string, req: PaginationRequest) => {
   const queryParams = new URLSearchParams();

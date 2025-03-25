@@ -32,4 +32,5 @@ export interface WhatsappMessageSessionModel {
   company?: CompanyModel;
   contact_id?: string;
   contact?: ContactModel;
+  is_human_agent?: boolean;
 }
