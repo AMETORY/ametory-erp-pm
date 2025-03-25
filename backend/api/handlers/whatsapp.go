@@ -805,6 +805,30 @@ func (h *WhatsappHandler) UpdateSessionHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Session updated successfully"})
 }
 
+func (h *WhatsappHandler) DeleteSessionHandler(c *gin.Context) {
+	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+	var session models.WhatsappMessageSession
+	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.erpContext.DB.Unscoped().Where("session = ?", session.Session).Delete(&models.WhatsappMessageModel{}).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.erpContext.DB.Unscoped().Delete(&models.WhatsappMessageSession{}, "id = ?", sessionId).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Session deleted successfully"})
+}
 func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
 

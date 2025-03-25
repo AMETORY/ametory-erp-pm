@@ -3,6 +3,7 @@ import AdminLayout from "../components/layouts/admin";
 import {
   Button,
   Drawer,
+  Dropdown,
   Label,
   Modal,
   Textarea,
@@ -20,7 +21,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
 import { PaginationResponse } from "../objects/pagination";
 import { getPagination } from "../utils/helper";
-import { getWhatsappSessions } from "../services/api/whatsappApi";
+import { deleteWhatsappSession, getWhatsappSessions } from "../services/api/whatsappApi";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import toast from "react-hot-toast";
@@ -131,29 +132,61 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
             <ul className="space-y-2">
               {sessions.map((e) => (
                 <li
-                  className="flex justify-between items-center p-2 hover:bg-gray-50 cursor-pointer hover:font-semibold"
+                  className="flex justify-between items-center p-2 hover:bg-gray-50 cursor-pointer hover:font-semibold group/item"
                   key={e.id}
-                  onClick={() => {
-                    nav(`/whatsapp/${e.id}`);
-                    asyncStorage.setItem(
-                      LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION,
-                      e.id
-                    );
-                  }}
                   style={{ background: sessionId == e.id ? "#e5e7eb" : "" }}
                 >
-                  <div className="flex gap-2 items-center">
-                    {e.contact?.avatar && (
-                      <img
-                        src={e.contact?.avatar.url}
-                        className=" aspect-square rounded-full object-cover w-8 h-8"
-                      />
-                    )}
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{e.contact?.name}</span>
-                      <small className="line-clamp-2 overflow-hidden text-ellipsis">
-                        {e.last_message}
-                      </small>
+                  <div className="flex justify-between w-full">
+                    <div
+                      className="flex gap-2 items-center"
+                      onClick={() => {
+                        nav(`/whatsapp/${e.id}`);
+                        asyncStorage.setItem(
+                          LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION,
+                          e.id
+                        );
+                      }}
+                    >
+                      {e.contact?.avatar && (
+                        <img
+                          src={e.contact?.avatar.url}
+                          className=" aspect-square rounded-full object-cover w-8 h-8"
+                        />
+                      )}
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{e.contact?.name}</span>
+                        <small className="line-clamp-2 overflow-hidden text-ellipsis">
+                          {e.last_message}
+                        </small>
+                      </div>
+                    </div>
+                    <div className="group/edit invisible group-hover/item:visible">
+                      <Dropdown label="" inline>
+                        <Dropdown.Item
+                          className="flex gap-2"
+                          onClick={() => {}}
+                        >
+                          Clear Chat
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          className="flex gap-2"
+                          onClick={() => {
+                          if (
+                            window.confirm(
+                              "Are you sure you want to delete this chat?"
+                            )
+                          ) {
+                            deleteWhatsappSession(e.id!).then(() => {
+                              toast.success("Chat deleted");
+                              getAllSessions();
+                              window.location.href = "/whatsapp"
+                            });
+                          }
+                          }}
+                        >
+                          Delete Chat
+                        </Dropdown.Item>
+                      </Dropdown>
                     </div>
                   </div>
                 </li>

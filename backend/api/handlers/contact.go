@@ -109,12 +109,12 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 		err = h.ctx.DB.First(&whatsappSession, "contact_id = ?", contact.ID).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 			parts := strings.Split(conn.Session, "@")
-			userParts := strings.Split(parts[0], ":")
+			// userParts := strings.Split(parts[0], ":")
 			refType := "connection"
 			whatsappSession = models.WhatsappMessageSession{
 				ContactID:    &contact.ID,
 				JID:          conn.Session,
-				Session:      fmt.Sprintf("%s@%s", userParts[0], parts[1]),
+				Session:      fmt.Sprintf("%s@%s", *contact.Phone, parts[1]),
 				LastOnlineAt: &now,
 				LastMessage:  input.Message,
 				CompanyID:    conn.CompanyID,
