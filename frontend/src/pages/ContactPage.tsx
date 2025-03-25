@@ -42,7 +42,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
     if (mounted) {
       getAllContacts();
     }
-  }, [mounted]);
+  }, [mounted,page,size,search]);
 
   const getAllContacts = async () => {
     try {
@@ -77,7 +77,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   };
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-8 h-[calc(100vh-100px)] overflow-y-auto" >
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold ">Contact</h1>
           <Button
@@ -96,7 +96,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
             + Create new Contact
           </Button>
         </div>
-        <Table>
+        <Table >
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
             <Table.HeadCell>Email</Table.HeadCell>

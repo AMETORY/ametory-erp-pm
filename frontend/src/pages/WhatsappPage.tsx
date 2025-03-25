@@ -1,6 +1,13 @@
 import { useContext, useEffect, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
-import { Button } from "flowbite-react";
+import {
+  Button,
+  Drawer,
+  Label,
+  Modal,
+  Textarea,
+  TextInput,
+} from "flowbite-react";
 import {
   WhatsappMessageModel,
   WhatsappMessageSessionModel,
@@ -19,7 +26,12 @@ import { ProfileContext } from "../contexts/ProfileContext";
 import toast from "react-hot-toast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import WhatsappMessages from "../components/WhatsappMessages";
-
+import { getContacts, sendContactMessage } from "../services/api/contactApi";
+import { ContactModel } from "../models/contact";
+import { FaMagnifyingGlass } from "react-icons/fa6";
+import { ConnectionModel } from "../models/connection";
+import { getConnections } from "../services/api/connectionApi";
+import Select, { InputActionMeta } from "react-select";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -37,9 +49,21 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [mounted, setMounted] = useState(false);
   const { sessionId } = useParams();
   const nav = useNavigate();
+  const [openChannelForm, setOpenChannelForm] = useState(false);
+  const [contacts, setContacts] = useState<ContactModel[]>([]);
+  const [searchContact, setSearchContact] = useState("");
+  const [modalSendMessage, setModalSendMessage] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<ContactModel>();
+  const [message, setMessage] = useState("");
+  const [connections, setConnections] = useState<ConnectionModel[]>([]);
+  const [selectedConnection, setSelectedConnection] =
+    useState<ConnectionModel>();
 
   useEffect(() => {
     setMounted(true);
+    getConnections({ page: 1, size: 50 }).then((resp: any) => {
+      setConnections(resp.data);
+    });
   }, []);
 
   useEffect(() => {
@@ -50,9 +74,23 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
   useEffect(() => {
     if (wsMsg?.command == "WHATSAPP_RECEIVED") {
-      getAllSessions()
+      getAllSessions();
     }
   }, [wsMsg, profile, sessionId]);
+
+  const getAllContact = async (s: string) => {
+    try {
+      const resp: any = await getContacts({
+        page: 1,
+        size: 30,
+        search: s,
+      });
+      setContacts(resp.data.items);
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+    }
+  };
 
   const getAllSessions = async () => {
     try {
@@ -80,7 +118,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
               gradientDuoTone="purpleToBlue"
               pill
               onClick={() => {
-                // setOpenChannelForm(true);
+                setOpenChannelForm(true);
+                getAllContact("");
               }}
             >
               + Chat
@@ -112,7 +151,9 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     )}
                     <div className="flex flex-col">
                       <span className="font-semibold">{e.contact?.name}</span>
-                      <small className="line-clamp-2 overflow-hidden text-ellipsis">{e.last_message}</small>
+                      <small className="line-clamp-2 overflow-hidden text-ellipsis">
+                        {e.last_message}
+                      </small>
                     </div>
                   </div>
                 </li>
@@ -124,6 +165,106 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </div>
       </div>
+      <Drawer
+        position="right"
+        open={openChannelForm}
+        onClose={() => setOpenChannelForm(false)}
+      >
+        <div className="mt-16">
+          <div className="relative">
+            <TextInput
+              placeholder="Search"
+              value={searchContact}
+              onChange={(e) => {
+                getAllContact(e.target.value);
+                setSearchContact(e.target.value);
+              }}
+              className="w-full"
+            />
+            <FaMagnifyingGlass className=" absolute top-3 right-2" />
+          </div>
+
+          <ul>
+            {contacts.map((e) => (
+              <li
+                className="flex justify-between items-center p-2 hover:bg-gray-50 cursor-pointer hover:font-semibold"
+                key={e.id}
+                onClick={() => {
+                  setModalSendMessage(true);
+                  setSelectedContact(e);
+                }}
+                style={{ background: sessionId == e.id ? "#e5e7eb" : "" }}
+              >
+                <div className="flex gap-2 items-center">{e.name}</div>
+                <small>{e.phone}</small>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Drawer>
+      <Modal show={modalSendMessage} onClose={() => setModalSendMessage(false)}>
+        <Modal.Header>Send Message</Modal.Header>
+        <Modal.Body>
+          <div className="flex gap-2 space-y-4 flex-col w-full">
+            <div className="w-full flex flex-col">
+              <Label className=" font-semibold">Connection</Label>
+              <Select
+                formatOptionLabel={(option: ConnectionModel) => (
+                  <div className="flex flex-row gap-2  items-center">
+                    <span>{option.name}</span>
+                  </div>
+                )}
+                options={connections}
+                value={selectedConnection}
+                onChange={(e) => setSelectedConnection(e!)}
+              />
+            </div>
+            <div className="w-full flex flex-col">
+              <Label className=" font-semibold">To</Label>
+              <div>{selectedContact?.name}</div>
+              <small>{selectedContact?.phone}</small>
+            </div>
+            <div className="w-full">
+              <Label className=" font-semibold">Message</Label>
+              <Textarea
+                rows={7}
+                placeholder="Message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2"></div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            gradientDuoTone="purpleToBlue"
+            onClick={() => {
+              setLoading(true);
+              sendContactMessage(selectedContact!.id!, {
+                message,
+                type: "whatsapp",
+                connection_id: selectedConnection!.id,
+              })
+                .then(() => {
+                  setSelectedConnection(undefined);
+                  setModalSendMessage(false);
+                  setMessage("");
+                  setSelectedContact(undefined);
+                })
+                .catch((err) => {
+                  toast.error(`${err}`);
+                })
+                .finally(() => {
+                  setLoading(false);
+                });
+            }}
+          >
+            Send Message
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

@@ -116,7 +116,11 @@ const GeminiAgentPage: FC<GeminiAgentPageProps> = ({}) => {
                 >
                   {agent.name}
                 </Table.Cell>
-                <Table.Cell>{agent.system_instruction}</Table.Cell>
+                <Table.Cell>
+                  <div className="max-h-[4.5rem] overflow-hidden text-ellipsis whitespace-normal">
+                    {agent.system_instruction}
+                  </div>
+                </Table.Cell>
                 <Table.Cell>
                   {agent.active && (
                     <div className="w-fit">

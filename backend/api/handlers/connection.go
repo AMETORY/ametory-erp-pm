@@ -5,14 +5,17 @@ import (
 	"ametory-pm/models/connection"
 	"ametory-pm/services/app"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type ConnectionHandler struct {
@@ -60,6 +63,21 @@ func (h *ConnectionHandler) GetConnectionsHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	for i, v := range connections {
+		resp, err := h.whatsappWebService.CheckConnected(v.Session)
+		if err == nil {
+			respJson := struct {
+				IsConnected bool   `json:"is_connected"`
+				Message     string `json:"message"`
+			}{}
+			if err := json.Unmarshal(resp, &respJson); err == nil {
+				fmt.Println("respJson", respJson)
+				v.Connected = respJson.IsConnected
+			}
+		}
+		connections[i] = v
+	}
 	c.JSON(http.StatusOK, gin.H{"data": connections, "pagination": pagination, "message": "Connections retrieved successfully"})
 }
 
@@ -70,6 +88,17 @@ func (h *ConnectionHandler) GetConnectionHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	resp, err := h.whatsappWebService.CheckConnected(connection.Session)
+	if err == nil {
+		respJson := struct {
+			IsConnected bool   `json:"is_connected"`
+			Message     string `json:"message"`
+		}{}
+		if err := json.Unmarshal(resp, &respJson); err == nil {
+			fmt.Println("respJson", respJson)
+			connection.Connected = respJson.IsConnected
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{"data": connection, "message": "Connection retrieved successfully"})
 }
 
@@ -79,8 +108,11 @@ func (h *ConnectionHandler) CreateConnectionHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	companyID := c.GetHeader("ID-Company")
 	connection.APIKey = utils.RandString(32, true)
 	connection.Status = "PENDING"
+	connection.CompanyID = &companyID
 	if err := h.appService.ConnectionService.CreateConnection(&connection); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -88,6 +120,45 @@ func (h *ConnectionHandler) CreateConnectionHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Connection created successfully", "id": connection.ID})
 }
 
+func (h *ConnectionHandler) SyncContactConnectionHandler(c *gin.Context) {
+	id := c.Param("id")
+	conn, err := h.appService.ConnectionService.GetConnection(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := h.whatsappWebService.GetContact(conn.Session, c.Query("search"), c.DefaultQuery("page", "1"), c.DefaultQuery("limit", "5000"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var respJson map[string]interface{}
+	if err := json.Unmarshal(resp, &respJson); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	for _, v := range respJson["data"].(map[string]interface{})["items"].([]interface{}) {
+		// fmt.Println(v.(map[string]any)["full_name"])
+		name := v.(map[string]any)["full_name"].(string)
+		if name == "" {
+			name = v.(map[string]any)["business_name"].(string)
+		}
+
+		phone := v.(map[string]any)["phone_number"].(string)
+		var contact models.ContactModel
+		err := h.ctx.DB.First(&contact, "phone = ?", phone).Error
+		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+			contact.Phone = &phone
+			contact.Name = name
+			contact.CompanyID = conn.CompanyID
+			contact.IsCustomer = true
+			h.ctx.DB.Create(&contact)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": respJson})
+}
 func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
 	id := c.Param("id")
 	_, err := h.appService.ConnectionService.GetConnection(id)
@@ -129,13 +200,19 @@ func (h *ConnectionHandler) ConnectDeviceHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	var respQr any
+	var respQr map[string]any
 	if err := json.Unmarshal(resp, &respQr); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// utils.LogJson(respQr)
 	connection.Status = "ACTIVE"
+	respData, ok := respQr["data"].(map[string]any)
+	if ok {
+		jid := respData["jid"].(string)
+		connection.Session = jid
+	}
 	err = h.ctx.DB.Save(&connection).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

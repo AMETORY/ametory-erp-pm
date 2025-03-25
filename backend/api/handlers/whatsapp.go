@@ -238,6 +238,11 @@ func (h *WhatsappHandler) CreateQR(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// respData, ok := resp["data"].(map[string]interface{})
+	// if ok {
+
+	// }
+
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": resp})
 }
 func (h *WhatsappHandler) UpdateWebhook(c *gin.Context) {
@@ -421,6 +426,7 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 
 	var sessionAuth *models.ContactModel
 	if conn.SessionAuth {
+		// fmt.Println("KENAPA KESINI", conn.SessionAuth)
 		// CHECK IS PHONE NUMBER REGISTERED
 		if !h.appService.ConnectionService.IsPhoneNumberRegistered(body.Sender) {
 			randomStr := utils.RandString(8, false)
@@ -492,6 +498,11 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	// fmt.Println("session", sessionAuth)
 
 	if body.Sender == "status" {
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+		return
+	}
+
+	if body.Info["Category"].(string) == "peer" {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 		return
 	}
@@ -752,7 +763,7 @@ func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 		return
 	}
 
-	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, *c.Request)
+	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, session.ContactID, *c.Request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1158,6 +1169,7 @@ func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) {
 		To:      to,
 		IsGroup: false,
 	}
+	utils.LogJson(replyData)
 	erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
 }
 

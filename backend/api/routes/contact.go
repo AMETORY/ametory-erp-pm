@@ -18,6 +18,7 @@ func SetContactRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		contactGroup.GET("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:read"}), contactHandler.GetContactHandler)
 		contactGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:create"}), contactHandler.CreateContactHandler)
 		contactGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:update"}), contactHandler.UpdateContactHandler)
+		contactGroup.PUT("/:id/message", contactHandler.SendMessageContactHandler)
 		contactGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:delete"}), contactHandler.GetContactsHandler)
 	}
 }

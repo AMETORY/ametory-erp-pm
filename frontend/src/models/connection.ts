@@ -18,4 +18,5 @@ export interface ConnectionModel {
   gemini_agent?: GeminiAgent;
   is_auto_pilot?: boolean;
   session_auth?: boolean;
+  connected?: boolean;
 }

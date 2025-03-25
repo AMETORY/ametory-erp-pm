@@ -20,6 +20,7 @@ type ConnectionModel struct {
 	Type          ConnectionType       `json:"type" gorm:"column:type;not null;type:varchar(255)"`
 	Username      string               `json:"username" gorm:"column:username;type:varchar(255)"`
 	SessionName   string               `json:"session_name" gorm:"column:session_name;type:varchar(255)"`
+	Session       string               `json:"session" gorm:"column:session;type:varchar(255)"`
 	Password      string               `json:"password" gorm:"column:password;type:varchar(255)"`
 	ChannelID     string               `json:"channel_id" gorm:"column:channel_id;type:varchar(255)"`
 	APIKey        string               `json:"api_key" gorm:"column:api_key;type:varchar(255)"`
@@ -33,6 +34,7 @@ type ConnectionModel struct {
 	SessionAuth   bool                 `json:"session_auth" gorm:"column:session_auth;type:bool;default:false"`
 	CompanyID     *string              `json:"company_id,omitempty" gorm:"column:company_id"`
 	Company       *models.CompanyModel `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
+	Connected     bool                 `json:"connected" gorm:"-"`
 }
 
 func (ConnectionModel) TableName() string {

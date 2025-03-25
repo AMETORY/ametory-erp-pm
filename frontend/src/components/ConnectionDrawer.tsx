@@ -1,6 +1,13 @@
 import { useContext, useEffect, useState, type FC } from "react";
 import { ConnectionModel } from "../models/connection";
-import { Badge, Button, Label, Spinner, ToggleSwitch } from "flowbite-react";
+import {
+  Badge,
+  Button,
+  ButtonGroup,
+  Label,
+  Spinner,
+  ToggleSwitch,
+} from "flowbite-react";
 import QRCode from "react-qr-code";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { useParams } from "react-router-dom";
@@ -9,17 +16,22 @@ import {
   connectDevice,
   getConnection,
   getQr,
+  syncContactConnection,
 } from "../services/api/connectionApi";
 import toast from "react-hot-toast";
 import { getGeminiAgents } from "../services/api/geminiApi";
 import { GeminiAgent } from "../models/gemini";
 import Select, { InputActionMeta } from "react-select";
+import { BsCheck2, BsCheck2Circle } from "react-icons/bs";
+import { FaCircleXmark } from "react-icons/fa6";
+import { ContactModel } from "../models/contact";
 
 interface ConnectionDrawerProps {
   connection: ConnectionModel;
   onUpdate: (connection: ConnectionModel) => void;
   onFinish: () => void;
   onSave: () => void;
+  
 }
 
 const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
@@ -27,6 +39,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
   onUpdate,
   onFinish,
   onSave,
+  
 }) => {
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
@@ -127,14 +140,50 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
       )}
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
-          <Button
-            className="mt-4"
-            onClick={async () => {
-              onSave();
-            }}
-          >
-            SAVE
-          </Button>
+          <Label className="font-bold">Device Connection</Label>
+          <p>
+            {connection?.connected ? (
+              <div className="flex gap-2 items-center">
+                <BsCheck2Circle className="text-green-500" /> Connected
+              </div>
+            ) : (
+              <div className="flex gap-2 items-center">
+                <FaCircleXmark className="text-red-500" /> Disconnected
+              </div>
+            )}
+          </p>
+        </div>
+      )}
+      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+        <div className="mt-4"></div>
+      )}
+      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+        <div className="mt-4">
+          <ButtonGroup>
+            <Button
+              className="mt-4"
+              color="warning"
+              onClick={async () => {
+                syncContactConnection(connection.id!)
+                  .then((res: any) => {
+                    toast.success("Sync Success");
+                  })
+                  .catch((err: any) => {
+                    toast.error("Sync Failed");
+                  });
+              }}
+            >
+              Sync Contact
+            </Button>
+            <Button
+              className="mt-4"
+              onClick={async () => {
+                onSave();
+              }}
+            >
+              SAVE
+            </Button>
+          </ButtonGroup>
         </div>
       )}
       {connection?.status == "PENDING" && connection.type == "whatsapp" && (

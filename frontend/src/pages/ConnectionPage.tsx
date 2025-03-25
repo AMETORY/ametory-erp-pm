@@ -25,6 +25,8 @@ import toast from "react-hot-toast";
 import { ConnectionModel } from "../models/connection";
 import { PaginationResponse } from "../objects/pagination";
 import ConnectionDrawer from "../components/ConnectionDrawer";
+import { BsCheck2Circle } from "react-icons/bs";
+import { FaCircleXmark } from "react-icons/fa6";
 interface ConnectionPageProps {}
 
 const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
@@ -126,6 +128,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
             <Table.HeadCell>Description</Table.HeadCell>
             <Table.HeadCell>Type</Table.HeadCell>
             <Table.HeadCell>Status</Table.HeadCell>
+            <Table.HeadCell>Connection</Table.HeadCell>
             <Table.HeadCell></Table.HeadCell>
           </Table.Head>
 
@@ -161,6 +164,17 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
                       <Badge color="success">{connection?.status}</Badge>
                     )}
                   </div>
+                </Table.Cell>
+                <Table.Cell>
+                  {connection?.connected ? (
+                    <div className="flex gap-2 items-center">
+                      <BsCheck2Circle className="text-green-500" /> Connected
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 items-center">
+                      <FaCircleXmark className="text-red-500" /> Disconnected
+                    </div>
+                  )}
                 </Table.Cell>
 
                 <Table.Cell>
