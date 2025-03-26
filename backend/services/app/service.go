@@ -49,6 +49,7 @@ var (
 			{"company": append(cruds, "approval")},
 		},
 		"customer_relationship": {
+			{"whatsapp": cruds},
 			{"form_template": cruds},
 			{"form": cruds},
 		},
@@ -84,6 +85,11 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 		"contact": {
 			{"customer": cruds},
 		},
+		"customer_relationship": {
+			{"whatsapp": cruds},
+			{"form_template": cruds},
+			{"form": cruds},
+		},
 		"project_management": {
 			{"project": cruds},
 			{"member": append(cruds, "approval", "invite")},
@@ -109,6 +115,11 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 	services = map[string][]map[string][]string{
 		"contact": {
 			{"customer": cruds},
+		},
+		"customer_relationship": {
+			{"whatsapp": []string{"read"}},
+			{"form_template": []string{"read"}},
+			{"form": []string{"read"}},
 		},
 		"project_management": {
 			{"project": []string{"read"}},

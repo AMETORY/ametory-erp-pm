@@ -125,6 +125,8 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		JID:         session.JID,
 		IsFromMe:    true,
 		IsGroup:     isGroup,
+		ContactID:   session.ContactID,
+		CompanyID:   session.CompanyID,
 	}
 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
 	if err != nil {

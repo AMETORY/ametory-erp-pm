@@ -45,6 +45,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
   const { companyID, setCompanyID } = useContext(CompanyIDContext);
   const { companies, setCompanies } = useContext(CompaniesContext);
   const [token, setToken] = useState("");
+  const [mounted, setMounted] = useState(false);
   const { sendMessage, sendJsonMessage, lastMessage, readyState } =
     useWebSocket(socketUrl, {
       onMessage(event) {
@@ -73,6 +74,10 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
   }[readyState];
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+  useEffect(() => {
+    if (!mounted) return;
     getProfile().then((res: any) => {
       setProfile(res.user);
       setCompanies(res.user.companies);
@@ -89,7 +94,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
         setSocketUrl(url);
       });
     });
-  }, []);
+  }, [mounted]);
 
   const renderSelectCompany = () => {
     return (
