@@ -92,7 +92,7 @@ const GeminiAgentPage: FC<GeminiAgentPageProps> = ({}) => {
         <Table hoverable>
           <Table.Head>
             <Table.HeadCell>Agent Name</Table.HeadCell>
-            <Table.HeadCell>Instructon</Table.HeadCell>
+            <Table.HeadCell style={{ width: 500 }}>Instructon</Table.HeadCell>
             <Table.HeadCell>Status</Table.HeadCell>
             <Table.HeadCell></Table.HeadCell>
           </Table.Head>

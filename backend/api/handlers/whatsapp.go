@@ -869,6 +869,17 @@ func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
+	msgNotif := gin.H{
+		"message": "ok",
+		"command": "UPDATE_SESSION",
+	}
+	msgNotifStr, _ := json.Marshal(msgNotif)
+	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.GetHeader("ID-Company"))
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {

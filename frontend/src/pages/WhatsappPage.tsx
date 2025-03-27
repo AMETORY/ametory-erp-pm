@@ -78,7 +78,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   }, [mounted, sessionId]);
 
   useEffect(() => {
-    if (wsMsg?.command == "WHATSAPP_RECEIVED") {
+    if (wsMsg?.command == "WHATSAPP_RECEIVED" || wsMsg?.command == "UPDATE_SESSION") {
       getAllSessions();
     }
   }, [wsMsg, profile, sessionId]);
@@ -99,7 +99,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
   const getAllSessions = async () => {
     try {
-      setLoading(true);
+      // setLoading(true);
       const resp: any = await getWhatsappSessions(sessionId!, {
         page,
         size,
@@ -110,7 +110,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     } catch (error) {
       toast.error(`${error}`);
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
   return (
