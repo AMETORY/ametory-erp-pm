@@ -124,6 +124,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		Session:     session.Session,
 		JID:         session.JID,
 		IsFromMe:    true,
+		IsRead:      true,
 		IsGroup:     isGroup,
 		ContactID:   session.ContactID,
 		CompanyID:   session.CompanyID,

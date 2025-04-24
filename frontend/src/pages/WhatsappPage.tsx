@@ -100,7 +100,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const getAllSessions = async () => {
     try {
       // setLoading(true);
-      const resp: any = await getWhatsappSessions(sessionId!, {
+      const resp: any = await getWhatsappSessions(sessionId ?? "", {
         page,
         size,
         search,

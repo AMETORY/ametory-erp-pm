@@ -289,11 +289,11 @@ func (h *FormHandler) FormResponseHandler(c *gin.Context) {
 		formResponse.RefType = "column"
 
 		task := models.TaskModel{
-			Name:           fmt.Sprintf("From Form - %s", form.Title),
-			ProjectID:      *form.ProjectID,
-			ColumnID:       form.ColumnID,
-			StartDate:      &formResponse.CreatedAt,
-			EndDate:        &formResponse.CreatedAt,
+			Name:      fmt.Sprintf("From Form - %s", form.Title),
+			ProjectID: *form.ProjectID,
+			ColumnID:  form.ColumnID,
+			// StartDate:      &formResponse.CreatedAt,
+			// EndDate:        &formResponse.CreatedAt,
 			FormResponseID: &formResponse.ID,
 			AssigneeID:     form.CreatedByMemberID,
 		}

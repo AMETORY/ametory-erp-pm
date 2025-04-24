@@ -29,6 +29,7 @@ import {
 } from "../utils/constants";
 import { MdOutlineAssistant } from "react-icons/md";
 import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
+import { PiBroadcast } from "react-icons/pi";
 
 interface SidebarProps {}
 
@@ -194,6 +195,22 @@ const Sidebar: FC<SidebarProps> = ({}) => {
           </span>
         </li>
         )}
+        <li className="" style={{}}>
+          <span
+            className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+            onClick={async () => {
+              nav(`/broadcast`);
+            }}
+          >
+            <Tooltip content="Whatsapp">
+              <PiBroadcast />
+            </Tooltip>
+            {!collapsed && (
+              <span className="flex-1 ms-3 whitespace-nowrap">Broadcast</span>
+            )}
+           
+          </span>
+        </li>
         <HR />
         <li className="text-xs text-gray-300" style={{}}>
           Preferences

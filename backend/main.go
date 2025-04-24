@@ -113,6 +113,9 @@ func main() {
 
 	erpContext.AddThirdPartyService("RapidAPI", rapidApiService)
 
+	broadcastSrv := app.NewBroadcastService(erpContext)
+	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
+
 	// fmt.Println(erpContext.ThirdPartyServices)
 
 	// GEMINI

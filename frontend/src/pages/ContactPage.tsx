@@ -20,15 +20,16 @@ import {
   Textarea,
   TextInput,
 } from "flowbite-react";
+import { SearchContext } from "../contexts/SearchContext";
 
 interface ContactPageProps {}
 
 const ContactPage: FC<ContactPageProps> = ({}) => {
+  const {search, setSearch} = useContext(SearchContext);
   const { loading, setLoading } = useContext(LoadingContext);
   const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState(1);
   const [size, setsize] = useState(20);
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [contacts, setContacts] = useState<ContactModel[]>([]);
   const [showModal, setShowModal] = useState(false);

@@ -24,6 +24,7 @@ import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 import AcceptInvitation from "../pages/AcceptInvitation";
 import { MemberModel } from "../models/member";
 import FormPublicPage from "../pages/FormPublicPage";
+import { SearchContext } from "../contexts/SearchContext";
 
 interface AppRoutesProps {
   token?: string | null;
@@ -39,6 +40,7 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
   const [profile, setProfile] = useState<UserModel | null>(null);
   const [member, setMember] = useState<MemberModel | null>(null);
   const [activeCompany, setActiveCompany] = useState<CompanyModel | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     // console.log("token", token);
@@ -100,10 +102,12 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
                   <WebsocketContext.Provider
                     value={{ isWsConnected, setWsConnected, wsMsg, setWsMsg }}
                   >
-                    <BrowserRouter>
-                      {token && <PrivateRoute />}
-                      {!token && <PublicRoute />}
-                    </BrowserRouter>
+                    <SearchContext.Provider value={{ search, setSearch }}>
+                      <BrowserRouter>
+                        {token && <PrivateRoute />}
+                        {!token && <PublicRoute />}
+                      </BrowserRouter>
+                    </SearchContext.Provider>
                   </WebsocketContext.Provider>
                 </CompanyIDContext.Provider>
               </ActiveCompanyContext.Provider>

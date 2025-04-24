@@ -49,6 +49,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const [files, setFiles] = useState<FileModel[]>([]);
   const [openAttachment, setOpenAttachment] = useState(false);
   const [connection, setConnection] = useState<ConnectionModel>();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -56,12 +57,45 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
   useEffect(() => {
     if (mounted) {
-      getWhatsappSessionDetail(sessionId).then((res: any) => {
-        setSession(res.data);
-        setConnection(res.connection);
-      });
+      getWhatsappSessionDetail(sessionId)
+        .then((res: any) => {
+          setSession(res.data);
+          setConnection(res.connection);
+        })
+        .catch((err) => {
+          toast.error(`${err}`);
+        })
+        .finally(() => {});
     }
   }, [mounted, sessionId]);
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+
+    if (container && container.scrollHeight <= container.clientHeight) {
+      markAllAsRead();
+    }
+  }, [messages]); // atau [chatList], tergantung state kamu
+
+  const markAllAsRead = () => {
+    for (const msg of messages) {
+      if (!msg.is_read) {
+        msg.is_read = true;
+        setMessages([
+          ...messages.map((m) => {
+            if (m.id == msg?.id) {
+              return { ...m, is_read: true };
+            }
+            return m;
+          }),
+        ]);
+
+        timeout.current = window.setTimeout(() => {
+          markAsRead(msg!.id!);
+        }, 500);
+      }
+    }
+  };
 
   const handleScroll = () => {
     const messageElements = document.querySelectorAll(".message");
@@ -88,7 +122,6 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   }),
                 ]);
 
-
                 timeout.current = window.setTimeout(() => {
                   markAsRead(message!.id!);
                 }, 500);
@@ -108,9 +141,14 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       page,
       size,
       search,
-    }).then((res: any) => {
-      setMessages(res.data.items);
-    });
+    })
+      .then((res: any) => {
+        setMessages(res.data.items);
+      })
+      .catch((err) => {
+        console.error(err);
+        window.location.href = "/whatsapp";
+      });
   }, [session, sessionId]);
 
   useEffect(() => {
@@ -231,11 +269,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           <div className="flex flex-col">
             <span className="font-semibold">{session?.contact?.name}</span>
             <div className="flex justify-between">
-
-            <Moment className="text-xs" fromNow>
-              {session?.last_online_at}
-            </Moment>
-            
+              <Moment className="text-xs" fromNow>
+                {session?.last_online_at}
+              </Moment>
             </div>
           </div>
         </div>
@@ -265,6 +301,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       <div
         id="channel-messages"
         className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-8"
+        ref={chatContainerRef}
         onScroll={handleScroll}
       >
         {messages.map((msg) => (
@@ -330,11 +367,14 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
-                {msg.is_read &&
-                <IoCheckmarkDone size={16} style={{ 
-                  color: msg.is_from_me ? 'green' : 'white',
-                 }} />
-                }
+                {msg.is_read && (
+                  <IoCheckmarkDone
+                    size={16}
+                    style={{
+                      color: msg.is_from_me ? "green" : "white",
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>

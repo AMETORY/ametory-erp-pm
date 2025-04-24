@@ -6,15 +6,33 @@ import { Avatar, Dropdown } from "flowbite-react";
 import { ProfileContext } from "../contexts/ProfileContext";
 import { initial } from "../utils/helper";
 import { useNavigate } from "react-router-dom";
+import { HiMagnifyingGlass } from "react-icons/hi2";
+import { SearchContext } from "../contexts/SearchContext";
 
 interface TopnavProps {}
 
 const Topnav: React.FC<TopnavProps> = () => {
+  const { search, setSearch } = useContext(SearchContext);
   const { companies, setCompanies } = useContext(CompaniesContext);
   const { companyID, setCompanyID } = useContext(CompanyIDContext);
   const { collapsed, setCollapsed } = useContext(CollapsedContext);
   const { profile, setProfile } = useContext(ProfileContext);
-  const nav = useNavigate()
+  const nav = useNavigate();
+
+  const searchBox = (
+    <div className="relative w-full max-w-[300px] mr-6 focus-within:text-purple-500">
+      <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+        <HiMagnifyingGlass />
+      </div>
+      <input
+        type="text"
+        className="w-full py-2 pl-10 text-sm text-gray-700 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500"
+        placeholder="Search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </div>
+  );
 
   return (
     <nav className="fixed top-0 z-20 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -48,26 +66,29 @@ const Topnav: React.FC<TopnavProps> = () => {
           </div>
           <div className="flex items-center">
             <div className="flex items-center ms-3 gap-4">
-              <Dropdown
-                label={
-                  companies?.find((c) => c.id === companyID)?.name ??
-                  "no company"
-                }
-                color="gray"
-              >
-                {companies?.map((c) => (
-                  <Dropdown.Item
-                    as={"button"}
-                    key={c.id}
-                    onClick={() => {
-                      setCompanyID(c.id!);
-                      window.location.href = "/"
-                    }}
-                  >
-                    {c.name}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown>
+              <div className="flex gap-2 items-center">
+                {searchBox}
+                <Dropdown
+                  label={
+                    companies?.find((c) => c.id === companyID)?.name ??
+                    "no company"
+                  }
+                  color="gray"
+                >
+                  {companies?.map((c) => (
+                    <Dropdown.Item
+                      as={"button"}
+                      key={c.id}
+                      onClick={() => {
+                        setCompanyID(c.id!);
+                        window.location.href = "/";
+                      }}
+                    >
+                      {c.name}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown>
+              </div>
               <Avatar
                 size="xs"
                 img={profile?.profile_picture?.url}

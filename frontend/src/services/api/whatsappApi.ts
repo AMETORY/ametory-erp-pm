@@ -3,7 +3,7 @@ import { customFetch } from "./baseApi";
 
 export const getWhatsappSessions = async (session_id: string, req: PaginationRequest) => {
   const queryParams = new URLSearchParams();
-  queryParams.set("session_id", session_id);
+  if  (session_id != "") queryParams.set("session_id", session_id);
   queryParams.set("page", String(req.page));
   queryParams.set("size", String(req.size));
   if (req.search) queryParams.set("search", req.search);
