@@ -11,6 +11,7 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/go-redis/redis/v8"
@@ -18,13 +19,17 @@ import (
 )
 
 type BroadcastService struct {
-	ctx        *context.ERPContext
-	logHandler func(log models.MessageLog)
+	ctx *context.ERPContext
 }
 
 func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
 	if !ctx.SkipMigration {
-		ctx.DB.AutoMigrate(&models.BroadcastModel{}, &models.BroadcastGrouping{}, &models.BroadcastContacts{})
+		ctx.DB.AutoMigrate(&models.BroadcastModel{},
+			&models.BroadcastGrouping{},
+			&models.BroadcastContacts{},
+			&models.MessageLog{},
+			&models.MessageRetry{},
+		)
 	}
 	return &BroadcastService{
 		ctx: ctx,
@@ -100,6 +105,14 @@ func (s *BroadcastService) startBroadcast(b *models.BroadcastModel) {
 	for i, batch := range batches {
 		sender := b.Connections[i%len(b.Connections)]
 		go s.sendBatchWithDelay(sender, b.ID, batch, 1*time.Second)
+		var group = models.BroadcastGrouping{
+			BroadcastID: b.ID,
+			Code:        utils.GenerateRandomNumber(6),
+		}
+		s.ctx.DB.Create(&group)
+		for _, v := range batch {
+			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id", v.ID).Update("broadcast_grouping_id", group.ID)
+		}
 	}
 }
 
@@ -116,13 +129,16 @@ func (s *BroadcastService) sendBatchWithDelay(sender connection.ConnectionModel,
 				s.saveToRetryQueue(mr)
 			},
 		)
+		s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id", contact.ID).Update("connection_model_id", sender.ID)
 	}
 }
 
 func (s *BroadcastService) saveToRetryQueue(retry models.MessageRetry) {
-	key := fmt.Sprintf("retry:sender:%d", retry.Sender.ID)
+	key := fmt.Sprintf("retry:sender:%v", retry.Sender.ID)
 	data, _ := json.Marshal(retry)
 	srv.REDIS.RPush(*s.ctx.Ctx, key, data)
+	retry.ID = utils.Uuid()
+	s.ctx.DB.Create(&retry)
 }
 
 func (s *BroadcastService) StartRetrySchedulers(b models.BroadcastModel) {
@@ -135,7 +151,7 @@ func (s *BroadcastService) scheduleRetrySender(sender connection.ConnectionModel
 	c := cron.New()
 	_, _ = c.AddFunc("*/1 * * * *", func() {
 		ctx := s.ctx.Ctx
-		key := fmt.Sprintf("retry:sender:%d", sender.ID)
+		key := fmt.Sprintf("retry:sender:%v", sender.ID)
 
 		for {
 			retryData, err := srv.REDIS.LPop(*ctx, key).Result()
@@ -229,4 +245,9 @@ func simulateSend(contact mdl.ContactModel) bool {
 	fmt.Println("Simulate send to", contact.Phone)
 	// 90% berhasil
 	return rand.Intn(100) < 90
+}
+
+func (s BroadcastService) logHandler(log models.MessageLog) {
+	log.ID = utils.Uuid()
+	s.ctx.DB.Create(&log)
 }
