@@ -53,6 +53,10 @@ var (
 			{"form_template": cruds},
 			{"form": cruds},
 		},
+		"whatsapp": {
+			{"broadcast": append(cruds, "send")},
+			{"message": append(cruds, "send")},
+		},
 		"project_management": {
 			{"project": cruds},
 			{"member": append(cruds, "approval", "invite")},
@@ -90,6 +94,10 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 			{"form_template": cruds},
 			{"form": cruds},
 		},
+		"whatsapp": {
+			{"broadcast": append(cruds, "send")},
+			{"message": append(cruds, "send")},
+		},
 		"project_management": {
 			{"project": cruds},
 			{"member": append(cruds, "approval", "invite")},
@@ -120,6 +128,10 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 			{"whatsapp": []string{"read"}},
 			{"form_template": []string{"read"}},
 			{"form": []string{"read"}},
+		},
+		"whatsapp": {
+			{"broadcast": append(cruds, "send")},
+			{"message": append(cruds, "send")},
 		},
 		"project_management": {
 			{"project": []string{"read"}},

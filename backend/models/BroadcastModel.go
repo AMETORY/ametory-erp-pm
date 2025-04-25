@@ -12,14 +12,15 @@ import (
 
 type BroadcastModel struct {
 	shared.BaseModel
-	Description string                        `json:"description"`
-	Message     string                        `json:"message"`
-	CompanyID   *string                       `gorm:"primaryKey" json:"company_id,omitempty"`
-	Company     *models.CompanyModel          `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
-	ScheduledAt *time.Time                    `json:"scheduled_at,omitempty"`
-	Status      string                        `json:"status" gorm:"default:DRAFT"`
-	Connections []*connection.ConnectionModel `gorm:"many2many:broadcast_connections;" json:"connections,omitempty"`
-	Contacts    []*models.ContactModel        `gorm:"many2many:broadcast_contacts;" json:"contacts,omitempty"`
+	Description         string                       `json:"description"`
+	Message             string                       `json:"message"`
+	CompanyID           *string                      `gorm:"primaryKey" json:"company_id,omitempty"`
+	Company             *models.CompanyModel         `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
+	ScheduledAt         *time.Time                   `json:"scheduled_at,omitempty"`
+	Status              string                       `json:"status" gorm:"default:DRAFT"`
+	Connections         []connection.ConnectionModel `gorm:"many2many:broadcast_connections;" json:"connections,omitempty"`
+	Contacts            []models.ContactModel        `gorm:"many2many:broadcast_contacts;" json:"contacts,omitempty"`
+	MaxContactsPerBatch int                          `json:"max_contacts_per_batch" gorm:"default:100"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
@@ -43,4 +44,22 @@ type BroadcastContacts struct {
 	BroadcastGroupingID string `gorm:"size:36" json:"broadcast_grouping_id"`
 	ContactModelID      string `gorm:"size:36" json:"contact_model_id"`
 	ConnectionModelID   string `gorm:"size:36" json:"connection_model_id"`
+}
+
+type MessageLog struct {
+	BroadcastID  string    `json:"broadcast_id"`
+	ContactID    string    `json:"contact_id"`
+	SenderID     string    `json:"sender_id"`
+	Status       string    `json:"status"` // "success" or "failed"
+	ErrorMessage string    `json:"error_message,omitempty"`
+	SentAt       time.Time `json:"sent_at"`
+}
+
+type MessageRetry struct {
+	BroadcastID string                     `json:"broadcast_id"`
+	Contact     models.ContactModel        `json:"contact"`
+	Sender      connection.ConnectionModel `json:"sender"`
+	Attempt     int                        `json:"attempt"`
+	LastError   string                     `json:"last_error"`
+	LastTriedAt time.Time                  `json:"last_tried_at"`
 }

@@ -24,7 +24,16 @@ func NewBroadcastHandler(erpContext *context.ERPContext) *BroadcastHandler {
 	}
 }
 
-func (h *BroadcastHandler) CreateBroadcast(c *gin.Context) {
+func (h *BroadcastHandler) GetBroadcastsHandler(c *gin.Context) {
+	broadcasts, err := h.broadcastServ.GetBroadcasts(c.MustGet("companyID").(string))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, broadcasts)
+}
+
+func (h *BroadcastHandler) CreateBroadcastHandler(c *gin.Context) {
 	var input models.BroadcastModel
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -49,7 +58,7 @@ func (h *BroadcastHandler) GetBroadcasts(c *gin.Context) {
 	c.JSON(200, broadcasts)
 }
 
-func (h *BroadcastHandler) GetBroadcastByID(c *gin.Context) {
+func (h *BroadcastHandler) GetBroadcastHandler(c *gin.Context) {
 	id := c.Param("id")
 	broadcast, err := h.broadcastServ.GetBroadcastByID(id)
 	if err != nil {
@@ -59,7 +68,7 @@ func (h *BroadcastHandler) GetBroadcastByID(c *gin.Context) {
 	c.JSON(200, gin.H{"data": broadcast})
 }
 
-func (h *BroadcastHandler) UpdateBroadcast(c *gin.Context) {
+func (h *BroadcastHandler) UpdateBroadcastHandler(c *gin.Context) {
 	id := c.Param("id")
 	var input models.BroadcastModel
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -75,7 +84,7 @@ func (h *BroadcastHandler) UpdateBroadcast(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Broadcast updated successfully"})
 }
 
-func (h *BroadcastHandler) DeleteBroadcast(c *gin.Context) {
+func (h *BroadcastHandler) DeleteBroadcastHandler(c *gin.Context) {
 	id := c.Param("id")
 	err := h.broadcastServ.DeleteBroadcast(id)
 	if err != nil {
@@ -83,4 +92,18 @@ func (h *BroadcastHandler) DeleteBroadcast(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Broadcast deleted successfully"})
+}
+
+func (h *BroadcastHandler) SendBroadcastHandler(c *gin.Context) {
+	id := c.Param("id")
+	broadcast, err := h.broadcastServ.GetBroadcastByID(id)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to retrieve broadcast"})
+		return
+	}
+
+	// Logic to send the broadcast, for example using a messaging service
+	h.broadcastServ.Send(broadcast)
+
+	c.JSON(200, gin.H{"message": "Broadcast sent successfully"})
 }
