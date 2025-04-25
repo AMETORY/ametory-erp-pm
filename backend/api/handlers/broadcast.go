@@ -3,6 +3,8 @@ package handlers
 import (
 	"ametory-pm/models"
 	"ametory-pm/services/app"
+	"net/http"
+	"strconv"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/gin-gonic/gin"
@@ -25,12 +27,28 @@ func NewBroadcastHandler(erpContext *context.ERPContext) *BroadcastHandler {
 }
 
 func (h *BroadcastHandler) GetBroadcastsHandler(c *gin.Context) {
-	broadcasts, err := h.broadcastServ.GetBroadcasts(c.MustGet("companyID").(string))
+	var pagination app.Pagination
+
+	limitStr := c.DefaultQuery("size", "10")
+	pageStr := c.DefaultQuery("page", "1")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 10
+	}
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		page = 1
+	}
+	pagination.Limit = limit
+	pagination.Page = page
+
+	broadcasts, err := h.broadcastServ.GetBroadcasts(&pagination, *c.Request, c.Query("search"))
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, broadcasts)
+	c.JSON(http.StatusOK, gin.H{"data": broadcasts, "pagination": pagination, "message": "Broadcasts retrieved successfully"})
 }
 
 func (h *BroadcastHandler) CreateBroadcastHandler(c *gin.Context) {
@@ -47,15 +65,6 @@ func (h *BroadcastHandler) CreateBroadcastHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Broadcast created", "data": input})
-}
-
-func (h *BroadcastHandler) GetBroadcasts(c *gin.Context) {
-	broadcasts, err := h.broadcastServ.GetBroadcasts(c.MustGet("companyID").(string))
-	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(200, broadcasts)
 }
 
 func (h *BroadcastHandler) GetBroadcastHandler(c *gin.Context) {

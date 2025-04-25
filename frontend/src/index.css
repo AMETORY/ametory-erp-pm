@@ -143,3 +143,11 @@ pre:has(code[class*='language-']) {
   @apply m-0 text-sm
 }
 
+
+.input-white {
+  @apply bg-white
+}
+
+label {
+  @apply !font-bold
+}

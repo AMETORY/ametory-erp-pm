@@ -22,6 +22,7 @@ import ConnectionPage from "../pages/ConnectionPage";
 import ConnectionDetail from "../pages/ConnectionDetail";
 import WhatsappPage from "../pages/WhatsappPage";
 import BroadcastPage from "../pages/BroadcastPage";
+import BroadcastDetail from "../pages/BroadcastDetail";
 
 interface PrivateRouteProps {}
 
@@ -52,6 +53,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/task-attribute" element={<TaskAttributePage />} />
       <Route path="/whatsapp" element={<WhatsappPage />} />
       <Route path="/broadcast" element={<BroadcastPage />} />
+      <Route path="/broadcast/:broadcastId" element={<BroadcastDetail/>} />
       <Route path="/whatsapp/:sessionId" element={<WhatsappPage />} />
       <Route
         path="/task-attribute/:attributeId"

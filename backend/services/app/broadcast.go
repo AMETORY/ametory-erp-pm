@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/shared"
@@ -40,9 +41,9 @@ func (s *BroadcastService) CreateBroadcast(broadcast *models.BroadcastModel) err
 	return s.ctx.DB.Create(broadcast).Error
 }
 
-func (s *BroadcastService) GetBroadcasts(companyID string) ([]models.BroadcastModel, error) {
+func (s *BroadcastService) GetBroadcasts(pagination *Pagination, httpRequest http.Request, search string) ([]models.BroadcastModel, error) {
 	var broadcasts []models.BroadcastModel
-	if err := s.ctx.DB.Where("company_id = ?", companyID).Find(&broadcasts).Error; err != nil {
+	if err := s.ctx.DB.Scopes(paginate(broadcasts, pagination, s.ctx.DB)).Find(&broadcasts).Error; err != nil {
 		return nil, err
 	}
 	return broadcasts, nil
