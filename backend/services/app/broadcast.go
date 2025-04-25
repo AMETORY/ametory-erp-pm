@@ -43,7 +43,8 @@ func (s *BroadcastService) CreateBroadcast(broadcast *models.BroadcastModel) err
 
 func (s *BroadcastService) GetBroadcasts(pagination *Pagination, httpRequest http.Request, search string) ([]models.BroadcastModel, error) {
 	var broadcasts []models.BroadcastModel
-	if err := s.ctx.DB.Scopes(paginate(broadcasts, pagination, s.ctx.DB)).Find(&broadcasts).Error; err != nil {
+	db := s.ctx.DB.Scopes(paginate(broadcasts, pagination, s.ctx.DB))
+	if err := db.Find(&broadcasts).Error; err != nil {
 		return nil, err
 	}
 	return broadcasts, nil
@@ -69,7 +70,7 @@ func (s *BroadcastService) AddConnection(broadcastID string, connections []conne
 
 func (s *BroadcastService) GetBroadcastByID(id string) (*models.BroadcastModel, error) {
 	var broadcast models.BroadcastModel
-	if err := s.ctx.DB.Where("id = ?", id).First(&broadcast).Error; err != nil {
+	if err := s.ctx.DB.Preload("Contacts.Tags").Preload("Connections").Where("id = ?", id).First(&broadcast).Error; err != nil {
 		return nil, err
 	}
 	return &broadcast, nil

@@ -44,8 +44,9 @@ type BroadcastGrouping struct {
 
 type BroadcastContacts struct {
 	BroadcastGroupingID string `gorm:"size:36" json:"broadcast_grouping_id"`
-	ContactModelID      string `gorm:"size:36" json:"contact_model_id"`
 	ConnectionModelID   string `gorm:"size:36" json:"connection_model_id"`
+	ContactModelID      string `gorm:"uniqueIndex:idx_broadcast_contact;type:char(36)" json:"contact_model_id"`
+	BroadcastModelID    string `gorm:"uniqueIndex:idx_broadcast_contact;type:char(36)" json:"broadcast_model_id"`
 }
 
 type MessageLog struct {

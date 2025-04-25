@@ -18,6 +18,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/file"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
+	"github.com/AMETORY/ametory-erp-modules/tag"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
@@ -116,6 +117,9 @@ func main() {
 	broadcastSrv := app.NewBroadcastService(erpContext)
 	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
 
+	tagSrv := tag.NewTagService(erpContext)
+	erpContext.TagService = tagSrv
+
 	// fmt.Println(erpContext.ThirdPartyServices)
 
 	// GEMINI
@@ -147,6 +151,7 @@ func main() {
 	routes.SetupGeminiRoutes(v1, erpContext)
 	routes.NewWhatsappRoutes(v1, erpContext)
 	routes.SetBroadcastRoutes(v1, erpContext)
+	routes.SetupTagRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

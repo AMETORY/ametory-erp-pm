@@ -1,13 +1,33 @@
 import { useContext, useEffect, useState, type FC } from "react";
 import { useParams } from "react-router-dom";
 import AdminLayout from "../components/layouts/admin";
-import { getBroadcast } from "../services/api/broadcastApi";
+import { addContactBroadcast, getBroadcast, updateBroadcast } from "../services/api/broadcastApi";
 import { BroadcastModel } from "../models/broadcast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import toast from "react-hot-toast";
-import { Badge, Label, Textarea } from "flowbite-react";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Datepicker,
+  Label,
+  Modal,
+  TabItem,
+  Table,
+  Tabs,
+  Textarea,
+  ToggleSwitch,
+} from "flowbite-react";
 import { parseMentions } from "../utils/helper-ui";
 import { Mention, MentionsInput } from "react-mentions";
+import Moment from "react-moment";
+import moment from "moment";
+import Select from "react-select";
+import { ConnectionModel } from "../models/connection";
+import { getConnections } from "../services/api/connectionApi";
+import { countContactByTag } from "../services/api/contactApi";
+import { TagModel } from "../models/tag";
+import { getContrastColor } from "../utils/helper";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -19,6 +39,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const [mounted, setMounted] = useState(false);
   const [broadcast, setBroadcast] = useState<BroadcastModel>();
   const [isEditable, setisEditable] = useState(false);
+  const [connections, setConnections] = useState<ConnectionModel[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [tags, setTags] = useState<TagModel[]>([]);
+  const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -60,92 +84,348 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
         .finally(() => {
           setLoading(false);
         });
+
+      getConnections({ page: 1, size: 100 }).then((res: any) => {
+        setConnections(res.data);
+      });
     }
   }, [mounted, broadcastId]);
   return (
     <AdminLayout>
       <div className="p-8">
         <h1 className="text-2xl font-bold">Detail Broadcast</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {broadcast && (
-            <div className="bg-white border rounded p-6 flex flex-col space-y-4">
-              <div>
-                <Label>Description</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-4">
+          <div className="bg-white border rounded p-6 flex flex-col space-y-4">
+            <div>
+              <Label>Description</Label>
+              {isEditable ? (
+                <Textarea
+                  value={broadcast?.description ?? ""}
+                  onChange={(val) => {
+                    setBroadcast({
+                      ...broadcast!,
+                      description: val.target.value,
+                    });
+                  }}
+                />
+              ) : (
+                <p className="">{broadcast?.description}</p>
+              )}
+            </div>
+            <div>
+              <Label>Message</Label>
+              <p className="">
                 {isEditable ? (
-                  <Textarea
-                    value={broadcast?.description ?? ""}
+                  <MentionsInput
+                    value={broadcast?.message ?? ""}
                     onChange={(val) => {
                       setBroadcast({
-                        ...broadcast,
-                        description: val.target.value,
+                        ...broadcast!,
+                        message: val.target.value,
                       });
                     }}
-                  />
-                ) : (
-                  <p className="">{broadcast.description}</p>
-                )}
-              </div>
-              <div>
-                <Label>Message</Label>
-                <p className="">
-                  {isEditable ? (
-                    <MentionsInput
-                      value={broadcast?.message ?? ""}
-                      onChange={(val) => {
-                        setBroadcast({
-                          ...broadcast,
-                          message: val.target.value,
-                        });
-                      }}
-                      style={emojiStyle}
-                      placeholder={
-                        "Press ':' for emojis, and template using '@' and shift+enter to send"
-                      }
-                      autoFocus
-                    >
-                      <Mention
-                        trigger="@"
-                        data={[
-                          { id: "{{user}}", display: "Full Name" },
-                          { id: "{{phone}}", display: "Phone Number" },
-                        ]}
-                        style={{
-                          backgroundColor: "#cee4e5",
-                        }}
-                        appendSpaceOnAdd
-                      />
-                      <Mention
-                        trigger=":"
-                        markup="__id__"
-                        regex={neverMatchingRegex}
-                        data={queryEmojis}
-                      />
-                    </MentionsInput>
-                  ) : (
-                    parseMentions(broadcast.message ?? "", (type, id) => {})
-                  )}
-                </p>
-              </div>
-              <div>
-                <Label>Status</Label>
-                <div className="w-fit">
-                  <Badge
-                    color={
-                      broadcast.status === "DRAFT"
-                        ? "warning"
-                        : broadcast.status === "FAILED"
-                        ? "danger"
-                        : "success"
+                    style={emojiStyle}
+                    placeholder={
+                      "Press ':' for emojis, and template using '@' and shift+enter to send"
                     }
+                    autoFocus
                   >
-                    {broadcast.status}
-                  </Badge>
-                </div>
+                    <Mention
+                      trigger="@"
+                      data={[
+                        { id: "{{user}}", display: "Full Name" },
+                        { id: "{{phone}}", display: "Phone Number" },
+                      ]}
+                      style={{
+                        backgroundColor: "#cee4e5",
+                      }}
+                      appendSpaceOnAdd
+                    />
+                    <Mention
+                      trigger=":"
+                      markup="__id__"
+                      regex={neverMatchingRegex}
+                      data={queryEmojis}
+                    />
+                  </MentionsInput>
+                ) : (
+                  parseMentions(broadcast?.message ?? "", (type, id) => {})
+                )}
+              </p>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <div className="w-fit">
+                <Badge
+                  color={
+                    broadcast?.status === "DRAFT"
+                      ? "warning"
+                      : broadcast?.status === "FAILED"
+                      ? "danger"
+                      : "success"
+                  }
+                >
+                  {broadcast?.status}
+                </Badge>
               </div>
             </div>
-          )}
+            <div>
+              <Button
+                onClick={() => {
+                  updateBroadcast(broadcast?.id!, broadcast);
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+          <div className="bg-white border rounded p-6 flex flex-col space-y-4">
+            <div>
+              <Label>Scheduled At</Label>
+              {isEditable ? (
+                <div className="grid grid-cols-5 gap-4">
+                  <Datepicker
+                    disabled={broadcast?.scheduled_at ? false : true}
+                    value={broadcast?.scheduled_at ?? null}
+                    onChange={(val) => {
+                      setBroadcast({
+                        ...broadcast!,
+                        scheduled_at: val,
+                      });
+                    }}
+                    className="col-span-2"
+                  />
+                  <div className="flex col-span-2">
+                    <input
+                      disabled={broadcast?.scheduled_at ? false : true}
+                      type="time"
+                      id="time"
+                      style={{
+                        color: broadcast?.scheduled_at ? "black" : "gray",
+                      }}
+                      className="rounded-none rounded-s-lg bg-gray-50 border text-gray-900 leading-none focus:ring-blue-500 focus:border-blue-500 block flex-1 w-full text-sm border-gray-300 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                      value={moment(broadcast?.scheduled_at).format("HH:mm")}
+                      onChange={(e) => {
+                        setBroadcast({
+                          ...broadcast!,
+                          scheduled_at: moment(
+                            moment(broadcast?.scheduled_at).format(
+                              "YYYY-MM-DD"
+                            ) +
+                              " " +
+                              e.target.value
+                          ).toDate(),
+                        });
+                      }}
+                    />
+                    <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border rounded-s-0 border-s-0 border-gray-300 rounded-e-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
+                      <svg
+                        className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="flex items-center flex-col justify-center">
+                    <ToggleSwitch
+                      checked={broadcast?.scheduled_at ? true : false}
+                      onChange={(val) => {
+                        setBroadcast({
+                          ...broadcast!,
+                          scheduled_at: val ? new Date() : null,
+                        });
+                      }}
+                      label="Schedule"
+                    />
+                  </div>
+                </div>
+              ) : (
+                broadcast?.scheduled_at && (
+                  <Moment className="" format="DD MMM YYYY, HH:mm">
+                    {broadcast?.scheduled_at}
+                  </Moment>
+                )
+              )}
+            </div>
+            <div>
+              <Label>Connection</Label>
+              <p className="">
+                {isEditable ? (
+                  <Select
+                    options={connections.filter(
+                      (item: any) => item.status === "ACTIVE"
+                    )}
+                    value={broadcast?.connections ?? []}
+                    isMulti
+                    onChange={(val) => {
+                      console.log(val);
+                      setBroadcast({
+                        ...broadcast!,
+                        connections: val.map((item: any) => item),
+                      });
+                    }}
+                    formatOptionLabel={(option) => (
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {option.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {option.session_name}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  />
+                ) : (
+                  <div></div>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white border rounded p-6 flex flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold">Contact</h3>
+            <Button
+              color="gray"
+              size="sm"
+              onClick={() => {
+                countContactByTag().then((v: any) => {
+                  setTags(v.data);
+                });
+                setShowModal(true);
+              }}
+            >
+              + Contact
+            </Button>
+          </div>
+          <Table>
+                    <Table.Head>
+                      <Table.HeadCell>Name</Table.HeadCell>
+                      <Table.HeadCell>Email</Table.HeadCell>
+                      <Table.HeadCell>Phone</Table.HeadCell>
+                      <Table.HeadCell>Address</Table.HeadCell>
+                      <Table.HeadCell>Position</Table.HeadCell>
+                      <Table.HeadCell></Table.HeadCell>
+                    </Table.Head>
+          
+                    <Table.Body className="divide-y">
+                      {(broadcast?.contacts??[]).length === 0 && (
+                        <Table.Row>
+                          <Table.Cell colSpan={5} className="text-center">
+                            No contacts found.
+                          </Table.Cell>
+                        </Table.Row>
+                      )}
+                      {(broadcast?.contacts??[]).map((contact) => (
+                        <Table.Row
+                          key={contact.id}
+                          className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                        >
+                          <Table.Cell
+                            className="whitespace-nowrap font-medium text-gray-900 dark:text-white cursor-pointer hover:font-semibold"
+                            onClick={() => {}}
+                          >
+                            <div className="flex flex-col">
+                              {contact.name}
+                              {(contact.tags ?? []).length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {contact.tags?.map((tag) => (
+                                    <span className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100" key={tag.id} style={{ color: getContrastColor(tag.color), backgroundColor: tag.color }}>
+                                      {tag.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>{contact.email}</Table.Cell>
+                          <Table.Cell>{contact.phone}</Table.Cell>
+                          <Table.Cell>{contact.address}</Table.Cell>
+                          <Table.Cell>{contact.contact_person_position}</Table.Cell>
+                          <Table.Cell>
+                           
+                            <a
+                              href="#"
+                              className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (
+                                  window.confirm(
+                                    `Are you sure you want to delete contact ${contact.name}?`
+                                  )
+                                ) {
+                                  // deleteContact(contact?.id!).then(() => {
+                                  //   getAllContacts();
+                                  // });
+                                }
+                              }}
+                            >
+                              Delete
+                            </a>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table>
         </div>
       </div>
+      <Modal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        title="Add Contact"
+        size="4xl"
+      >
+        <Modal.Header>Add Contact</Modal.Header>
+        <Modal.Body>
+          <Tabs>
+            <TabItem title="Contact"></TabItem>
+            <TabItem title="Tag">
+              <ul>
+                {tags.map((item: any) => (
+                  <li className="flex items-center gap-2 py-2">
+                    <Checkbox
+                      checked={selectedTags.includes(item.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedTags([...selectedTags, item.id]);
+                        } else {
+                          setSelectedTags(
+                            selectedTags.filter((id) => id !== item.id)
+                          );
+                        }
+                      }}
+
+                    />
+                    <p>{item.name}</p>
+                    <p>( {item.count} )</p>
+                  </li>
+                ))}
+              </ul>
+            </TabItem>
+          </Tabs>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="flex justify-end w-full gap-2">
+            <Button onClick={() => {
+              addContactBroadcast(broadcast!.id!, {
+                tag_ids: selectedTags
+              }).then((v: any) => {
+                
+              })
+            }}>Save</Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
     </AdminLayout>
   );
 };

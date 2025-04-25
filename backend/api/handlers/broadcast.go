@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/AMETORY/ametory-erp-modules/contact"
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +14,7 @@ import (
 type BroadcastHandler struct {
 	ctx           *context.ERPContext
 	broadcastServ *app.BroadcastService
+	contactSrv    *contact.ContactService
 }
 
 func NewBroadcastHandler(erpContext *context.ERPContext) *BroadcastHandler {
@@ -20,9 +22,16 @@ func NewBroadcastHandler(erpContext *context.ERPContext) *BroadcastHandler {
 	if !ok {
 		panic("broadcast service not found")
 	}
+
+	contactSrv, ok := erpContext.ContactService.(*contact.ContactService)
+	if !ok {
+		panic("contact service not found")
+	}
+
 	return &BroadcastHandler{
 		ctx:           erpContext,
 		broadcastServ: broadcastServ,
+		contactSrv:    contactSrv,
 	}
 }
 
@@ -115,4 +124,28 @@ func (h *BroadcastHandler) SendBroadcastHandler(c *gin.Context) {
 	h.broadcastServ.Send(broadcast)
 
 	c.JSON(200, gin.H{"message": "Broadcast sent successfully"})
+}
+
+func (h *BroadcastHandler) AddContactHandler(c *gin.Context) {
+	id := c.Param("id")
+	var input struct {
+		TagIDs []string `json:"tag_ids"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	contacts, err := h.contactSrv.GetContactByTagIDs(input.TagIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.broadcastServ.AddContact(id, contacts); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contacts added successfully"})
 }

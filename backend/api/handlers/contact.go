@@ -213,3 +213,13 @@ func (h *ContactHandler) GetContactsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": contacts, "message": "Contact created successfully"})
 }
+
+func (h *ContactHandler) GetContactCountByTagHandler(c *gin.Context) {
+	contactCount, err := h.contactService.CountContactByTag()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": contactCount, "message": "Contact count retrieved successfully"})
+}

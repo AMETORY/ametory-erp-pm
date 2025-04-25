@@ -6,6 +6,7 @@ export interface PaginationRequest {
     type?: string;
     project_id?: string;
     team_id?: string;
+    order?: string;
   }
   
   
@@ -19,4 +20,5 @@ export interface PaginationResponse {
     last?: boolean;
     first?: boolean;
     visible?: number;
+    
   }

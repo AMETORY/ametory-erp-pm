@@ -1,5 +1,6 @@
 import { CompanyModel } from "./company";
 import { FileModel } from "./file";
+import { TagModel } from "./tag";
 import { UserModel } from "./user";
 
 export interface ContactModel {
@@ -20,4 +21,5 @@ export interface ContactModel {
   user?: UserModel;
   company_id?: string;
   company?: CompanyModel;
+  tags?: TagModel[];
 }

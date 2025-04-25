@@ -6,6 +6,7 @@ export const getContacts = async (req: PaginationRequest) => {
   queryParams.set("page", String(req.page));
   queryParams.set("size", String(req.size));
   if (req.search) queryParams.set("search", req.search);
+  if (req.order) queryParams.set("order", req.order);
   return await customFetch(`api/v1/contact/list?${queryParams}`, {
     method: "GET",
   });
@@ -37,4 +38,11 @@ export const sendContactMessage = async (id: string, data: any) => {
 
 export const deleteContact = async (id: string) => {
   await customFetch(`api/v1/contact/${id}`);
+};
+
+
+export const countContactByTag = async () => {
+  return await customFetch(`api/v1/contact/count-by-tag`, {
+    method: "GET",
+  });
 };

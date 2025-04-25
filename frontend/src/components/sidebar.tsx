@@ -6,6 +6,7 @@ import {
   BsGear,
   BsKanban,
   BsPeople,
+  BsTag,
   BsWhatsapp,
 } from "react-icons/bs";
 import { GoTasklist } from "react-icons/go";
@@ -30,6 +31,7 @@ import {
 import { MdOutlineAssistant } from "react-icons/md";
 import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 import { PiBroadcast } from "react-icons/pi";
+import { IoPricetag } from "react-icons/io5";
 
 interface SidebarProps {}
 
@@ -309,6 +311,19 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             </span>
           </li>
         )}
+        <li className="" style={{}}>
+            <span
+              className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+              onClick={handleNavigation("/tag")}
+            >
+              <Tooltip content="Tag">
+                <BsTag />
+              </Tooltip>
+              {!collapsed && (
+                <span className="flex-1 ms-3 whitespace-nowrap">Taf</span>
+              )}
+            </span>
+          </li>
         {member?.role?.is_super_admin && (
           <li className="" style={{}}>
             <span

@@ -57,6 +57,9 @@ var (
 			{"broadcast": append(cruds, "send")},
 			{"message": append(cruds, "send")},
 		},
+		"misc": {
+			{"tag": cruds},
+		},
 		"project_management": {
 			{"project": cruds},
 			{"member": append(cruds, "approval", "invite")},
@@ -93,6 +96,9 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 			{"whatsapp": cruds},
 			{"form_template": cruds},
 			{"form": cruds},
+		},
+		"misc": {
+			{"tag": cruds},
 		},
 		"whatsapp": {
 			{"broadcast": append(cruds, "send")},

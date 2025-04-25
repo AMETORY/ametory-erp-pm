@@ -9,7 +9,7 @@ import {
 } from "../services/api/contactApi";
 import { ContactModel } from "../models/contact";
 import { LoadingContext } from "../contexts/LoadingContext";
-import { getPagination } from "../utils/helper";
+import { getContrastColor, getPagination, randomColor } from "../utils/helper";
 import toast from "react-hot-toast";
 import {
   Button,
@@ -21,11 +21,15 @@ import {
   TextInput,
 } from "flowbite-react";
 import { SearchContext } from "../contexts/SearchContext";
+import { TagModel } from "../models/tag";
+import { createTag, getTags } from "../services/api/tagApi";
+import Select from "react-select";
+import CreatableSelect from 'react-select/creatable';
 
 interface ContactPageProps {}
 
 const ContactPage: FC<ContactPageProps> = ({}) => {
-  const {search, setSearch} = useContext(SearchContext);
+  const { search, setSearch } = useContext(SearchContext);
   const { loading, setLoading } = useContext(LoadingContext);
   const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState(1);
@@ -34,6 +38,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   const [contacts, setContacts] = useState<ContactModel[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactModel>();
+  const [tags, setTags] = useState<TagModel[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -42,15 +47,28 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   useEffect(() => {
     if (mounted) {
       getAllContacts();
+      getAllTags();
     }
-  }, [mounted,page,size,search]);
+  }, [mounted, page, size, search]);
 
   const getAllContacts = async () => {
     try {
       setLoading(true);
-      let resp: any = await getContacts({ page, size, search });
+      let resp: any = await getContacts({ page, size, search, order: "name" });
       setContacts(resp.data.items);
       setPagination(getPagination(resp.data));
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAllTags = async () => {
+    try {
+      setLoading(true);
+      let resp: any = await getTags({ page: 1, size: 100 });
+      setTags(resp.data.items);
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -78,7 +96,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   };
   return (
     <AdminLayout>
-      <div className="p-8 h-[calc(100vh-100px)] overflow-y-auto" >
+      <div className="p-8 h-[calc(100vh-100px)] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold ">Contact</h1>
           <Button
@@ -97,7 +115,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
             + Create new Contact
           </Button>
         </div>
-        <Table >
+        <Table>
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
             <Table.HeadCell>Email</Table.HeadCell>
@@ -124,7 +142,18 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   className="whitespace-nowrap font-medium text-gray-900 dark:text-white cursor-pointer hover:font-semibold"
                   onClick={() => {}}
                 >
-                  {contact.name}
+                  <div className="flex flex-col">
+                    {contact.name}
+                    {(contact.tags ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {contact.tags?.map((tag) => (
+                          <span className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100" key={tag.id} style={{ color: getContrastColor(tag.color), backgroundColor: tag.color }}>
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </Table.Cell>
                 <Table.Cell>{contact.email}</Table.Cell>
                 <Table.Cell>{contact.phone}</Table.Cell>
@@ -176,9 +205,11 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
       </div>
       {selectedContact && (
         <Modal show={showModal} onClose={() => setShowModal(false)}>
-          <Modal.Header>{selectedContact?.id ? "Edit" : "Create"} Contact</Modal.Header>
+          <Modal.Header>
+            {selectedContact?.id ? "Edit" : "Create"} Contact
+          </Modal.Header>
           <Modal.Body>
-            <div className="space-y-4">
+            <div className="space-y-4 pb-32">
               <div>
                 <Label htmlFor="contactName" value="Name" />
                 <TextInput
@@ -256,6 +287,63 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                       contact_person_position: e.target.value,
                     })
                   }
+                />
+              </div>
+              <div>
+                <Label htmlFor="tag" value="Tag" />
+                
+                <CreatableSelect
+                  id="tag"
+                  name="tag"
+                  onCreateOption={(e) => {
+                    console.log(e);
+                    createTag({
+                      name: e,
+                      color: randomColor({ luminosity: "dark" }),
+                    }).then(() => {
+                      getAllTags();
+                    })
+                  }}
+                  isMulti={true}
+                  options={tags.map((tag) => ({
+                    value: tag.id,
+                    label: tag.name,
+                    color: tag.color,
+                  }))}
+                  value={(selectedContact?.tags ?? []).map((tag) => ({
+                    value: tag.id,
+                    label: tag.name,
+                    color: tag.color,
+                  }))}
+                  onChange={(e) => {
+                    setSelectedContact({
+                      ...selectedContact,
+                      tags: e.map((tag) => ({
+                        id: tag.value,
+                        name: tag.label,
+                        color: tag.color,
+                      })),
+                    });
+                  }}
+                  formatOptionLabel={(option) => (
+                    <div
+                      className="w-fit px-2 py-1 rounded-lg"
+                      style={{
+                        backgroundColor: option.color,
+                        color: getContrastColor(option.color),
+                      }}
+                    >
+                      <span>{option.label}</span>
+                    </div>
+                  )}
+                  formatGroupLabel={(option) => (
+                    <div
+                      className="w-fit px-2 py-1 rounded-lg"
+                      style={{ backgroundColor: "white" }}
+                    >
+                      <span>{option.label}</span>
+                    </div>
+                  )}
                 />
               </div>
             </div>

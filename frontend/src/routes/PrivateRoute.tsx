@@ -23,6 +23,7 @@ import ConnectionDetail from "../pages/ConnectionDetail";
 import WhatsappPage from "../pages/WhatsappPage";
 import BroadcastPage from "../pages/BroadcastPage";
 import BroadcastDetail from "../pages/BroadcastDetail";
+import TagPage from "../pages/TagPage";
 
 interface PrivateRouteProps {}
 
@@ -38,6 +39,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/chat" element={<ChatPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/form" element={<FormPage />} />
+      <Route path="/tag" element={<TagPage />} />
       <Route
         path="/form-template/:templateId"
         element={<FormTempateDetail />}
