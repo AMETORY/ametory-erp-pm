@@ -34,6 +34,11 @@ export const updateBroadcast = async (id: string, data: any) => {
     body: JSON.stringify(data),
   });
 };
+export const sendBroadcast = async (id: string) => {
+  return await customFetch(`api/v1/broadcast/${id}/send`, {
+    method: "PUT",
+  });
+};
 export const addContactBroadcast = async (id: string, data: any) => {
   return await customFetch(`api/v1/broadcast/${id}/add-contact`, {
     method: "POST",

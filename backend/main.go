@@ -114,9 +114,6 @@ func main() {
 
 	erpContext.AddThirdPartyService("RapidAPI", rapidApiService)
 
-	broadcastSrv := app.NewBroadcastService(erpContext)
-	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
-
 	tagSrv := tag.NewTagService(erpContext)
 	erpContext.TagService = tagSrv
 
@@ -137,6 +134,9 @@ func main() {
 	// WA
 	waSrv := whatsmeow_client.NewWhatsmeowService(cfg.Whatsapp.BaseURL, cfg.Whatsapp.MockNumber, cfg.Whatsapp.IsMock, "")
 	erpContext.AddThirdPartyService("WA", waSrv)
+
+	broadcastSrv := app.NewBroadcastService(erpContext)
+	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
 
 	routes.NewCommonRoutes(r, erpContext)
 	v1 := r.Group("/api/v1")

@@ -1,3 +1,4 @@
+import { MessageLog, MessageRetry } from "./broadcast";
 import { CompanyModel } from "./company";
 import { FileModel } from "./file";
 import { TagModel } from "./tag";
@@ -22,4 +23,9 @@ export interface ContactModel {
   company_id?: string;
   company?: CompanyModel;
   tags?: TagModel[];
+  is_completed?: boolean;
+  data?: {
+    log?: MessageLog;
+    retries?: MessageRetry[];
+  };
 }

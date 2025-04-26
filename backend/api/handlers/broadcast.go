@@ -11,6 +11,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 )
 
 type BroadcastHandler struct {
@@ -108,6 +109,7 @@ func (h *BroadcastHandler) GetBroadcastHandler(c *gin.Context) {
 		return
 	}
 	broadcast.Contacts = contacts
+	broadcast.ContactCount = int(pagination.TotalRows)
 	c.JSON(200, gin.H{"data": broadcast, "pagination": pagination, "message": "Broadcast retrieved successfully"})
 }
 
@@ -144,6 +146,8 @@ func (h *BroadcastHandler) SendBroadcastHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to retrieve broadcast"})
 		return
 	}
+
+	h.ctx.DB.Preload(clause.Associations).Find(&broadcast)
 
 	// Logic to send the broadcast, for example using a messaging service
 	h.broadcastServ.Send(broadcast)

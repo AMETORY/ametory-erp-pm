@@ -5,6 +5,7 @@ import {
   addContactBroadcast,
   deleteContactBroadcast,
   getBroadcast,
+  sendBroadcast,
   updateBroadcast,
 } from "../services/api/broadcastApi";
 import { BroadcastModel } from "../models/broadcast";
@@ -38,13 +39,17 @@ import { ContactModel } from "../models/contact";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { SearchContext } from "../contexts/SearchContext";
 import { PaginationResponse } from "../objects/pagination";
+import { BsCheck2Circle, BsInfoCircle } from "react-icons/bs";
+import { FaXmark } from "react-icons/fa6";
+import { WebsocketContext } from "../contexts/WebsocketContext";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
 const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const { loading, setLoading } = useContext(LoadingContext);
   const [emojis, setEmojis] = useState([]);
-
+const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+    useContext(WebsocketContext);
   const { broadcastId } = useParams();
   const [mounted, setMounted] = useState(false);
   const [broadcast, setBroadcast] = useState<BroadcastModel>();
@@ -88,6 +93,15 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
       .slice(0, 10);
     return matches.map(({ emoji }) => ({ id: emoji }));
   };
+
+  useEffect(() => {
+      if (wsMsg?.broadcast_id == broadcastId && wsMsg?.command == "BROADCAST_COMPLETED") {
+        //   console.log("wsMsg", wsMsg);
+        toast.success(wsMsg.message);
+        getDetail();
+      }
+    }, [wsMsg]);
+
   useEffect(() => {
     getConnections({ page: 1, size: 100 }).then((res: any) => {
       setConnections(res.data);
@@ -240,6 +254,46 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   Undo
                 </Button>
               )}
+              {broadcast?.status === "READY" && (
+                <Button
+                  color="success"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        broadcast?.scheduled_at
+                          ? "Are you sure you want to send the broadcast at " +
+                              moment(broadcast?.scheduled_at).format(
+                                "DD MMM YYYY HH:mm"
+                              )
+                          : "Are you sure you want to send the broadcast?"
+                      )
+                    ) {
+                      setLoading(true);
+                      sendBroadcast(broadcast?.id!)
+                        .then(() => {
+                          getDetail();
+                        })
+                        .catch((error) => {
+                          toast.error(`${error}`);
+                        })
+                        .finally(() => {
+                          setLoading(false);
+                        });
+                    }
+                  }}
+                >
+                  {broadcast?.scheduled_at ? (
+                    <div>
+                      Broadcast at{" "}
+                      {moment(broadcast?.scheduled_at).format(
+                        "DD MMM YYYY HH:mm"
+                      )}
+                    </div>
+                  ) : (
+                    "Broadcast Now"
+                  )}
+                </Button>
+              )}
               {broadcast?.status === "DRAFT" && (
                 <Button
                   onClick={() => {
@@ -268,7 +322,11 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <div className="grid grid-cols-5 gap-4">
                   <Datepicker
                     disabled={broadcast?.scheduled_at ? false : true}
-                    value={broadcast?.scheduled_at ? moment(broadcast?.scheduled_at).toDate() : null}
+                    value={
+                      broadcast?.scheduled_at
+                        ? moment(broadcast?.scheduled_at).toDate()
+                        : null
+                    }
                     onChange={(val) => {
                       setBroadcast({
                         ...broadcast!,
@@ -381,6 +439,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 )}
               </p>
             </div>
+            <div>
+              <Label>Total Contact</Label>
+              <p className="">{broadcast?.contact_count ?? 0}</p>
+            </div>
           </div>
         </div>
         <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -452,6 +514,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               <Table.HeadCell>Phone</Table.HeadCell>
               <Table.HeadCell>Address</Table.HeadCell>
               <Table.HeadCell>Position</Table.HeadCell>
+              <Table.HeadCell>Info</Table.HeadCell>
               <Table.HeadCell></Table.HeadCell>
             </Table.Head>
 
@@ -518,6 +581,42 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <Table.Cell>{contact.phone}</Table.Cell>
                   <Table.Cell>{contact.address}</Table.Cell>
                   <Table.Cell>{contact.contact_person_position}</Table.Cell>
+                  <Table.Cell className="w-32">
+                    <div className="flex gap-2">
+                      <ul>
+                        <li className="flex gap-2 w-full justify-between">
+                          <span>
+                          Completed 
+                          </span>
+                          {contact.is_completed && (
+                            <BsCheck2Circle className="text-green-500" />
+                          )}
+                        </li>
+                        
+                        <li className="flex gap-2 w-full justify-between">
+                          <span>
+                          Status 
+                          </span>
+                          {contact.data?.log?.status == "success" ? (
+                            <BsCheck2Circle className="text-green-500" />
+                          ) : contact.data?.log?.status == "failed" ? (
+                            <FaXmark className="text-red-500" />
+                          ) : (
+                            <></>
+                          )}
+                        </li>
+                        <li className="flex gap-2 w-full justify-between">
+                          <span>
+                          Retries 
+                          </span>
+                          {(contact.data?.retries?? []).length}
+                        </li>
+
+                      </ul>
+
+                     
+                    </div>
+                  </Table.Cell>
                   <Table.Cell>
                     {isEditable && (
                       <a

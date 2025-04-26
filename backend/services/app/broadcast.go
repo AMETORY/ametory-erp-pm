@@ -3,7 +3,6 @@ package app
 import (
 	"ametory-pm/models"
 	"ametory-pm/models/connection"
-	srv "ametory-pm/services"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -13,7 +12,10 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
+	"github.com/google/uuid"
+	"gopkg.in/olahol/melody.v1"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/go-redis/redis/v8"
@@ -21,7 +23,9 @@ import (
 )
 
 type BroadcastService struct {
-	ctx *context.ERPContext
+	ctx              *context.ERPContext
+	appService       *AppService
+	whatsmeowService *whatsmeow_client.WhatsmeowService
 }
 
 func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
@@ -33,8 +37,18 @@ func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
 			&models.MessageRetry{},
 		)
 	}
+	appService, ok := ctx.AppService.(*AppService)
+	if !ok {
+		panic("AppService is not instance of app.AppService")
+	}
+	whatsmeowService, ok := ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService)
+	if !ok {
+		panic("ThirdPartyServices is not instance of whatsmeow_client.WhatsmeowService")
+	}
 	return &BroadcastService{
-		ctx: ctx,
+		ctx:              ctx,
+		appService:       appService,
+		whatsmeowService: whatsmeowService,
 	}
 }
 
@@ -102,7 +116,9 @@ func (s *BroadcastService) GetBroadcastByID(id string) (*models.BroadcastModel, 
 }
 
 func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search string) ([]mdl.ContactModel, error) {
+
 	var contacts []mdl.ContactModel
+	var selectContacts []models.CustomContactModel
 	var totalRows int64
 	db := s.ctx.DB.Model(&mdl.ContactModel{}).
 		Joins("JOIN broadcast_contacts on broadcast_contacts.contact_model_id = contacts.id").
@@ -119,11 +135,30 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 
 	if err := db.
 		Where("broadcasts.id  = ?", id).
+		Select("contacts.*", "broadcast_contacts.is_completed").
 		Offset(pagination.GetOffset()).Limit(pagination.GetLimit()).Order(pagination.GetSort()).
-		Find(&contacts).
+		Scan(&selectContacts).
 		Error; err != nil {
 		return nil, err
 	}
+
+	for _, contact := range selectContacts {
+		var newContact mdl.ContactModel = contact.ContactModel
+		var retries []models.MessageRetry
+		var log models.MessageLog
+
+		s.ctx.DB.Model(&models.MessageRetry{}).Where("contact_id = ? and broadcast_id = ?", contact.ID, id).Find(&retries)
+		s.ctx.DB.Model(&models.MessageLog{}).Where("contact_id = ? and broadcast_id = ?", contact.ID, id).Find(&log)
+		newContact.IsCompleted = contact.IsCompleted
+
+		var data map[string]any = make(map[string]any)
+		data["retries"] = retries
+		data["log"] = log
+		newContact.Data = data
+
+		contacts = append(contacts, newContact)
+	}
+
 	return contacts, nil
 }
 
@@ -136,17 +171,21 @@ func (s *BroadcastService) DeleteBroadcast(id string) error {
 }
 
 func (s *BroadcastService) Send(b *models.BroadcastModel) {
-	if b.ScheduledAt == nil {
+	if b.ScheduledAt != nil {
 		key := fmt.Sprintf("broadcast:schedule:%v", b.ID)
 		data, _ := json.Marshal(b)
-		srv.REDIS.Set(*s.ctx.Ctx, key, data, time.Until(*b.ScheduledAt))
+		s.appService.Redis.Set(*s.ctx.Ctx, key, data, time.Until(*b.ScheduledAt))
 		b.Status = "SCHEDULED"
 		s.ctx.DB.Save(b)
 		go func() {
 			time.Sleep(time.Until(*b.ScheduledAt))
+			b.Status = "PROCESSING"
+			s.ctx.DB.Save(b)
 			s.startBroadcast(b)
 		}()
 	} else {
+		b.Status = "PROCESSING"
+		s.ctx.DB.Save(b)
 		s.startBroadcast(b)
 	}
 }
@@ -155,23 +194,26 @@ func (s *BroadcastService) startBroadcast(b *models.BroadcastModel) {
 	fmt.Println("📢 Starting broadcast", b.ID)
 
 	batches := chunkContacts(b.Contacts, b.MaxContactsPerBatch)
+	fmt.Println("📢 Number of batches", len(batches), "<>", b.MaxContactsPerBatch)
+	utils.LogJson((batches))
 	for i, batch := range batches {
 		sender := b.Connections[i%len(b.Connections)]
 		go s.sendBatchWithDelay(sender, b.ID, batch, 1*time.Second)
 		var group = models.BroadcastGrouping{
+			BaseModel:   shared.BaseModel{ID: uuid.New().String()},
 			BroadcastID: b.ID,
 			Code:        utils.GenerateRandomNumber(6),
 		}
 		s.ctx.DB.Create(&group)
 		for _, v := range batch {
-			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id", v.ID).Update("broadcast_grouping_id", group.ID)
+			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Update("broadcast_grouping_id", group.ID)
 		}
 	}
 }
 
 func (s *BroadcastService) sendBatchWithDelay(sender connection.ConnectionModel, broadcastID string, contacts []mdl.ContactModel, delay time.Duration) {
 	for _, contact := range contacts {
-		sendWithRetryHandling(
+		s.sendWithRetryHandling(
 			sender,
 			broadcastID,
 			contact,
@@ -182,14 +224,14 @@ func (s *BroadcastService) sendBatchWithDelay(sender connection.ConnectionModel,
 				s.saveToRetryQueue(mr)
 			},
 		)
-		s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id", contact.ID).Update("connection_model_id", sender.ID)
+		s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("connection_model_id", sender.ID)
 	}
 }
 
 func (s *BroadcastService) saveToRetryQueue(retry models.MessageRetry) {
 	key := fmt.Sprintf("retry:sender:%v", retry.Sender.ID)
 	data, _ := json.Marshal(retry)
-	srv.REDIS.RPush(*s.ctx.Ctx, key, data)
+	s.appService.Redis.RPush(*s.ctx.Ctx, key, data)
 	retry.ID = utils.Uuid()
 	s.ctx.DB.Create(&retry)
 }
@@ -207,7 +249,7 @@ func (s *BroadcastService) scheduleRetrySender(sender connection.ConnectionModel
 		key := fmt.Sprintf("retry:sender:%v", sender.ID)
 
 		for {
-			retryData, err := srv.REDIS.LPop(*ctx, key).Result()
+			retryData, err := s.appService.Redis.LPop(*ctx, key).Result()
 			if err == redis.Nil {
 				break
 			} else if err != nil {
@@ -224,7 +266,7 @@ func (s *BroadcastService) scheduleRetrySender(sender connection.ConnectionModel
 				Phone:     retryItem.Contact.Phone,
 			}
 
-			sendWithRetryHandling(
+			s.sendWithRetryHandling(
 				retryItem.Sender,
 				retryItem.BroadcastID,
 				contact,
@@ -243,12 +285,13 @@ func (s *BroadcastService) scheduleRetrySender(sender connection.ConnectionModel
 func chunkContacts(contacts []mdl.ContactModel, size int) [][]mdl.ContactModel {
 	var batches [][]mdl.ContactModel
 	for size < len(contacts) {
-		contacts, batches = contacts[size:], append(batches, contacts[0:size:size])
+		contacts, batches = contacts[size:], append(batches, contacts[:size:size])
 	}
+
 	return append(batches, contacts)
 }
 
-func sendWithRetryHandling(
+func (b *BroadcastService) sendWithRetryHandling(
 	sender connection.ConnectionModel,
 	broadcastID string,
 	contact mdl.ContactModel,
@@ -291,11 +334,34 @@ func sendWithRetryHandling(
 			})
 		}
 	}
+	b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
+	var broadcast models.BroadcastModel
+	b.ctx.DB.Where("id = ?", broadcastID).Select("id", "company_id").First(&broadcast)
+
+	var completedCount int64
+	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ? and is_completed = ?", broadcastID, true).Count(&completedCount)
+	var contactCount int64
+	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ?", broadcastID).Count(&contactCount)
+	fmt.Println("COUNT", completedCount, contactCount)
+	if completedCount == contactCount {
+		b.ctx.DB.Where("id = ?", broadcastID).Model(&broadcast).Update("status", "COMPLETED")
+		msg := map[string]any{
+			"message":      "All contacts have been sent",
+			"broadcast_id": broadcastID,
+			"command":      "BROADCAST_COMPLETED",
+		}
+		msgStr, _ := json.Marshal(msg)
+		b.appService.Websocket.BroadcastFilter(msgStr, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", b.appService.Config.Server.BaseURL, *broadcast.CompanyID)
+			return fmt.Sprintf("%s%s", b.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
+	}
+
 }
 
 func simulateSend(contact mdl.ContactModel) bool {
 
-	fmt.Println("Simulate send to", contact.Phone)
+	fmt.Println("Simulate send to", contact.Name, *contact.Phone)
 	// 90% berhasil
 	return rand.Intn(100) < 90
 }

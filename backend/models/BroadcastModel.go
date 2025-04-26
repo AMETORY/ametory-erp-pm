@@ -22,11 +22,22 @@ type BroadcastModel struct {
 	Contacts            []models.ContactModel        `gorm:"many2many:broadcast_contacts;" json:"contacts,omitempty"`
 	MaxContactsPerBatch int                          `json:"max_contacts_per_batch" gorm:"default:100"`
 	Groups              []BroadcastGrouping          `gorm:"foreignKey:BroadcastID" json:"groups,omitempty"`
+	ContactCount        int                          `json:"contact_count" gorm:"-"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
 	if b.ID == "" {
 		tx.Statement.SetColumn("id", uuid.New().String())
+	}
+	return nil
+}
+
+func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
+	var completedCount int64
+	tx.Model(&BroadcastContacts{}).Where(" broadcast_model_id = ?", b.ID).Count(&completedCount)
+	if int(completedCount) == b.ContactCount {
+		b.Status = "COMPLETED"
+		return tx.Save(b).Error
 	}
 	return nil
 }
@@ -47,6 +58,7 @@ type BroadcastContacts struct {
 	ConnectionModelID   string `gorm:"size:36" json:"connection_model_id"`
 	ContactModelID      string `gorm:"uniqueIndex:idx_broadcast_contact;type:char(36)" json:"contact_model_id"`
 	BroadcastModelID    string `gorm:"uniqueIndex:idx_broadcast_contact;type:char(36)" json:"broadcast_model_id"`
+	IsCompleted         bool   `json:"is_completed"`
 }
 
 type MessageLog struct {
@@ -81,4 +93,11 @@ type MessageRetry struct {
 
 func (MessageRetry) TableName() string {
 	return "broadcast_message_retries"
+}
+
+type CustomContactModel struct {
+	models.ContactModel
+	IsCompleted bool           `json:"is_completed"`
+	Retries     []MessageRetry `gorm:"-" json:"retries,omitempty"`
+	MessageLog  MessageLog     `gorm:"-" json:"message_log,omitempty"`
 }

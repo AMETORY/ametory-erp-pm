@@ -5,6 +5,8 @@ import {
   Button,
   Label,
   Modal,
+  Pagination,
+  Table,
   Textarea,
   TextInput,
 } from "flowbite-react";
@@ -15,6 +17,8 @@ import { SearchContext } from "../contexts/SearchContext";
 import { LoadingContext } from "../contexts/LoadingContext";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { BroadcastModel } from "../models/broadcast";
+import { parseMentions } from "../utils/helper-ui";
 
 interface BroadcastPageProps {}
 const neverMatchingRegex = /($a)/;
@@ -29,6 +33,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
   const { search, setSearch } = useContext(SearchContext);
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [description, setDescription] = useState("");
+  const [broadcasts, setBroadcasts] = useState<BroadcastModel[]>([]);
   const nav = useNavigate();
   useEffect(() => {
     setMounted(true);
@@ -36,7 +41,10 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
 
   useEffect(() => {
     if (mounted) {
-      getBroadcasts({ page, size, search }).then((res) => {});
+      getBroadcasts({ page, size, search }).then((res: any) => {
+        setBroadcasts(res.data);
+        setPagination(res.pagination);
+      });
     }
   }, [mounted, page, size, search]);
   useEffect(() => {
@@ -95,6 +103,43 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
             + Create new broadcast
           </Button>
         </div>
+        <Table>
+          <Table.Head>
+            <Table.HeadCell>ID</Table.HeadCell>
+            <Table.HeadCell>Description</Table.HeadCell>
+            <Table.HeadCell>Message</Table.HeadCell>
+            <Table.HeadCell>Actions</Table.HeadCell>
+          </Table.Head>
+          <Table.Body>
+            {broadcasts?.map((broadcast: any, index) => (
+              <Table.Row key={broadcast.id}>
+                <Table.Cell>{index + 1}</Table.Cell>
+                <Table.Cell>{broadcast.description}</Table.Cell>
+                <Table.Cell>
+                  {parseMentions(broadcast.message, () => {})}
+                </Table.Cell>
+                <Table.Cell>
+                  <a
+                    href="#"
+                    className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
+                    onClick={() => nav(`/broadcast/${broadcast.id}`)}
+                  >
+                    View
+                  </a>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+        <Pagination
+          className="mt-4"
+          currentPage={page}
+          totalPages={pagination?.total_pages ?? 0}
+          onPageChange={(val) => {
+            setPage(val);
+          }}
+          showIcons
+        />
       </div>
       {showModal && (
         <Modal show={showModal} onClose={() => setShowModal(false)}>
