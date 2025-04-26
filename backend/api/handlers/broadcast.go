@@ -8,6 +8,8 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/contact"
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/shared"
+	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -83,7 +85,30 @@ func (h *BroadcastHandler) GetBroadcastHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": broadcast})
+
+	var pagination app.Pagination
+
+	limitStr := c.DefaultQuery("size", "10")
+	pageStr := c.DefaultQuery("page", "1")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 10
+	}
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		page = 1
+	}
+	pagination.Limit = limit
+	pagination.Page = page
+
+	contacts, err := h.broadcastServ.GetContacts(id, &pagination, c.Query("search"))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	broadcast.Contacts = contacts
+	c.JSON(200, gin.H{"data": broadcast, "pagination": pagination, "message": "Broadcast retrieved successfully"})
 }
 
 func (h *BroadcastHandler) UpdateBroadcastHandler(c *gin.Context) {
@@ -129,7 +154,8 @@ func (h *BroadcastHandler) SendBroadcastHandler(c *gin.Context) {
 func (h *BroadcastHandler) AddContactHandler(c *gin.Context) {
 	id := c.Param("id")
 	var input struct {
-		TagIDs []string `json:"tag_ids"`
+		TagIDs     []string `json:"tag_ids"`
+		ContactIDs []string `json:"contact_ids"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -142,10 +168,35 @@ func (h *BroadcastHandler) AddContactHandler(c *gin.Context) {
 		return
 	}
 
+	contactIDs := []mdl.ContactModel{}
+	for _, v := range input.ContactIDs {
+		contactIDs = append(contactIDs, mdl.ContactModel{BaseModel: shared.BaseModel{ID: v}})
+	}
+
+	contacts = append(contacts, contactIDs...)
+
 	if err := h.broadcastServ.AddContact(id, contacts); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Contacts added successfully"})
+}
+
+func (h *BroadcastHandler) DeleteContactHandler(c *gin.Context) {
+	id := c.Param("id")
+	var input struct {
+		TagIDs     []string `json:"tag_ids"`
+		ContactIDs []string `json:"contact_ids"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.broadcastServ.DeleteContactByIDs(id, input.ContactIDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contact deleted successfully"})
 }

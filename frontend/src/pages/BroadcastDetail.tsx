@@ -1,7 +1,12 @@
 import { useContext, useEffect, useState, type FC } from "react";
 import { useParams } from "react-router-dom";
 import AdminLayout from "../components/layouts/admin";
-import { addContactBroadcast, getBroadcast, updateBroadcast } from "../services/api/broadcastApi";
+import {
+  addContactBroadcast,
+  deleteContactBroadcast,
+  getBroadcast,
+  updateBroadcast,
+} from "../services/api/broadcastApi";
 import { BroadcastModel } from "../models/broadcast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import toast from "react-hot-toast";
@@ -12,6 +17,7 @@ import {
   Datepicker,
   Label,
   Modal,
+  Pagination,
   TabItem,
   Table,
   Tabs,
@@ -25,9 +31,13 @@ import moment from "moment";
 import Select from "react-select";
 import { ConnectionModel } from "../models/connection";
 import { getConnections } from "../services/api/connectionApi";
-import { countContactByTag } from "../services/api/contactApi";
+import { countContactByTag, getContacts } from "../services/api/contactApi";
 import { TagModel } from "../models/tag";
-import { getContrastColor } from "../utils/helper";
+import { getContrastColor, getPagination } from "../utils/helper";
+import { ContactModel } from "../models/contact";
+import { HiMagnifyingGlass } from "react-icons/hi2";
+import { SearchContext } from "../contexts/SearchContext";
+import { PaginationResponse } from "../objects/pagination";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -43,6 +53,15 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const [showModal, setShowModal] = useState(false);
   const [tags, setTags] = useState<TagModel[]>([]);
   const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
+  const [contacts, setContacts] = useState<ContactModel[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<ContactModel[]>([]);
+  const [page, setPage] = useState(1);
+  const [size, setsize] = useState(20);
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState<PaginationResponse>();
+  const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<
+    ContactModel[]
+  >([]);
 
   useEffect(() => {
     setMounted(true);
@@ -69,30 +88,35 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
       .slice(0, 10);
     return matches.map(({ emoji }) => ({ id: emoji }));
   };
-
+  useEffect(() => {
+    getConnections({ page: 1, size: 100 }).then((res: any) => {
+      setConnections(res.data);
+    });
+  }, []);
   useEffect(() => {
     if (mounted && broadcastId) {
       setLoading(true);
-      getBroadcast(broadcastId)
-        .then((res: any) => {
-          setBroadcast(res.data);
-          setisEditable(res.data.status === "DRAFT");
-        })
-        .catch((error) => {
-          toast.error(`${error}`);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-
-      getConnections({ page: 1, size: 100 }).then((res: any) => {
-        setConnections(res.data);
-      });
+      getDetail();
     }
-  }, [mounted, broadcastId]);
+  }, [mounted, broadcastId, page, search, size]);
+
+  const getDetail = () => {
+    getBroadcast(broadcastId!, { page, size, search })
+      .then((res: any) => {
+        setBroadcast(res.data);
+        setPagination(res.pagination);
+        setisEditable(res.data.status === "DRAFT");
+      })
+      .catch((error) => {
+        toast.error(`${error}`);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-8 h-[calc(100vh-80px)] overflow-y-auto">
         <h1 className="text-2xl font-bold">Detail Broadcast</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 mb-4">
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -169,14 +193,72 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 </Badge>
               </div>
             </div>
-            <div>
-              <Button
-                onClick={() => {
-                  updateBroadcast(broadcast?.id!, broadcast);
-                }}
-              >
-                Save
-              </Button>
+            <div className="flex gap-2">
+              {broadcast?.status === "DRAFT" && (
+                <Button
+                  color="success"
+                  onClick={() => {
+                    setLoading(true);
+                    updateBroadcast(broadcast?.id!, {
+                      ...broadcast,
+                      status: "READY",
+                    })
+                      .then(() => {
+                        getDetail();
+                      })
+                      .catch((error) => {
+                        toast.error(`${error}`);
+                      })
+                      .finally(() => {
+                        setLoading(false);
+                      });
+                  }}
+                >
+                  Ready To Send
+                </Button>
+              )}
+              {broadcast?.status === "READY" && (
+                <Button
+                  color="warning"
+                  onClick={() => {
+                    setLoading(true);
+                    updateBroadcast(broadcast?.id!, {
+                      ...broadcast,
+                      status: "DRAFT",
+                    })
+                      .then(() => {
+                        getDetail();
+                      })
+                      .catch((error) => {
+                        toast.error(`${error}`);
+                      })
+                      .finally(() => {
+                        setLoading(false);
+                      });
+                  }}
+                >
+                  Undo
+                </Button>
+              )}
+              {broadcast?.status === "DRAFT" && (
+                <Button
+                  onClick={() => {
+                    setLoading(true);
+                    updateBroadcast(broadcast?.id!, broadcast)
+                      .then(() => {
+                        getDetail();
+                      })
+                      .catch((error) => {
+                        toast.error(`${error}`);
+                      })
+                      .finally(() => {
+                        setLoading(false);
+                      });
+                  }}
+                >
+                  Save
+                </Button>
+              )}
             </div>
           </div>
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -186,7 +268,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <div className="grid grid-cols-5 gap-4">
                   <Datepicker
                     disabled={broadcast?.scheduled_at ? false : true}
-                    value={broadcast?.scheduled_at ?? null}
+                    value={broadcast?.scheduled_at ? moment(broadcast?.scheduled_at).toDate() : null}
                     onChange={(val) => {
                       setBroadcast({
                         ...broadcast!,
@@ -249,9 +331,11 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 </div>
               ) : (
                 broadcast?.scheduled_at && (
-                  <Moment className="" format="DD MMM YYYY, HH:mm">
-                    {broadcast?.scheduled_at}
-                  </Moment>
+                  <div>
+                    <Moment className="" format="DD MMM YYYY, HH:mm">
+                      {broadcast?.scheduled_at}
+                    </Moment>
+                  </div>
                 )
               )}
             </div>
@@ -286,7 +370,14 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     )}
                   />
                 ) : (
-                  <div></div>
+                  <div>
+                    {(broadcast?.connections ?? []).map((item: any) => (
+                      <div className="flex flex-col w-fit px-2 bg-amber-200 rounded-lg">
+                        <div className="font-semibold">{item.name}</div>
+                        <small className="">{item.session_name}</small>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </p>
             </div>
@@ -295,88 +386,179 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
         <div className="bg-white border rounded p-6 flex flex-col space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold">Contact</h3>
-            <Button
-              color="gray"
-              size="sm"
-              onClick={() => {
-                countContactByTag().then((v: any) => {
-                  setTags(v.data);
-                });
-                setShowModal(true);
+            <div className="flex gap-2">
+              {selectedBroadcastContacts.length > 0 &&
+                broadcast?.status === "DRAFT" && (
+                  <Button
+                    color="red"
+                    size="sm"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Are you sure you want to delete ${selectedBroadcastContacts.length} contacts ?`
+                        )
+                      ) {
+                        deleteContactBroadcast(broadcastId!, {
+                          contact_ids: selectedBroadcastContacts.map(
+                            (item) => item.id
+                          ),
+                        }).then(() => {
+                          getDetail();
+                          setSelectedBroadcastContacts([]);
+                        });
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
+                )}
+              {broadcast?.status === "DRAFT" && (
+                <Button
+                  color="gray"
+                  size="sm"
+                  onClick={() => {
+                    countContactByTag().then((v: any) => {
+                      setTags(v.data);
+                    });
+                    getContacts({ page: 1, size: 10 }).then((v: any) => {
+                      setContacts(v.data.items);
+                    });
+                    setShowModal(true);
+                  }}
+                >
+                  + Contact
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="relative w-full max-w-[300px] mr-6 focus-within:text-purple-500">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <HiMagnifyingGlass />
+            </div>
+            <input
+              type="text"
+              className="w-full py-2 pl-10 text-sm text-gray-700 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500"
+              placeholder="Search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
               }}
-            >
-              + Contact
-            </Button>
+            />
           </div>
           <Table>
-                    <Table.Head>
-                      <Table.HeadCell>Name</Table.HeadCell>
-                      <Table.HeadCell>Email</Table.HeadCell>
-                      <Table.HeadCell>Phone</Table.HeadCell>
-                      <Table.HeadCell>Address</Table.HeadCell>
-                      <Table.HeadCell>Position</Table.HeadCell>
-                      <Table.HeadCell></Table.HeadCell>
-                    </Table.Head>
-          
-                    <Table.Body className="divide-y">
-                      {(broadcast?.contacts??[]).length === 0 && (
-                        <Table.Row>
-                          <Table.Cell colSpan={5} className="text-center">
-                            No contacts found.
-                          </Table.Cell>
-                        </Table.Row>
-                      )}
-                      {(broadcast?.contacts??[]).map((contact) => (
-                        <Table.Row
-                          key={contact.id}
-                          className="bg-white dark:border-gray-700 dark:bg-gray-800"
-                        >
-                          <Table.Cell
-                            className="whitespace-nowrap font-medium text-gray-900 dark:text-white cursor-pointer hover:font-semibold"
-                            onClick={() => {}}
-                          >
-                            <div className="flex flex-col">
-                              {contact.name}
-                              {(contact.tags ?? []).length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                  {contact.tags?.map((tag) => (
-                                    <span className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100" key={tag.id} style={{ color: getContrastColor(tag.color), backgroundColor: tag.color }}>
-                                      {tag.name}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </Table.Cell>
-                          <Table.Cell>{contact.email}</Table.Cell>
-                          <Table.Cell>{contact.phone}</Table.Cell>
-                          <Table.Cell>{contact.address}</Table.Cell>
-                          <Table.Cell>{contact.contact_person_position}</Table.Cell>
-                          <Table.Cell>
-                           
-                            <a
-                              href="#"
-                              className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (
-                                  window.confirm(
-                                    `Are you sure you want to delete contact ${contact.name}?`
-                                  )
-                                ) {
-                                  // deleteContact(contact?.id!).then(() => {
-                                  //   getAllContacts();
-                                  // });
-                                }
-                              }}
-                            >
-                              Delete
-                            </a>
-                          </Table.Cell>
-                        </Table.Row>
-                      ))}
-                    </Table.Body>
-                  </Table>
+            <Table.Head>
+              <Table.HeadCell>Name</Table.HeadCell>
+              <Table.HeadCell>Email</Table.HeadCell>
+              <Table.HeadCell>Phone</Table.HeadCell>
+              <Table.HeadCell>Address</Table.HeadCell>
+              <Table.HeadCell>Position</Table.HeadCell>
+              <Table.HeadCell></Table.HeadCell>
+            </Table.Head>
+
+            <Table.Body className="divide-y">
+              {(broadcast?.contacts ?? []).length === 0 && (
+                <Table.Row>
+                  <Table.Cell colSpan={5} className="text-center">
+                    No contacts found.
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {(broadcast?.contacts ?? []).map((contact) => (
+                <Table.Row
+                  key={contact.id}
+                  className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <Table.Cell
+                    className="whitespace-nowrap font-medium text-gray-900 dark:text-white cursor-pointer hover:font-semibold"
+                    onClick={() => {}}
+                  >
+                    <div className="flex gap-2">
+                      <Checkbox
+                        disabled={!isEditable}
+                        checked={selectedBroadcastContacts
+                          .map((contact) => contact.id)
+                          .includes(contact.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedBroadcastContacts([
+                              ...selectedBroadcastContacts,
+                              contact,
+                            ]);
+                          } else {
+                            setSelectedBroadcastContacts(
+                              selectedBroadcastContacts.filter(
+                                (c) => c.id !== contact.id
+                              )
+                            );
+                          }
+                        }}
+                      />
+                      <div className="flex flex-col">
+                        {contact.name}
+                        {(contact.tags ?? []).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {contact.tags?.map((tag) => (
+                              <span
+                                className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100"
+                                key={tag.id}
+                                style={{
+                                  color: getContrastColor(tag.color),
+                                  backgroundColor: tag.color,
+                                }}
+                              >
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell>{contact.email}</Table.Cell>
+                  <Table.Cell>{contact.phone}</Table.Cell>
+                  <Table.Cell>{contact.address}</Table.Cell>
+                  <Table.Cell>{contact.contact_person_position}</Table.Cell>
+                  <Table.Cell>
+                    {isEditable && (
+                      <a
+                        href="#"
+                        className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete contact ${contact.name}?`
+                            )
+                          ) {
+                            // deleteContact(contact?.id!).then(() => {
+                            //   getAllContacts();
+                            // });
+
+                            deleteContactBroadcast(broadcastId!, {
+                              contact_ids: [contact.id],
+                            }).then(() => {
+                              getDetail();
+                            });
+                          }
+                        }}
+                      >
+                        Delete
+                      </a>
+                    )}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+          <Pagination
+            className="mt-4"
+            currentPage={page}
+            totalPages={pagination?.total_pages ?? 0}
+            onPageChange={(val) => {
+              setPage(val);
+            }}
+            showIcons
+          />
         </div>
       </div>
       <Modal
@@ -388,23 +570,109 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
         <Modal.Header>Add Contact</Modal.Header>
         <Modal.Body>
           <Tabs>
-            <TabItem title="Contact"></TabItem>
+            <TabItem title="Contact">
+              <div className="mb-4 flex justify-end">
+                <div className="relative w-full max-w-[300px] mr-6 focus-within:text-purple-500">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <HiMagnifyingGlass />
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full py-2 pl-10 text-sm text-gray-700 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500"
+                    placeholder="Search"
+                    onChange={(e) => {
+                      getContacts({
+                        page: 1,
+                        size: 10,
+                        search: e.target.value,
+                      }).then((v: any) => {
+                        setContacts(v.data.items);
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+              <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-3 py-3"
+                      style={{ width: "5%" }}
+                    ></th>
+                    <th scope="col" className="px-6 py-3">
+                      Name
+                    </th>
+                    <th scope="col" className="px-6 py-3">
+                      Email
+                    </th>
+                    <th scope="col" className="px-6 py-3">
+                      Phone
+                    </th>
+                    <th scope="col" className="px-6 py-3">
+                      Address
+                    </th>
+                    <th scope="col" className="px-6 py-3">
+                      Position
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contacts.map((contact) => (
+                    <tr
+                      key={contact.id}
+                      className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <td className="px-3 py-4">
+                        <Checkbox
+                          checked={selectedContacts
+                            .map((contact) => contact.id)
+                            .includes(contact.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedContacts([
+                                ...selectedContacts,
+                                contact,
+                              ]);
+                            } else {
+                              setSelectedContacts(
+                                selectedContacts.filter(
+                                  (c) => c.id !== contact.id
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      </td>
+                      <td className="px-6 py-4">{contact.name}</td>
+                      <td className="px-6 py-4">{contact.email}</td>
+                      <td className="px-6 py-4">{contact.phone}</td>
+                      <td className="px-6 py-4">{contact.address}</td>
+                      <td className="px-6 py-4">
+                        {contact.contact_person_position}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TabItem>
             <TabItem title="Tag">
               <ul>
                 {tags.map((item: any) => (
                   <li className="flex items-center gap-2 py-2">
                     <Checkbox
-                      checked={selectedTags.includes(item.id)}
+                      checked={selectedTags
+                        .map((tag) => tag.id)
+                        .includes(item.id)}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedTags([...selectedTags, item.id]);
+                          setSelectedTags([...selectedTags, item]);
                         } else {
                           setSelectedTags(
-                            selectedTags.filter((id) => id !== item.id)
+                            selectedTags.filter((t) => t.id !== item.id)
                           );
                         }
                       }}
-
                     />
                     <p>{item.name}</p>
                     <p>( {item.count} )</p>
@@ -416,13 +684,28 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
         </Modal.Body>
         <Modal.Footer>
           <div className="flex justify-end w-full gap-2">
-            <Button onClick={() => {
-              addContactBroadcast(broadcast!.id!, {
-                tag_ids: selectedTags
-              }).then((v: any) => {
-                
-              })
-            }}>Save</Button>
+            <Button
+              onClick={() => {
+                setLoading(true);
+                addContactBroadcast(broadcast!.id!, {
+                  tag_ids: selectedTags.map((tag) => tag.id),
+                  contact_ids: selectedContacts.map((contact) => contact.id),
+                })
+                  .then((v: any) => {
+                    getDetail();
+                    toast.success("Successfully added contact");
+                    setShowModal(false);
+                  })
+                  .catch((e: any) => {
+                    toast.error(`${e.message}`);
+                  })
+                  .finally(() => {
+                    setLoading(false);
+                  });
+              }}
+            >
+              Save
+            </Button>
           </div>
         </Modal.Footer>
       </Modal>

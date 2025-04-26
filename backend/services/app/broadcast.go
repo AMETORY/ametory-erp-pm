@@ -6,6 +6,7 @@ import (
 	srv "ametory-pm/services"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"net/http"
 	"time"
@@ -59,6 +60,29 @@ func (s *BroadcastService) AddContact(broadcastID string, contacts []mdl.Contact
 	return s.ctx.DB.Model(&broadcast).Association("Contacts").Append(contacts)
 }
 
+func (s *BroadcastService) DeleteContact(broadcastID string, contactID string) error {
+	var broadcast models.BroadcastModel
+	if err := s.ctx.DB.Where("id = ?", broadcastID).First(&broadcast).Error; err != nil {
+		return err
+	}
+
+	return s.ctx.DB.Model(&broadcast).Association("Contacts").Delete(mdl.ContactModel{BaseModel: shared.BaseModel{ID: contactID}})
+}
+
+func (s *BroadcastService) DeleteContactByIDs(broadcastID string, contactIDs []string) error {
+	var broadcast models.BroadcastModel
+	if err := s.ctx.DB.Where("id = ?", broadcastID).First(&broadcast).Error; err != nil {
+		return err
+	}
+
+	contacts := make([]mdl.ContactModel, len(contactIDs))
+	for i, id := range contactIDs {
+		contacts[i] = mdl.ContactModel{BaseModel: shared.BaseModel{ID: id}}
+	}
+
+	return s.ctx.DB.Model(&broadcast).Association("Contacts").Delete(contacts)
+}
+
 func (s *BroadcastService) AddConnection(broadcastID string, connections []connection.ConnectionModel) error {
 	var broadcast models.BroadcastModel
 	if err := s.ctx.DB.Where("id = ?", broadcastID).First(&broadcast).Error; err != nil {
@@ -70,10 +94,37 @@ func (s *BroadcastService) AddConnection(broadcastID string, connections []conne
 
 func (s *BroadcastService) GetBroadcastByID(id string) (*models.BroadcastModel, error) {
 	var broadcast models.BroadcastModel
-	if err := s.ctx.DB.Preload("Contacts.Tags").Preload("Connections").Where("id = ?", id).First(&broadcast).Error; err != nil {
+	if err := s.ctx.DB.Preload("Connections").Where("id = ?", id).First(&broadcast).Error; err != nil {
 		return nil, err
 	}
+
 	return &broadcast, nil
+}
+
+func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search string) ([]mdl.ContactModel, error) {
+	var contacts []mdl.ContactModel
+	var totalRows int64
+	db := s.ctx.DB.Model(&mdl.ContactModel{}).
+		Joins("JOIN broadcast_contacts on broadcast_contacts.contact_model_id = contacts.id").
+		Joins("JOIN broadcasts on broadcasts.id = broadcast_contacts.broadcast_model_id").
+		Where("(contacts.name LIKE ? OR contacts.phone LIKE ?)", "%"+search+"%", "%"+search+"%")
+
+	err := db.Count(&totalRows).Error
+	if err != nil {
+		return nil, err
+	}
+	pagination.TotalRows = totalRows
+	totalPages := int(math.Ceil(float64(totalRows) / float64(pagination.Limit)))
+	pagination.TotalPages = totalPages
+
+	if err := db.
+		Where("broadcasts.id  = ?", id).
+		Offset(pagination.GetOffset()).Limit(pagination.GetLimit()).Order(pagination.GetSort()).
+		Find(&contacts).
+		Error; err != nil {
+		return nil, err
+	}
+	return contacts, nil
 }
 
 func (s *BroadcastService) UpdateBroadcast(id string, broadcast *models.BroadcastModel) error {
