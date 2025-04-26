@@ -378,6 +378,29 @@ func (b *BroadcastService) sendWithRetryHandling(
 			url := fmt.Sprintf("%s/api/v1/ws/%s", b.appService.Config.Server.BaseURL, *broadcast.CompanyID)
 			return fmt.Sprintf("%s%s", b.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 		})
+	} else {
+		type count struct {
+			Complete int64 `json:"complete"`
+			Success  int64 `json:"success"`
+			Failed   int64 `json:"failed"`
+		}
+		var countData count
+		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("broadcast_model_id = ?", broadcastID).Select("COUNT(CASE WHEN is_completed = 't' THEN 1 END) as complete, COUNT(CASE WHEN is_success = 't' THEN 1 END) as success, COUNT(CASE WHEN is_success = 'f' THEN 1 END) as failed").Scan(&countData)
+		msg := map[string]any{
+			"message":      "Broadcast in progress",
+			"broadcast_id": broadcastID,
+			"command":      "BROADCAST_PROGRESS",
+			"data": map[string]any{
+				"success":   countData.Success,
+				"failed":    countData.Failed,
+				"completed": countData.Complete,
+			},
+		}
+		msgStr, _ := json.Marshal(msg)
+		b.appService.Websocket.BroadcastFilter(msgStr, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", b.appService.Config.Server.BaseURL, *broadcast.CompanyID)
+			return fmt.Sprintf("%s%s", b.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
 	}
 
 }

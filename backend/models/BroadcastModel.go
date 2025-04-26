@@ -26,6 +26,7 @@ type BroadcastModel struct {
 	GroupCount          int                          `json:"group_count" gorm:"-"`
 	SuccessCount        int                          `json:"success_count" gorm:"-"`
 	FailedCount         int                          `json:"failed_count" gorm:"-"`
+	CompletedCount      int                          `json:"completed_count" gorm:"-"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
@@ -46,13 +47,15 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 	tx.Model(&BroadcastGrouping{}).Where(" broadcast_id = ?", b.ID).Count(&countGroups)
 	b.GroupCount = int(countGroups)
 	type count struct {
-		Success int64 `json:"success"`
-		Failed  int64 `json:"failed"`
+		Success  int64 `json:"success"`
+		Failed   int64 `json:"failed"`
+		Complete int64 `json:"complete"`
 	}
 	var countData count
-	tx.Model(&BroadcastContacts{}).Where("broadcast_model_id = ?", b.ID).Select("COUNT(CASE WHEN is_success = 't' THEN 1 END) as success, COUNT(CASE WHEN is_success = 'f' THEN 1 END) as failed").Scan(&countData)
+	tx.Model(&BroadcastContacts{}).Where("broadcast_model_id = ?", b.ID).Select("COUNT(CASE WHEN is_completed = 't' THEN 1 END) as complete, COUNT(CASE WHEN is_success = 't' THEN 1 END) as success, COUNT(CASE WHEN is_success = 'f' THEN 1 END) as failed").Scan(&countData)
 	b.SuccessCount = int(countData.Success)
 	b.FailedCount = int(countData.Failed)
+	b.CompletedCount = int(countData.Complete)
 
 	return nil
 }

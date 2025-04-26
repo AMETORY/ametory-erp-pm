@@ -35,7 +35,7 @@ import { ConnectionModel } from "../models/connection";
 import { getConnections } from "../services/api/connectionApi";
 import { countContactByTag, getContacts } from "../services/api/contactApi";
 import { TagModel } from "../models/tag";
-import { getContrastColor, getPagination } from "../utils/helper";
+import { getContrastColor, getPagination, money } from "../utils/helper";
 import { ContactModel } from "../models/contact";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { SearchContext } from "../contexts/SearchContext";
@@ -104,6 +104,18 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
       //   console.log("wsMsg", wsMsg);
       toast.success(wsMsg.message);
       getDetail();
+    }
+    if (
+      wsMsg?.broadcast_id == broadcastId &&
+      wsMsg?.command == "BROADCAST_PROGRESS"
+    ) {
+      //   console.log("wsMsg", wsMsg);
+      setBroadcast({
+        ...broadcast!,
+        success_count: wsMsg.data.success,
+        failed_count: wsMsg.data.failed,
+        completed_count: wsMsg.data.completed,
+      });
     }
   }, [wsMsg]);
 
@@ -472,6 +484,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               <Label>Total Contact</Label>
               <p className="">{broadcast?.contact_count ?? 0}</p>
             </div>
+            <div>
+              <Label>Progress</Label>
+              <p className="">{money((broadcast?.completed_count ?? 0)/(broadcast?.contact_count ?? 0) * 100)}%</p>
+            </div>
 
             {broadcast?.status === "COMPLETED" && (
               <Chart
@@ -631,31 +647,30 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <Table.Cell>{contact.contact_person_position}</Table.Cell>
                   <Table.Cell className="w-32">
                     {broadcast?.status === "COMPLETED" && (
-                       <div className="flex gap-2">
-                       <ul>
-                         <li className="flex gap-2 w-full justify-between">
-                           <span>Completed</span>
-                           {contact.is_completed && (
-                             <BsCheck2Circle className="text-green-500" />
-                           )}
-                         </li>
-                         <li className="flex gap-2 w-full justify-between">
-                           <span>Success</span>
-                           {contact.is_success ? (
-                             <BsCheck2Circle className="text-green-500" />
-                           ) : (
-                             <FaXmark className="text-red-500" />
-                           )}
-                         </li>
- 
-                         <li className="flex gap-2 w-full justify-between">
-                           <span>Retries</span>
-                           {contact.data?.retry?.attempt ?? 0}
-                         </li>
-                       </ul>
-                     </div>
+                      <div className="flex gap-2">
+                        <ul>
+                          <li className="flex gap-2 w-full justify-between">
+                            <span>Completed</span>
+                            {contact.is_completed && (
+                              <BsCheck2Circle className="text-green-500" />
+                            )}
+                          </li>
+                          <li className="flex gap-2 w-full justify-between">
+                            <span>Success</span>
+                            {contact.is_success ? (
+                              <BsCheck2Circle className="text-green-500" />
+                            ) : (
+                              <FaXmark className="text-red-500" />
+                            )}
+                          </li>
+
+                          <li className="flex gap-2 w-full justify-between">
+                            <span>Retries</span>
+                            {contact.data?.retry?.attempt ?? 0}
+                          </li>
+                        </ul>
+                      </div>
                     )}
-                   
                   </Table.Cell>
                   <Table.Cell>
                     {isEditable && (

@@ -16,6 +16,7 @@ export interface BroadcastModel {
   failed_count?: number;
   group_count?: number;
   success_count?: number;
+  completed_count?: number;
 }
 
 export interface MessageLog {
