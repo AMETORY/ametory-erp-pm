@@ -1304,7 +1304,7 @@ func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) {
 		To:      to,
 		IsGroup: false,
 	}
-	utils.LogJson(replyData)
+	// utils.LogJson(replyData)
 	erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
 }
 

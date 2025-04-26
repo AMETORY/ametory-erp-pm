@@ -24,8 +24,9 @@ export interface ContactModel {
   company?: CompanyModel;
   tags?: TagModel[];
   is_completed?: boolean;
+  is_success?: boolean;
   data?: {
-    log?: MessageLog;
-    retries?: MessageRetry[];
+    logs?: MessageLog[];
+    retry?: MessageRetry;
   };
 }

@@ -13,6 +13,9 @@ export interface BroadcastModel {
   contacts: ContactModel[];
   groups: any[];
   contact_count?: number;
+  failed_count?: number;
+  group_count?: number;
+  success_count?: number;
 }
 
 export interface MessageLog {

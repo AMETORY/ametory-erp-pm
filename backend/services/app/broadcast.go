@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/shared"
@@ -123,7 +124,9 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 	db := s.ctx.DB.Model(&mdl.ContactModel{}).
 		Joins("JOIN broadcast_contacts on broadcast_contacts.contact_model_id = contacts.id").
 		Joins("JOIN broadcasts on broadcasts.id = broadcast_contacts.broadcast_model_id").
-		Where("(contacts.name LIKE ? OR contacts.phone LIKE ?)", "%"+search+"%", "%"+search+"%")
+		Where("(contacts.name LIKE ? OR contacts.phone LIKE ?)", "%"+search+"%", "%"+search+"%").
+		Where("broadcasts.id  = ?", id).
+		Select("contacts.*", "broadcast_contacts.is_completed", "broadcast_contacts.is_success")
 
 	err := db.Count(&totalRows).Error
 	if err != nil {
@@ -134,8 +137,6 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 	pagination.TotalPages = totalPages
 
 	if err := db.
-		Where("broadcasts.id  = ?", id).
-		Select("contacts.*", "broadcast_contacts.is_completed").
 		Offset(pagination.GetOffset()).Limit(pagination.GetLimit()).Order(pagination.GetSort()).
 		Scan(&selectContacts).
 		Error; err != nil {
@@ -144,16 +145,17 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 
 	for _, contact := range selectContacts {
 		var newContact mdl.ContactModel = contact.ContactModel
-		var retries []models.MessageRetry
-		var log models.MessageLog
+		var retry models.MessageRetry
+		var logs []models.MessageLog
 
-		s.ctx.DB.Model(&models.MessageRetry{}).Where("contact_id = ? and broadcast_id = ?", contact.ID, id).Find(&retries)
-		s.ctx.DB.Model(&models.MessageLog{}).Where("contact_id = ? and broadcast_id = ?", contact.ID, id).Find(&log)
+		s.ctx.DB.Model(&models.MessageRetry{}).Where("contact_id = ? and broadcast_id = ?", contact.ID, id).Find(&retry)
+		s.ctx.DB.Model(&models.MessageLog{}).Where("contact_id = ? and broadcast_id = ?", contact.ID, id).Find(&logs)
 		newContact.IsCompleted = contact.IsCompleted
+		newContact.IsSuccess = contact.IsSuccess
 
 		var data map[string]any = make(map[string]any)
-		data["retries"] = retries
-		data["log"] = log
+		data["retry"] = retry
+		data["logs"] = logs
 		newContact.Data = data
 
 		contacts = append(contacts, newContact)
@@ -209,6 +211,7 @@ func (s *BroadcastService) startBroadcast(b *models.BroadcastModel) {
 			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Update("broadcast_grouping_id", group.ID)
 		}
 	}
+	s.StartRetrySchedulers(*b)
 }
 
 func (s *BroadcastService) sendBatchWithDelay(sender connection.ConnectionModel, broadcastID string, contacts []mdl.ContactModel, delay time.Duration) {
@@ -300,9 +303,28 @@ func (b *BroadcastService) sendWithRetryHandling(
 	logHandler func(log models.MessageLog),
 	retryHandler func(retry models.MessageRetry),
 ) {
+	var broadcast models.BroadcastModel
+	b.ctx.DB.Where("id = ?", broadcastID).First(&broadcast)
 	time.Sleep(delay)
+	var success bool
+	success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Message))
 
-	success := simulateSend(contact)
+	// sender.Session
+	// if contact.Phone != nil {
+	// 	waData := whatsmeow_client.WaMessage{
+	// 		JID:     sender.Session,
+	// 		Text:    parseMsgTemplate(contact, broadcast.Message),
+	// 		To:      *contact.Phone,
+	// 		IsGroup: false,
+	// 	}
+
+	// 	_, err := b.whatsmeowService.SendMessage(waData)
+	// 	if err != nil {
+	// 		success = false
+	// 	} else {
+	// 		success = true
+	// 	}
+	// }
 
 	log := models.MessageLog{
 		BroadcastID: broadcastID,
@@ -314,11 +336,15 @@ func (b *BroadcastService) sendWithRetryHandling(
 	if success {
 		log.Status = "success"
 		logHandler(log)
+		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", true)
+		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
 	} else {
+		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", false)
 		if attempt >= 3 {
 			log.Status = "undeliverable"
 			log.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
 			logHandler(log)
+			b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
 		} else {
 			log.Status = "failed"
 			log.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
@@ -334,9 +360,6 @@ func (b *BroadcastService) sendWithRetryHandling(
 			})
 		}
 	}
-	b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
-	var broadcast models.BroadcastModel
-	b.ctx.DB.Where("id = ?", broadcastID).Select("id", "company_id").First(&broadcast)
 
 	var completedCount int64
 	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ? and is_completed = ?", broadcastID, true).Count(&completedCount)
@@ -359,9 +382,9 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 }
 
-func simulateSend(contact mdl.ContactModel) bool {
+func simulateSend(contact mdl.ContactModel, msg string) bool {
 
-	fmt.Println("Simulate send to", contact.Name, *contact.Phone)
+	fmt.Println("Simulate send to", contact.Name, *contact.Phone, "with message \n", msg)
 	// 90% berhasil
 	return rand.Intn(100) < 90
 }
@@ -369,4 +392,27 @@ func simulateSend(contact mdl.ContactModel) bool {
 func (s BroadcastService) logHandler(log models.MessageLog) {
 	log.ID = utils.Uuid()
 	s.ctx.DB.Create(&log)
+}
+
+func parseMsgTemplate(contact mdl.ContactModel, msg string) string {
+	re := regexp.MustCompile(`@\[([^\]]+)\]|\(\{\{([^}]+)\}\}\)`)
+
+	// Replace
+	result := re.ReplaceAllStringFunc(msg, func(s string) string {
+		matches := re.FindStringSubmatch(s)
+		re2 := regexp.MustCompile(`@\[([^\]]+)\]`)
+		if re2.MatchString(s) {
+			return ""
+		}
+
+		if matches[0] == "({{user}})" {
+			return contact.Name
+		}
+		if matches[0] == "({{phone}})" {
+			return *contact.Phone
+		}
+		return s // Kalau tidak ada datanya, biarkan
+	})
+
+	return result
 }

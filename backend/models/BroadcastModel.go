@@ -23,6 +23,9 @@ type BroadcastModel struct {
 	MaxContactsPerBatch int                          `json:"max_contacts_per_batch" gorm:"default:100"`
 	Groups              []BroadcastGrouping          `gorm:"foreignKey:BroadcastID" json:"groups,omitempty"`
 	ContactCount        int                          `json:"contact_count" gorm:"-"`
+	GroupCount          int                          `json:"group_count" gorm:"-"`
+	SuccessCount        int                          `json:"success_count" gorm:"-"`
+	FailedCount         int                          `json:"failed_count" gorm:"-"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
@@ -33,12 +36,24 @@ func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
-	var completedCount int64
-	tx.Model(&BroadcastContacts{}).Where(" broadcast_model_id = ?", b.ID).Count(&completedCount)
-	if int(completedCount) == b.ContactCount {
-		b.Status = "COMPLETED"
-		return tx.Save(b).Error
+	// var completedCount int64
+	// tx.Model(&BroadcastContacts{}).Where(" broadcast_model_id = ?", b.ID).Count(&completedCount)
+	// if int(completedCount) == b.ContactCount {
+	// 	b.Status = "COMPLETED"
+	// 	return tx.Save(b).Error
+	// }
+	var countGroups int64
+	tx.Model(&BroadcastGrouping{}).Where(" broadcast_id = ?", b.ID).Count(&countGroups)
+	b.GroupCount = int(countGroups)
+	type count struct {
+		Success int64 `json:"success"`
+		Failed  int64 `json:"failed"`
 	}
+	var countData count
+	tx.Model(&BroadcastContacts{}).Where("broadcast_model_id = ?", b.ID).Select("COUNT(CASE WHEN is_success = 't' THEN 1 END) as success, COUNT(CASE WHEN is_success = 'f' THEN 1 END) as failed").Scan(&countData)
+	b.SuccessCount = int(countData.Success)
+	b.FailedCount = int(countData.Failed)
+
 	return nil
 }
 
@@ -59,6 +74,7 @@ type BroadcastContacts struct {
 	ContactModelID      string `gorm:"uniqueIndex:idx_broadcast_contact;type:char(36)" json:"contact_model_id"`
 	BroadcastModelID    string `gorm:"uniqueIndex:idx_broadcast_contact;type:char(36)" json:"broadcast_model_id"`
 	IsCompleted         bool   `json:"is_completed"`
+	IsSuccess           bool   `json:"is_success"`
 }
 
 type MessageLog struct {
@@ -98,6 +114,7 @@ func (MessageRetry) TableName() string {
 type CustomContactModel struct {
 	models.ContactModel
 	IsCompleted bool           `json:"is_completed"`
+	IsSuccess   bool           `json:"is_success"`
 	Retries     []MessageRetry `gorm:"-" json:"retries,omitempty"`
 	MessageLog  MessageLog     `gorm:"-" json:"message_log,omitempty"`
 }

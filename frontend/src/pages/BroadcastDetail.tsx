@@ -23,6 +23,7 @@ import {
   Table,
   Tabs,
   Textarea,
+  TextInput,
   ToggleSwitch,
 } from "flowbite-react";
 import { parseMentions } from "../utils/helper-ui";
@@ -42,13 +43,14 @@ import { PaginationResponse } from "../objects/pagination";
 import { BsCheck2Circle, BsInfoCircle } from "react-icons/bs";
 import { FaXmark } from "react-icons/fa6";
 import { WebsocketContext } from "../contexts/WebsocketContext";
+import Chart from "react-google-charts";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
 const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const { loading, setLoading } = useContext(LoadingContext);
   const [emojis, setEmojis] = useState([]);
-const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
   const { broadcastId } = useParams();
   const [mounted, setMounted] = useState(false);
@@ -95,12 +97,15 @@ const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
   };
 
   useEffect(() => {
-      if (wsMsg?.broadcast_id == broadcastId && wsMsg?.command == "BROADCAST_COMPLETED") {
-        //   console.log("wsMsg", wsMsg);
-        toast.success(wsMsg.message);
-        getDetail();
-      }
-    }, [wsMsg]);
+    if (
+      wsMsg?.broadcast_id == broadcastId &&
+      wsMsg?.command == "BROADCAST_COMPLETED"
+    ) {
+      //   console.log("wsMsg", wsMsg);
+      toast.success(wsMsg.message);
+      getDetail();
+    }
+  }, [wsMsg]);
 
   useEffect(() => {
     getConnections({ page: 1, size: 100 }).then((res: any) => {
@@ -206,6 +211,30 @@ const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
                   {broadcast?.status}
                 </Badge>
               </div>
+            </div>
+            {broadcast?.status !== "DRAFT" && (
+              <div>
+                <Label>Sequence</Label>
+                <p className="">{broadcast?.group_count ?? 0}</p>
+              </div>
+            )}
+
+            <div>
+              <Label>Max Contact per Sequence</Label>
+              {isEditable ? (
+                <TextInput
+                  type="number"
+                  value={broadcast?.max_contacts_per_batch ?? 0}
+                  onChange={(val) => {
+                    setBroadcast({
+                      ...broadcast!,
+                      max_contacts_per_batch: Number(val.target.value),
+                    });
+                  }}
+                />
+              ) : (
+                <div className="w-fit">{broadcast?.max_contacts_per_batch}</div>
+              )}
             </div>
             <div className="flex gap-2">
               {broadcast?.status === "DRAFT" && (
@@ -443,6 +472,25 @@ const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
               <Label>Total Contact</Label>
               <p className="">{broadcast?.contact_count ?? 0}</p>
             </div>
+
+            {broadcast?.status === "COMPLETED" && (
+              <Chart
+                chartType="PieChart"
+                width="100%"
+                height="300px"
+                data={[
+                  ["Status", "Count"],
+                  ["Succeed", broadcast?.success_count ?? 0],
+                  ["Failed", broadcast?.failed_count ?? 0],
+                ]}
+                options={{
+                  colors: ["#10b981", "#ef4444", "#f59e0b"],
+                  pieHole: 0.4,
+                  legend: { position: "bottom" },
+                  is3D: true,
+                }}
+              />
+            )}
           </div>
         </div>
         <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -582,40 +630,32 @@ const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
                   <Table.Cell>{contact.address}</Table.Cell>
                   <Table.Cell>{contact.contact_person_position}</Table.Cell>
                   <Table.Cell className="w-32">
-                    <div className="flex gap-2">
-                      <ul>
-                        <li className="flex gap-2 w-full justify-between">
-                          <span>
-                          Completed 
-                          </span>
-                          {contact.is_completed && (
-                            <BsCheck2Circle className="text-green-500" />
-                          )}
-                        </li>
-                        
-                        <li className="flex gap-2 w-full justify-between">
-                          <span>
-                          Status 
-                          </span>
-                          {contact.data?.log?.status == "success" ? (
-                            <BsCheck2Circle className="text-green-500" />
-                          ) : contact.data?.log?.status == "failed" ? (
-                            <FaXmark className="text-red-500" />
-                          ) : (
-                            <></>
-                          )}
-                        </li>
-                        <li className="flex gap-2 w-full justify-between">
-                          <span>
-                          Retries 
-                          </span>
-                          {(contact.data?.retries?? []).length}
-                        </li>
-
-                      </ul>
-
-                     
-                    </div>
+                    {broadcast?.status === "COMPLETED" && (
+                       <div className="flex gap-2">
+                       <ul>
+                         <li className="flex gap-2 w-full justify-between">
+                           <span>Completed</span>
+                           {contact.is_completed && (
+                             <BsCheck2Circle className="text-green-500" />
+                           )}
+                         </li>
+                         <li className="flex gap-2 w-full justify-between">
+                           <span>Success</span>
+                           {contact.is_success ? (
+                             <BsCheck2Circle className="text-green-500" />
+                           ) : (
+                             <FaXmark className="text-red-500" />
+                           )}
+                         </li>
+ 
+                         <li className="flex gap-2 w-full justify-between">
+                           <span>Retries</span>
+                           {contact.data?.retry?.attempt ?? 0}
+                         </li>
+                       </ul>
+                     </div>
+                    )}
+                   
                   </Table.Cell>
                   <Table.Cell>
                     {isEditable && (
