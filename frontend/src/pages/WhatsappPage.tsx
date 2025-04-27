@@ -78,7 +78,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   }, [mounted, sessionId]);
 
   useEffect(() => {
-    if (wsMsg?.command == "WHATSAPP_RECEIVED" || wsMsg?.command == "UPDATE_SESSION") {
+    if (wsMsg?.command == "WHATSAPP_RECEIVED" || wsMsg?.command == "UPDATE_SESSION" || wsMsg?.command == "WHATSAPP_MESSAGE_READ") {
       getAllSessions();
     }
   }, [wsMsg, profile, sessionId]);

@@ -80,7 +80,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const markAllAsRead = () => {
     for (const msg of messages) {
       if (!msg.is_read) {
-        msg.is_read = true;
+        
         setMessages([
           ...messages.map((m) => {
             if (m.id == msg?.id) {
@@ -91,7 +91,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         ]);
 
         timeout.current = window.setTimeout(() => {
-          markAsRead(msg!.id!);
+          if (!msg.is_from_me) {
+            markAsRead(msg!.id!);
+          }
         }, 500);
       }
     }
@@ -111,7 +113,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 (m) => m.id == entry.target.getAttribute("id")
               );
               // console.log(message?.message)
-              if (message && !message.is_read) {
+              if (message && !message.is_read &&  !(message?.is_from_me ?? false)) {
                 message.is_read = true;
                 setMessages([
                   ...messages.map((m) => {
@@ -123,7 +125,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 ]);
 
                 timeout.current = window.setTimeout(() => {
-                  markAsRead(message!.id!);
+                  if (!message?.is_from_me) {
+                    markAsRead(message!.id!);
+                  }
                 }, 500);
               }
             }
@@ -165,6 +169,22 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           last_online_at: new Date(),
         });
       }, 300);
+    }
+
+    if (
+      wsMsg?.session_id == sessionId &&
+      wsMsg?.command == "WHATSAPP_MESSAGE_READ"
+    ) {
+      // console.log(wsMsg.message_ids);
+      setMessages([
+        ...messages.map((m) => {
+          // console.log(m.message_id, wsMsg.message_ids.includes(m.message_id));
+          if (wsMsg.message_ids.includes(m.message_id)) {
+            return { ...m, is_read: true };
+          }
+          return m;
+        }),
+      ]);
     }
   }, [wsMsg, profile, sessionId]);
   useEffect(() => {
@@ -366,12 +386,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
+                
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
                 {msg.is_read && (
                   <IoCheckmarkDone
                     size={16}
                     style={{
-                      color: msg.is_from_me ? "green" : "white",
+                      color: msg.is_from_me ? "#0e9f6e" : "white",
                     }}
                   />
                 )}
@@ -403,10 +424,11 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           onKeyDown={async (val: any) => {
             if (val.key === "Enter" && val.shiftKey) {
               setContent((prev) => prev + "\n");
-              return
+              return;
             }
             if (val.key === "Enter") {
               try {
+                setContent("")
                 await createWAMessage(sessionId!, {
                   message: content,
                   files: files,

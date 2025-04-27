@@ -11,6 +11,7 @@ export interface WhatsappMessageModel {
   mime_type?: string;
   session?: string;
   info?: string;
+  message_id?: string;
   message_info?: any;
   contact_id?: string;
   contact?: ContactModel;

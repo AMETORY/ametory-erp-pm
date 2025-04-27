@@ -132,7 +132,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		Session:     session.Session,
 		JID:         session.JID,
 		IsFromMe:    true,
-		IsRead:      true,
+		IsRead:      false,
 		IsGroup:     isGroup,
 		ContactID:   session.ContactID,
 		CompanyID:   session.CompanyID,
@@ -159,12 +159,24 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
 	}
-	_, err = h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+	resp, err := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
 		JID:     waDataReply.JID,
 		Text:    waDataReply.Message,
 		To:      to,
 		IsGroup: waDataReply.IsGroup,
 	})
+
+	respData, ok := resp.(map[string]any)["data"].(map[string]any)
+	if ok {
+		utils.LogJson(respData["ID"])
+		msgID, ok2 := respData["ID"].(string)
+		if ok2 {
+			waDataReply.MessageID = &msgID
+			h.erpContext.DB.Save(&waDataReply)
+		}
+
+	}
+
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -426,10 +438,42 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("RECEIPT MESSAGE")
+	utils.LogJson(body)
 	// GET CONNECTION
 	conn, err := h.appService.ConnectionService.GetConnectionBySession(body.SessionName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	msgType, ok := body.Info["Type"].(string)
+	if ok && msgType == "read" {
+		msgIDs, ok := body.Info["MessageIDs"].([]any)
+		if ok {
+			for _, v := range msgIDs {
+				var msg models.WhatsappMessageModel
+				h.erpContext.DB.Where("message_id = ?", v.(string)).First(&msg)
+				msg.IsRead = true
+				h.erpContext.DB.Save(&msg)
+				var whatsappSession *models.WhatsappMessageSession
+				err = h.erpContext.DB.First(&whatsappSession, "session = ?", body.Info["Chat"].(string)).Error
+				if err == nil {
+					msgNotif := gin.H{
+						"command":     "WHATSAPP_MESSAGE_READ",
+						"session_id":  whatsappSession.ID,
+						"message_ids": msgIDs,
+					}
+					b, _ := json.Marshal(msgNotif)
+					h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+						url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+						return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+					})
+				}
+
+				// h.appService.WhatsappService.MarkMessageAsRead(v)
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 		return
 	}
 
@@ -573,16 +617,18 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	msgID := body.Info["ID"].(string)
 	var waData models.WhatsappMessageModel = models.WhatsappMessageModel{
-		Sender:   body.Sender,
-		Message:  convMsg,
-		MimeType: mimeType,
-		MediaURL: fileUrl,
-		Info:     string(infoByte),
-		Session:  body.SessionID,
-		JID:      body.JID,
-		IsFromMe: body.Info["IsFromMe"].(bool),
-		IsGroup:  body.Info["IsGroup"].(bool),
+		Sender:    body.Sender,
+		Message:   convMsg,
+		MimeType:  mimeType,
+		MediaURL:  fileUrl,
+		Info:      string(infoByte),
+		Session:   body.SessionID,
+		JID:       body.JID,
+		IsFromMe:  body.Info["IsFromMe"].(bool),
+		IsGroup:   body.Info["IsGroup"].(bool),
+		MessageID: &msgID,
 	}
 
 	if sessionAuth != nil {
@@ -942,7 +988,21 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 }
 func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
 	messageId := c.Param("messageId")
-	err := h.customerRelationshipService.WhatsappService.MarkMessageAsRead(messageId)
+
+	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessage(messageId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if msg.MessageID != nil && !msg.IsRead {
+		err = h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).MarkAsRead(msg.JID, []string{*msg.MessageID}, msg.Sender)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	err = h.customerRelationshipService.WhatsappService.MarkMessageAsRead(messageId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -1374,7 +1434,7 @@ Session anda akan berlaku selama 7 hari:
 //		c.JSON(http.StatusOK, gin.H{"message": "ok", "data": msg})
 //	}
 
-func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) {
+func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) (any, error) {
 	replyData := whatsmeow_client.WaMessage{
 		JID:     jid,
 		Text:    message,
@@ -1382,7 +1442,7 @@ func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) {
 		IsGroup: false,
 	}
 	// utils.LogJson(replyData)
-	erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
+	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
 }
 
 type geminiResponse struct {
