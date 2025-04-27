@@ -70,6 +70,7 @@ func (c *ConnectionService) CreateConnection(con *connection.ConnectionModel) er
 }
 
 func (c *ConnectionService) UpdateConnection(con *connection.ConnectionModel) error {
+
 	if err := c.ctx.DB.Save(con).Error; err != nil {
 		return err
 	}

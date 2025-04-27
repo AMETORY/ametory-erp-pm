@@ -387,14 +387,14 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       )}
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
         <MentionsInput
-          disabled={!session?.is_human_agent}
+          disabled={!session?.is_human_agent && connection?.is_auto_pilot}
           value={content}
           onChange={(val: any) => {
             setContent(val.target.value);
           }}
           style={emojiStyle}
           placeholder={
-            !session?.is_human_agent
+            !session?.is_human_agent && connection?.is_auto_pilot
               ? "Input disabled for auto pilot mode"
               : "Press ':' for emojis and shift+enter to send"
           }
@@ -402,6 +402,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           autoFocus
           onKeyDown={async (val: any) => {
             if (val.key === "Enter" && val.shiftKey) {
+              setContent((prev) => prev + "\n");
+              return
+            }
+            if (val.key === "Enter") {
               try {
                 await createWAMessage(sessionId!, {
                   message: content,

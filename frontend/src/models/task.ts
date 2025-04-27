@@ -40,6 +40,8 @@ export interface TaskModel {
   form_response?: {
     sections: FormSection[]
   }
+  ref_id?: string
+  ref_type?: string
 }
 
 export interface TaskCommentModel {

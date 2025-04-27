@@ -8,16 +8,18 @@ import {
   FileInput,
   Label,
   Modal,
+  Popover,
   Progress,
   Radio,
+  Select as SelectFlowBite,
   Tabs,
   TabsRef,
   Textarea,
   TextInput,
   ToggleSwitch,
   Tooltip,
-  Select as SelectFlowBite,
 } from "flowbite-react";
+import moment from "moment";
 import {
   ReactNode,
   useContext,
@@ -27,27 +29,7 @@ import {
   type FC,
 } from "react";
 import toast from "react-hot-toast";
-import {
-  HiAdjustments,
-  HiClipboardList,
-  HiRefresh,
-  HiUserCircle,
-} from "react-icons/hi";
-import { MdClose, MdComment, MdDashboard, MdDone } from "react-icons/md";
-import { RiFullscreenFill } from "react-icons/ri";
-import Select, { InputActionMeta } from "react-select";
-import { WebsocketContext } from "../contexts/WebsocketContext";
-import { ProjectModel, ProjectPreference } from "../models/project";
-import { TaskCommentModel, TaskModel } from "../models/task";
-import {
-  addComment,
-  addTaskPlugin,
-  getTask,
-  getTaskPluginData,
-  getTaskPlugins,
-  updateTask,
-} from "../services/api/taskApi";
-import { getColor, initial, invert, money, nl2br } from "../utils/helper";
+import { AiOutlineLike } from "react-icons/ai";
 import {
   BsActivity,
   BsAsterisk,
@@ -56,34 +38,56 @@ import {
   BsFloppy,
   BsPencil,
   BsQuote,
+  BsWhatsapp,
   BsYoutube,
 } from "react-icons/bs";
+import { FaDigg, FaRetweet } from "react-icons/fa6";
 import { GoComment, GoCommentDiscussion } from "react-icons/go";
-import { ProfileContext } from "../contexts/ProfileContext";
-import { MentionsInput, Mention } from "react-mentions";
-import { parseMentions } from "../utils/helper-ui";
-import Moment from "react-moment";
-import moment from "moment";
+import { HiRefresh } from "react-icons/hi";
+import { IoCheckmarkDone, IoShareOutline } from "react-icons/io5";
+import { LuLink } from "react-icons/lu";
+import { PiBookmark, PiPlay, PiPlayCircle } from "react-icons/pi";
+import { RiAttachment2, RiFullscreenFill } from "react-icons/ri";
 import { SiGoogleforms } from "react-icons/si";
-import { priorityOptions, severityOptions } from "../utils/constants";
-import { FormField, FormFieldType } from "../models/form";
+import Markdown from "react-markdown";
+import { Mention, MentionsInput } from "react-mentions";
+import Moment from "react-moment";
 import { Link } from "react-router-dom";
+import Select, { InputActionMeta } from "react-select";
+import remarkGfm from "remark-gfm";
+import { ActiveCompanyContext } from "../contexts/CompanyContext";
 import { LoadingContext } from "../contexts/LoadingContext";
-import { getCompanyRapidAPIPlugins } from "../services/api/commonApi";
+import { ProfileContext } from "../contexts/ProfileContext";
+import { WebsocketContext } from "../contexts/WebsocketContext";
+import { FormField, FormFieldType } from "../models/form";
+import { ProjectModel, ProjectPreference } from "../models/project";
 import {
   CompanyRapidApiPluginModel,
   RapidApiDataModel,
   RapidApiEndpointModel,
 } from "../models/rapid_api";
-import { LuLink } from "react-icons/lu";
-import { AiOutlineLike } from "react-icons/ai";
-import { PiBookmark, PiPlay, PiPlayCircle } from "react-icons/pi";
-import { IoShareOutline } from "react-icons/io5";
-import { FaDigg, FaRetweet } from "react-icons/fa6";
-import { ActiveCompanyContext } from "../contexts/CompanyContext";
-import { generateContent } from "../services/api/geminiApi";
+import { TaskCommentModel, TaskModel } from "../models/task";
 import { TaskAttributeModel } from "../models/task_attribute";
+import { WhatsappMessageModel } from "../models/whatsapp_message";
+import { getCompanyRapidAPIPlugins } from "../services/api/commonApi";
+import { generateContent } from "../services/api/geminiApi";
+import {
+  addComment,
+  addTaskPlugin,
+  getTask,
+  getTaskPluginData,
+  getTaskPlugins,
+  updateTask,
+} from "../services/api/taskApi";
 import { getTaskAttributes } from "../services/api/taskAttributeApi";
+import {
+  createWAMessage,
+  getWhatsappMessages,
+  markAsRead,
+} from "../services/api/whatsappApi";
+import { priorityOptions, severityOptions } from "../utils/constants";
+import { getColor, initial, invert, money, nl2br } from "../utils/helper";
+import { parseMentions } from "../utils/helper-ui";
 
 interface TaskDetailProps {
   task: TaskModel;
@@ -101,6 +105,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const { loading, setLoading } = useContext(LoadingContext);
   const { profile, setProfile } = useContext(ProfileContext);
   const tabsRef = useRef<TabsRef>(null);
+  const [messages, setMessages] = useState<WhatsappMessageModel[]>([]);
 
   const [activeTab, setActiveTab] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -133,6 +138,75 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const [taskAttributes, setTaskAttributes] = useState<TaskAttributeModel[]>(
     []
   );
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const timeout = useRef<number | null>(null);
+  const [content, setContent] = useState("");
+  const [openAttachment, setOpenAttachment] = useState(false);
+  useEffect(() => {
+    if (!activeTask?.ref_id) return;
+    if (
+      wsMsg?.session_id == activeTask?.ref_id &&
+      wsMsg?.command == "WHATSAPP_RECEIVED"
+    ) {
+      setMessages([...messages, wsMsg.data]);
+      setTimeout(() => {
+        scrollToBottom();
+      }, 300);
+    }
+  }, [wsMsg, profile, activeTask?.ref_id]);
+
+  const scrollToBottom = () => {
+    const element = document.getElementById("channel-messages");
+    if (element) {
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleScroll = () => {
+    const messageElements = document.querySelectorAll(".message");
+
+    messageElements.forEach((el) => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // const messageId = parseInt(entry.target.dataset.id);
+              // markAsRead(messageId);
+              let message = messages.find(
+                (m) => m.id == entry.target.getAttribute("id")
+              );
+              // console.log(message?.message)
+              if (message && !message.is_read) {
+                message.is_read = true;
+                setMessages([
+                  ...messages.map((m) => {
+                    if (m.id == message?.id) {
+                      return { ...m, is_read: true };
+                    }
+                    return m;
+                  }),
+                ]);
+
+                timeout.current = window.setTimeout(() => {
+                  markAsRead(message!.id!);
+                }, 500);
+              }
+            }
+          });
+        },
+        { threshold: 0.3 } // Minimal 50% pesan terlihat
+      );
+
+      observer.observe(el);
+    });
+  };
   useEffect(() => {
     fetch(
       "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
@@ -177,7 +251,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
         setTaskAttributes(v.data.items)
       );
     }
-  }, [ mounted, preference]);
+  }, [mounted, preference]);
 
   useEffect(() => {
     setPluginEndpointParams(JSON.parse(selectedEnpoint?.params ?? "[]"));
@@ -225,6 +299,20 @@ const TaskDetail: FC<TaskDetailProps> = ({
       .then((resp: any) => {
         setActiveTask(resp.data);
         setPreference(resp.preference);
+        if (resp.data?.ref_type == "whatsapp_session") {
+          getWhatsappMessages(resp.data?.ref_id, {
+            page: 1,
+            size: 100,
+            search: "",
+          })
+            .then((res: any) => {
+              setMessages(res.data.items);
+            })
+            .catch((err) => {
+              console.error(err);
+              window.location.href = "/whatsapp";
+            });
+        }
       })
       .catch(toast.error);
   };
@@ -887,7 +975,9 @@ const TaskDetail: FC<TaskDetailProps> = ({
                     watchers: watchers.map((watcher) => ({
                       id: watcher.value,
                     })),
-                    task_attribute_data: activeTask?.task_attribute ? JSON.stringify(activeTask?.task_attribute) : "{}"
+                    task_attribute_data: activeTask?.task_attribute
+                      ? JSON.stringify(activeTask?.task_attribute)
+                      : "{}",
                   })
                     .catch(toast.error)
                     .then(() => {
@@ -1813,6 +1903,142 @@ const TaskDetail: FC<TaskDetailProps> = ({
                   </tr>
                 ))}
               </table>
+            </Tabs.Item>
+          )}
+          {task?.ref_type == "whatsapp_session" && (
+            <Tabs.Item title="WhatsApp" icon={BsWhatsapp}>
+              <div
+                id="channel-messages"
+                className="messages h-[calc(50vh-120px)] overflow-y-auto p-4 bg-gray-50 space-y-8"
+                ref={chatContainerRef}
+                onScroll={handleScroll}
+              >
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`message flex flex-row items-end mb-2  ${
+                      msg.is_from_me ? "justify-end" : "justify-start"
+                    }`}
+                    id={msg.id}
+                  >
+                    <div
+                      className={`min-w-[300px] max-w-[600px] ${
+                        !msg.is_from_me
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-200"
+                      } p-2 rounded-md`}
+                      data-id={msg.id}
+                    >
+                      {msg.media_url && msg.mime_type?.includes("video") && (
+                        <video
+                          controls
+                          src={msg.media_url}
+                          className={`rounded-md mb-2 ${
+                            msg.is_from_me ? "ml-auto" : "mr-auto"
+                          } w-[300px] h-[300px] object-cover`}
+                        />
+                      )}
+                      {msg.media_url && msg.mime_type?.includes("audio") && (
+                        <audio
+                          controls
+                          src={msg.media_url}
+                          className={`rounded-md mb-2 ${
+                            msg.is_from_me ? "ml-auto" : "mr-auto"
+                          } w-[300px]`}
+                        />
+                      )}
+
+                      {msg.media_url && msg.mime_type?.includes("image") && (
+                        <Popover
+                          placement="bottom"
+                          content={
+                            <div className="bg-white p-4 rounded-md w-[600px]">
+                              <img
+                                src={msg.media_url}
+                                alt=""
+                                className="w-full h-full object-cover rounded-md"
+                              />
+                            </div>
+                          }
+                        >
+                          <img
+                            src={msg.media_url}
+                            alt=""
+                            className={` rounded-md mb-2 ${
+                              msg.is_from_me ? "ml-auto" : "mr-auto"
+                            } w-[300px] h-[300px] object-cover`}
+                          />
+                        </Popover>
+                      )}
+                      {!msg.is_from_me && <small>{msg.contact?.name}</small>}
+                      {msg.is_group && !msg.is_from_me && (
+                        <small>{msg.message_info?.PushName}</small>
+                      )}
+
+                      <Markdown remarkPlugins={[remarkGfm]}>
+                        {msg.message}
+                      </Markdown>
+                      <div className="text-[10px] justify-between flex items-center">
+                        {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
+                        {msg.is_read && (
+                          <IoCheckmarkDone
+                            size={16}
+                            style={{
+                              color: msg.is_from_me ? "green" : "white",
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
+                <MentionsInput
+                  value={content}
+                  onChange={(val: any) => {
+                    setContent(val.target.value);
+                  }}
+                  style={emojiStyle}
+                  placeholder={"Press ':' for emojis and shift+enter to send"}
+                  className="w-full"
+                  autoFocus
+                  onKeyDown={async (val: any) => {
+                    if (val.key === "Enter" && val.shiftKey) {
+                      setContent((prev) => prev + "\n");
+                      return;
+                    }
+                    if (val.key === "Enter") {
+                      try {
+                        await createWAMessage(task!.ref_id!, {
+                          message: content,
+                          // files: files,
+                        });
+                        // setOpenAttachment(false);
+                        // setFiles([]);
+                      } catch (error) {
+                        toast.error(`${error}`);
+                      } finally {
+                        setTimeout(() => {
+                          setContent("");
+                        }, 300);
+                      }
+
+                      return;
+                    }
+                  }}
+                >
+                  <Mention
+                    trigger=":"
+                    markup="__id__"
+                    regex={neverMatchingRegex}
+                    data={queryEmojis}
+                  />
+                </MentionsInput>
+                <Button color="gray" onClick={() => setOpenAttachment(true)}>
+                  <RiAttachment2 />
+                </Button>
+              </div>
             </Tabs.Item>
           )}
         </Tabs>
