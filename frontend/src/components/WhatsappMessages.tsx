@@ -80,16 +80,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const markAllAsRead = () => {
     for (const msg of messages) {
       if (!msg.is_read) {
-        
-        setMessages([
-          ...messages.map((m) => {
-            if (m.id == msg?.id) {
-              return { ...m, is_read: true };
-            }
-            return m;
-          }),
-        ]);
-
+        if (timeout.current) {
+          window.clearTimeout(timeout.current);
+        }
+       
         timeout.current = window.setTimeout(() => {
           if (!msg.is_from_me) {
             markAsRead(msg!.id!);
@@ -114,7 +108,6 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               );
               // console.log(message?.message)
               if (message && !message.is_read &&  !(message?.is_from_me ?? false)) {
-                message.is_read = true;
                 setMessages([
                   ...messages.map((m) => {
                     if (m.id == message?.id) {
@@ -185,6 +178,14 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           return m;
         }),
       ]);
+    }
+    if (
+      wsMsg?.session_id == sessionId &&
+      wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE"
+    ) {
+      // console.log(wsMsg.message_ids);
+      setMessages([
+        ]);
     }
   }, [wsMsg, profile, sessionId]);
   useEffect(() => {

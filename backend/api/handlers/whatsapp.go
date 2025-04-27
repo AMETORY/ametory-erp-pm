@@ -143,6 +143,16 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	now := time.Now()
+	session.LastMessage = input.Message
+	session.LastOnlineAt = &now
+
+	err = h.erpContext.DB.Save(&session).Error
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	msgNotif := gin.H{
 		"message":    input.Message,
@@ -182,6 +192,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	msg, err = h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -689,9 +700,14 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			})
 		}
 	} else {
-		var lastOnlineAt time.Time = *whatsappSession.LastOnlineAt
+		var lastOnlineAt time.Time
+		if whatsappSession.LastOnlineAt != nil {
+			lastOnlineAt = *whatsappSession.LastOnlineAt
+		} else {
+			lastOnlineAt = time.Now()
+		}
+		whatsappSession.LastOnlineAt = &lastOnlineAt
 		whatsappSession.LastMessage = convMsg
-		whatsappSession.LastOnlineAt = &now
 		h.erpContext.DB.Save(&whatsappSession)
 
 		if conn.IdleColumnID != nil && !lastOnlineAt.IsZero() {
@@ -896,7 +912,7 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 	newWaSessions := []models.WhatsappMessageSession{}
 	for _, v := range *waSessions {
 		var totalUnread int64
-		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ?", v.Session, false).Count(&totalUnread)
+		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ? and is_from_me = ?", v.Session, false, false).Count(&totalUnread)
 		v.CountUnread = int(totalUnread)
 		newWaSessions = append(newWaSessions, v)
 		// 	var conn connection.ConnectionModel
@@ -961,6 +977,44 @@ func (h *WhatsappHandler) DeleteSessionHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Session deleted successfully"})
+}
+func (h *WhatsappHandler) ClearSessionHandler(c *gin.Context) {
+	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+	var session models.WhatsappMessageSession
+	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.erpContext.DB.Unscoped().Where("session = ?", session.Session).Delete(&models.WhatsappMessageModel{}).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	session.LastMessage = ""
+	session.LastOnlineAt = nil
+
+	if err := h.erpContext.DB.Save(&session).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"command":    "WHATSAPP_CLEAR_MESSAGE",
+		"session_id": sessionId,
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Session Cleared successfully"})
 }
 func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")

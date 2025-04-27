@@ -17,6 +17,7 @@ func NewWhatsappRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		waGroup.GET("/sessions", waHandler.GetSessionsHandler)
 		waGroup.GET("/sessions/:session_id", waHandler.GetSessionDetailHandler)
 		waGroup.DELETE("/sessions/:session_id", waHandler.DeleteSessionHandler)
+		waGroup.PUT("/sessions/:session_id/clear", waHandler.ClearSessionHandler)
 		waGroup.PUT("/sessions/:session_id", waHandler.UpdateSessionHandler)
 		waGroup.GET("/messages", waHandler.GetSessionMessagesHandler)
 		waGroup.PUT("/messages/:messageId/read", waHandler.MarkAsReadHandler)

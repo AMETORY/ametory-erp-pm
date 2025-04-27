@@ -23,6 +23,11 @@ export const deleteWhatsappSession = async (session_id: string) => {
     method: "DELETE",
   });
 };
+export const clearWhatsappSession = async (session_id: string) => {
+  return await customFetch(`api/v1/whatsapp/sessions/${session_id}/clear`, {
+    method: "PUT",
+  });
+};
 
 export const updateWhatsappSession = async (session_id: string, data: any) => {
   return await customFetch(`api/v1/whatsapp/sessions/${session_id}`, {

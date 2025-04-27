@@ -23,6 +23,7 @@ import { asyncStorage } from "../utils/async_storage";
 import { PaginationResponse } from "../objects/pagination";
 import { getPagination } from "../utils/helper";
 import {
+  clearWhatsappSession,
   deleteWhatsappSession,
   getWhatsappSessions,
 } from "../services/api/whatsappApi";
@@ -37,6 +38,7 @@ import { FaMagnifyingGlass } from "react-icons/fa6";
 import { ConnectionModel } from "../models/connection";
 import { getConnections } from "../services/api/connectionApi";
 import Select, { InputActionMeta } from "react-select";
+import Moment from "react-moment";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -78,7 +80,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   }, [mounted, sessionId]);
 
   useEffect(() => {
-    if (wsMsg?.command == "WHATSAPP_RECEIVED" || wsMsg?.command == "UPDATE_SESSION" || wsMsg?.command == "WHATSAPP_MESSAGE_READ") {
+    if (wsMsg?.command == "WHATSAPP_RECEIVED" || wsMsg?.command == "UPDATE_SESSION" || wsMsg?.command == "WHATSAPP_MESSAGE_READ" || wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE") {
       getAllSessions();
     }
   }, [wsMsg, profile, sessionId]);
@@ -162,6 +164,9 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         <small className="line-clamp-2 overflow-hidden text-ellipsis">
                           {e.last_message}
                         </small>
+                        <small className="line-clamp-2 overflow-hidden text-ellipsis text-[8pt]">
+                          <Moment fromNow>{e.last_online_at}</Moment>
+                        </small>
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
@@ -172,7 +177,18 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         <Dropdown label="" inline>
                           <Dropdown.Item
                             className="flex gap-2"
-                            onClick={() => {}}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to clear this session?"
+                                )
+                              ) {
+                                clearWhatsappSession(e.id!).then(() => {
+                                  toast.success("Chat cleared");
+                                  getAllSessions();
+                                });
+                              }
+                            }}
                           >
                             Clear Chat
                           </Dropdown.Item>
@@ -181,7 +197,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  "Are you sure you want to delete this chat?"
+                                  "Are you sure you want to delete this session?"
                                 )
                               ) {
                                 deleteWhatsappSession(e.id!).then(() => {
