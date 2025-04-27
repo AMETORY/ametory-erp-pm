@@ -372,13 +372,13 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
             />
           )}
         </Tabs.Item>
-        <Tabs.Item
+        {/* <Tabs.Item
           active={activeTab === 3}
           title="Gantt Chart"
           icon={FaChartGantt}
         >
           {project && <GanttChart project={project} />}
-        </Tabs.Item>
+        </Tabs.Item> */}
         <Tabs.Item
           active={activeTab === 4}
           title="Preference & Setting"

@@ -27,6 +27,9 @@ import { PaginationResponse } from "../objects/pagination";
 import ConnectionDrawer from "../components/ConnectionDrawer";
 import { BsCheck2Circle } from "react-icons/bs";
 import { FaCircleXmark } from "react-icons/fa6";
+import { ProjectModel } from "../models/project";
+import { ColumnModel } from "../models/column";
+import { getProjects } from "../services/api/projectApi";
 interface ConnectionPageProps {}
 
 const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
@@ -43,6 +46,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   const [description, setDescription] = useState("");
   const [sessionName, setSessionName] = useState("");
   const [activeConnection, setActiveConnection] = useState<ConnectionModel>();
+  
   const [selectedConnection, setSelectedConnection] = useState<{
     label: string;
     value: string;
@@ -53,6 +57,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
 
   const createNewConnection = async () => {
     try {

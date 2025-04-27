@@ -28,7 +28,11 @@ func NewConnectionService(erpContext *context.ERPContext) *ConnectionService {
 func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest http.Request, search string) ([]connection.ConnectionModel, error) {
 	var connections []connection.ConnectionModel
 
-	if err := c.ctx.DB.Scopes(paginate(connections, pagination, c.ctx.DB)).Preload("GeminiAgent").Find(&connections).Error; err != nil {
+	if err := c.ctx.DB.Scopes(paginate(connections, pagination, c.ctx.DB)).
+		Preload("Project").
+		Preload("NewSessionColumn").
+		Preload("IdleColumn").
+		Preload("GeminiAgent").Find(&connections).Error; err != nil {
 		return nil, err
 	}
 	return connections, nil
@@ -36,7 +40,11 @@ func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest h
 
 func (c *ConnectionService) GetConnection(id string) (*connection.ConnectionModel, error) {
 	var con connection.ConnectionModel
-	if err := c.ctx.DB.Where("id = ?", id).Preload("GeminiAgent").First(&con).Error; err != nil {
+	if err := c.ctx.DB.Where("id = ?", id).
+		Preload("Project").
+		Preload("NewSessionColumn").
+		Preload("IdleColumn").
+		Preload("GeminiAgent").First(&con).Error; err != nil {
 		return nil, err
 	}
 	return &con, nil
@@ -44,7 +52,11 @@ func (c *ConnectionService) GetConnection(id string) (*connection.ConnectionMode
 
 func (c *ConnectionService) GetConnectionBySession(session string) (*connection.ConnectionModel, error) {
 	var con connection.ConnectionModel
-	if err := c.ctx.DB.Where("session_name = ?", session).Preload("GeminiAgent").First(&con).Error; err != nil {
+	if err := c.ctx.DB.Where("session_name = ?", session).
+		Preload("Project").
+		Preload("NewSessionColumn").
+		Preload("IdleColumn").
+		Preload("GeminiAgent").First(&con).Error; err != nil {
 		return nil, err
 	}
 	return &con, nil

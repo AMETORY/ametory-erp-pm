@@ -17,7 +17,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type TaskHandler struct {
@@ -231,6 +230,7 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
 	}
+	lastAttributeID := task.TaskAttributeID
 	if task.AssigneeID != input.AssigneeID {
 		msg := gin.H{
 			"task_id":      taskId,
@@ -254,10 +254,33 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		input.CompletedDate = &now
 		input.Percentage = 100
 	}
-	err = h.ctx.DB.Omit(clause.Associations).Save(&input).Error
+	err = h.ctx.DB.Updates(&input).Error
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+
+	if input.TaskAttributeID != lastAttributeID && input.TaskAttributeID != nil {
+		var taskAttribute models.TaskAttributeModel
+		h.ctx.DB.Find(&taskAttribute, "id = ?", input.TaskAttributeID)
+		input.TaskAttibuteData = taskAttribute.Data
+		err = h.ctx.DB.Save(&input).Error
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	fmt.Println("ATTRIBUTE", *input.TaskAttribute)
+	if input.TaskAttribute != nil {
+		b, _ := json.Marshal(*input.TaskAttribute)
+		attrStr := string(b)
+		input.TaskAttibuteData = &attrStr
+		err = h.ctx.DB.Updates(&input).Error
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	h.ctx.DB.Model(&task).Association("Watchers").Clear()

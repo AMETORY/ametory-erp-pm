@@ -19,6 +19,7 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
+	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
@@ -34,6 +35,7 @@ type WhatsappHandler struct {
 	appService                  *app.AppService
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
 	geminiService               *google.GeminiService
+	pmService                   *project_management.ProjectManagementService
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -60,12 +62,18 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		panic("GeminiService is not found")
 	}
 
+	pmService, ok := erpContext.ProjectManagementService.(*project_management.ProjectManagementService)
+	if !ok {
+		panic("ProjectManagementService is not instance of project_management.ProjectManagementService")
+	}
+
 	return &WhatsappHandler{
 		erpContext:                  erpContext,
 		waService:                   waService,
 		appService:                  appService,
 		customerRelationshipService: customerRelationshipService,
 		geminiService:               geminiService,
+		pmService:                   pmService,
 	}
 }
 
@@ -600,11 +608,80 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			sessionData.ContactID = &sessionAuth.ID
 		}
 		fmt.Println("CREATE SESSION")
+
 		h.erpContext.DB.Create(&sessionData)
+		if conn.NewSessionColumnID != nil {
+			senderName := sessionAuth.Name
+			if senderName == "" {
+				senderName = body.Sender
+			}
+			refType := "whatsapp_session"
+			task := models.TaskModel{
+				Name:      fmt.Sprintf("From Message - %s", senderName),
+				ProjectID: *conn.ProjectID,
+				ColumnID:  conn.NewSessionColumnID,
+				// StartDate:      &formResponse.CreatedAt,
+				// EndDate:        &formResponse.CreatedAt,
+				Description: convMsg,
+				RefID:       &sessionData.ID,
+				RefType:     &refType,
+			}
+			err = h.pmService.TaskService.CreateTask(&task)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+
+			msg := gin.H{
+				"message":   "Task created successfully",
+				"column_id": conn.NewSessionColumnID,
+			}
+			b, _ := json.Marshal(msg)
+			h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+				url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+				return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+			})
+		}
 	} else {
+		var lastOnlineAt time.Time = *whatsappSession.LastOnlineAt
 		whatsappSession.LastMessage = convMsg
 		whatsappSession.LastOnlineAt = &now
 		h.erpContext.DB.Save(&whatsappSession)
+
+		if conn.IdleColumnID != nil && !lastOnlineAt.IsZero() {
+			if (now.Sub(lastOnlineAt).Hours() / 24) > conn.IdleDuration {
+				senderName := sessionAuth.Name
+				if senderName == "" {
+					senderName = body.Sender
+				}
+				refType := "whatsapp_session"
+				task := models.TaskModel{
+					Name:      fmt.Sprintf("From Message - %s", senderName),
+					ProjectID: *conn.ProjectID,
+					ColumnID:  conn.IdleColumnID,
+					// StartDate:      &formResponse.CreatedAt,
+					// EndDate:        &formResponse.CreatedAt,
+					Description: convMsg,
+					RefID:       &whatsappSession.ID,
+					RefType:     &refType,
+				}
+				err = h.pmService.TaskService.CreateTask(&task)
+				if err != nil {
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+
+				msg := gin.H{
+					"message":   "Task created successfully",
+					"column_id": conn.IdleColumnID,
+				}
+				b, _ := json.Marshal(msg)
+				h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+				})
+			}
+		}
 	}
 
 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waData)

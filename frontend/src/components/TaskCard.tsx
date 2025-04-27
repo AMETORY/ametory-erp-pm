@@ -99,7 +99,7 @@ const TaskCard: FC<TaskCardProps> = ({ task, isdragged = false, onClick }) => {
       {task.task_attribute && (
         <div>
           <ul className="text-xs">
-            {task.task_attribute?.fields
+            {(task.task_attribute?.fields??[])
               .filter((e) => e.is_pinned)
               .map((e) => (
                 <li key={e.id}>{renderValue(e.type, e.value)}</li>

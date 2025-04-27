@@ -1,4 +1,6 @@
+import { ColumnModel } from "./column";
 import { GeminiAgent } from "./gemini";
+import { ProjectModel } from "./project";
 
 export interface ConnectionModel {
   id?: string;
@@ -19,4 +21,11 @@ export interface ConnectionModel {
   is_auto_pilot?: boolean;
   session_auth?: boolean;
   connected?: boolean;
+  project?: ProjectModel;
+  project_id?: string;
+  new_session_column?: ColumnModel;
+  new_session_column_id?: string;
+  idle_column?: ColumnModel;
+  idle_column_id?: string;
+  idle_duration?: number;
 }
