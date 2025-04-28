@@ -7,6 +7,7 @@ export interface PaginationRequest {
     project_id?: string;
     team_id?: string;
     order?: string;
+    tag_ids?: string
   }
   
   

@@ -14,6 +14,8 @@ import { getContrastColor, getPagination, randomColor } from "../utils/helper";
 import toast from "react-hot-toast";
 import {
   Button,
+  Drawer,
+  DrawerItems,
   Label,
   Modal,
   Pagination,
@@ -30,6 +32,8 @@ import { ProductModel } from "../models/product";
 import { getProducts } from "../services/api/productApi";
 import { PiFileXls } from "react-icons/pi";
 import { uploadFile } from "../services/api/commonApi";
+import { BsFilter, BsTag } from "react-icons/bs";
+import { LuFilter } from "react-icons/lu";
 
 interface ContactPageProps {}
 
@@ -46,6 +50,8 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   const [tags, setTags] = useState<TagModel[]>([]);
   const [products, setProducts] = useState<ProductModel[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [drawerFilter, setDrawerFilter] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -55,7 +61,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
     if (mounted) {
       getAllContacts();
     }
-  }, [mounted, page, size, search]);
+  }, [mounted, page, size, search, selectedTags]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files == null) return;
@@ -90,7 +96,13 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   const getAllContacts = async () => {
     try {
       setLoading(true);
-      let resp: any = await getContacts({ page, size, search, order: "name" });
+      let resp: any = await getContacts({
+        page,
+        size,
+        search,
+        order: "name",
+        tag_ids: selectedTags.map((t) => t.id).join(","),
+      });
       setContacts(resp.data.items);
       setPagination(getPagination(resp.data));
     } catch (error) {
@@ -147,7 +159,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
       <div className="p-8 h-[calc(100vh-100px)] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold ">Contact</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Button
               pill
               onClick={() => {
@@ -172,6 +184,9 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
             >
               + Create new Contact
             </Button>
+            <div className="cursor-pointer ">
+              <LuFilter onClick={() => setDrawerFilter(true)} />
+            </div>
           </div>
         </div>
         <Table>
@@ -228,10 +243,11 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   <div className="flex flex-wrap gap-2">
                     {(contact.products ?? []).map((product) => (
                       <div
-                        className="px-2 mb-2 text-[10pt]  text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100 w-fit"
+                        className="px-2 mb-2 text-[10pt] flex items-center  text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100 w-fit gap-1"
                         key={product.id}
                       >
-                        {product?.display_name}
+                        <BsTag />
+                        <span>{product?.display_name}</span>
                       </div>
                     ))}
                   </div>
@@ -465,6 +481,57 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
         ref={fileRef}
         accept=".xlsx, .xls"
       />
+      <Drawer
+        open={drawerFilter}
+        onClose={function (): void {
+          setDrawerFilter(false);
+        }}
+        position="right"
+        style={{ width: "400px" }}
+      >
+        <Drawer.Header>Filter</Drawer.Header>
+        <DrawerItems>
+          <div className="mt-8">
+            <h1 className="font-semibold text-2xl">Filter</h1>
+            <div>
+              <Label htmlFor="name" value="Filter" />
+              <Select
+                isMulti
+                value={selectedTags.map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                  color: tag.color,
+                }))}
+                options={tags.map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                  color: tag.color,
+                }))}
+                onChange={(e) => {
+                  setSelectedTags(
+                    e.map((tag) => ({
+                      id: tag.value,
+                      name: tag.label,
+                      color: tag.color,
+                    }))
+                  );
+                }}
+                formatOptionLabel={(option) => (
+                  <div
+                    className="w-fit px-2 py-1 rounded-lg"
+                    style={{
+                      backgroundColor: option.color,
+                      color: getContrastColor(option.color),
+                    }}
+                  >
+                    <span>{option.label}</span>
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+        </DrawerItems>
+      </Drawer>
     </AdminLayout>
   );
 };
