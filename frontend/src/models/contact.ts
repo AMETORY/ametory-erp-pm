@@ -1,6 +1,7 @@
 import { MessageLog, MessageRetry } from "./broadcast";
 import { CompanyModel } from "./company";
 import { FileModel } from "./file";
+import { ProductModel } from "./product";
 import { TagModel } from "./tag";
 import { UserModel } from "./user";
 
@@ -29,4 +30,5 @@ export interface ContactModel {
     logs?: MessageLog[];
     retry?: MessageRetry;
   };
+  products?: ProductModel[]
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/file"
+	"github.com/AMETORY/ametory-erp-modules/inventory"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/tag"
@@ -96,6 +97,9 @@ func main() {
 	csrService := customer_relationship.NewCustomerRelationshipService(erpContext)
 	erpContext.CustomerRelationshipService = csrService
 
+	inventoryService := inventory.NewInventoryService(erpContext)
+	erpContext.InventoryService = inventoryService
+
 	appService := app.NewAppService(erpContext, cfg, redisClient, websocket)
 	erpContext.AppService = appService
 
@@ -152,10 +156,15 @@ func main() {
 	routes.NewWhatsappRoutes(v1, erpContext)
 	routes.SetBroadcastRoutes(v1, erpContext)
 	routes.SetupTagRoutes(v1, erpContext)
+	routes.SetupProductRoutes(v1, erpContext)
+	routes.SetupProductCategoryRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {
 		worker.SendMail(erpContext)
+	}()
+	go func() {
+		worker.ImportContact(erpContext)
 	}()
 
 	r.Run(":" + config.App.Server.Port)

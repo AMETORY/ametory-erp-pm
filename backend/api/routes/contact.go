@@ -15,11 +15,12 @@ func SetContactRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	contactGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
 		contactGroup.GET("/list", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:read"}), contactHandler.GetContactsHandler)
+		contactGroup.POST("/import", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:create"}), contactHandler.ImportContactFromFileHandler)
 		contactGroup.GET("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:read"}), contactHandler.GetContactHandler)
 		contactGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:create"}), contactHandler.CreateContactHandler)
 		contactGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:update"}), contactHandler.UpdateContactHandler)
 		contactGroup.PUT("/:id/message", contactHandler.SendMessageContactHandler)
-		contactGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:delete"}), contactHandler.GetContactsHandler)
+		contactGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:delete"}), contactHandler.DeleteContactHandler)
 		contactGroup.GET("/count-by-tag", middlewares.RbacUserMiddleware(erpContext, []string{"contact:customer:read"}), contactHandler.GetContactCountByTagHandler)
 	}
 }

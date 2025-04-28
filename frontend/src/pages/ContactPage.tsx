@@ -1,10 +1,11 @@
-import { useContext, useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useRef, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import { PaginationResponse } from "../objects/pagination";
 import {
   createContact,
   deleteContact,
   getContacts,
+  importContact,
   updateContact,
 } from "../services/api/contactApi";
 import { ContactModel } from "../models/contact";
@@ -24,7 +25,11 @@ import { SearchContext } from "../contexts/SearchContext";
 import { TagModel } from "../models/tag";
 import { createTag, getTags } from "../services/api/tagApi";
 import Select from "react-select";
-import CreatableSelect from 'react-select/creatable';
+import CreatableSelect from "react-select/creatable";
+import { ProductModel } from "../models/product";
+import { getProducts } from "../services/api/productApi";
+import { PiFileXls } from "react-icons/pi";
+import { uploadFile } from "../services/api/commonApi";
 
 interface ContactPageProps {}
 
@@ -39,6 +44,8 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactModel>();
   const [tags, setTags] = useState<TagModel[]>([]);
+  const [products, setProducts] = useState<ProductModel[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -47,10 +54,39 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   useEffect(() => {
     if (mounted) {
       getAllContacts();
-      getAllTags();
     }
   }, [mounted, page, size, search]);
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files == null) return;
+    const file = e.target.files[0];
+    setLoading(true);
+    try {
+      const resp: any = await uploadFile(
+        file,
+        {
+          skip_save: true,
+        },
+        (progress) => {
+          console.log(progress);
+        }
+      );
+      await importContact({
+        file_url: resp.data.url,
+      });
+    } catch (e) {
+      toast.error(`${e}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mounted) {
+      getAllTags();
+      getAllProducts();
+    }
+  }, [mounted]);
   const getAllContacts = async () => {
     try {
       setLoading(true);
@@ -69,6 +105,18 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
       setLoading(true);
       let resp: any = await getTags({ page: 1, size: 100 });
       setTags(resp.data.items);
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAllProducts = async () => {
+    try {
+      setLoading(true);
+      let resp: any = await getProducts({ page: 1, size: 100 });
+      setProducts(resp.data.items);
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -99,29 +147,40 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
       <div className="p-8 h-[calc(100vh-100px)] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold ">Contact</h1>
-          <Button
-            gradientDuoTone="purpleToBlue"
-            pill
-            onClick={() => {
-              setShowModal(true);
-              setSelectedContact({
-                name: "",
-                is_customer: true,
-                is_supplier: false,
-                is_vendor: false,
-              });
-            }}
-          >
-            + Create new Contact
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              pill
+              onClick={() => {
+                fileRef.current?.click();
+              }}
+              color="gray"
+            >
+              <PiFileXls className="mr-2" /> Import Contacts
+            </Button>
+            <Button
+              gradientDuoTone="purpleToBlue"
+              pill
+              onClick={() => {
+                setShowModal(true);
+                setSelectedContact({
+                  name: "",
+                  is_customer: true,
+                  is_supplier: false,
+                  is_vendor: false,
+                });
+              }}
+            >
+              + Create new Contact
+            </Button>
+          </div>
         </div>
         <Table>
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
-            <Table.HeadCell>Email</Table.HeadCell>
+            <Table.HeadCell className="w-48">Email</Table.HeadCell>
             <Table.HeadCell>Phone</Table.HeadCell>
-            <Table.HeadCell>Address</Table.HeadCell>
-            <Table.HeadCell>Position</Table.HeadCell>
+            <Table.HeadCell className="w-64">Address</Table.HeadCell>
+            <Table.HeadCell>Product</Table.HeadCell>
             <Table.HeadCell></Table.HeadCell>
           </Table.Head>
 
@@ -147,7 +206,14 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                     {(contact.tags ?? []).length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {contact.tags?.map((tag) => (
-                          <span className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100" key={tag.id} style={{ color: getContrastColor(tag.color), backgroundColor: tag.color }}>
+                          <span
+                            className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100"
+                            key={tag.id}
+                            style={{
+                              color: getContrastColor(tag.color),
+                              backgroundColor: tag.color,
+                            }}
+                          >
                             {tag.name}
                           </span>
                         ))}
@@ -158,7 +224,18 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                 <Table.Cell>{contact.email}</Table.Cell>
                 <Table.Cell>{contact.phone}</Table.Cell>
                 <Table.Cell>{contact.address}</Table.Cell>
-                <Table.Cell>{contact.contact_person_position}</Table.Cell>
+                <Table.Cell>
+                  <div className="flex flex-wrap gap-2">
+                    {(contact.products ?? []).map((product) => (
+                      <div
+                        className="px-2 mb-2 text-[10pt]  text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100 w-fit"
+                        key={product.id}
+                      >
+                        {product?.display_name}
+                      </div>
+                    ))}
+                  </div>
+                </Table.Cell>
                 <Table.Cell>
                   <a
                     href="#"
@@ -291,7 +368,6 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
               </div>
               <div>
                 <Label htmlFor="tag" value="Tag" />
-                
                 <CreatableSelect
                   id="tag"
                   name="tag"
@@ -302,7 +378,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                       color: randomColor({ luminosity: "dark" }),
                     }).then(() => {
                       getAllTags();
-                    })
+                    });
                   }}
                   isMulti={true}
                   options={tags.map((tag) => ({
@@ -346,6 +422,31 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   )}
                 />
               </div>
+              <div>
+                <Label htmlFor="product" value="Products" />
+                <Select
+                  id="product"
+                  name="product"
+                  isMulti={true}
+                  options={products.map((product) => ({
+                    value: product.id,
+                    label: product.name,
+                  }))}
+                  value={(selectedContact?.products ?? []).map((product) => ({
+                    value: product.id,
+                    label: product.name,
+                  }))}
+                  onChange={(e) => {
+                    setSelectedContact({
+                      ...selectedContact!,
+                      products: e.map((product) => ({
+                        id: product.value!,
+                        name: product.label!,
+                      })),
+                    });
+                  }}
+                />
+              </div>
             </div>
           </Modal.Body>
           <Modal.Footer>
@@ -357,6 +458,13 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
           </Modal.Footer>
         </Modal>
       )}
+      <input
+        type="file"
+        className="hidden"
+        onChange={handleFileChange}
+        ref={fileRef}
+        accept=".xlsx, .xls"
+      />
     </AdminLayout>
   );
 };

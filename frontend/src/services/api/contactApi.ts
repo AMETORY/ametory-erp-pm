@@ -22,6 +22,12 @@ export const createContact = async (contact: any) => {
     body: JSON.stringify(contact),
   });
 };
+export const importContact = async (data: any) => {
+  return await customFetch("api/v1/contact/import", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
 
 export const updateContact = async (id: string, contact: any) => {
   return await customFetch(`api/v1/contact/${id}`, {
@@ -37,7 +43,9 @@ export const sendContactMessage = async (id: string, data: any) => {
 };
 
 export const deleteContact = async (id: string) => {
-  await customFetch(`api/v1/contact/${id}`);
+  await customFetch(`api/v1/contact/${id}`, {
+    method: "DELETE",
+  });
 };
 
 

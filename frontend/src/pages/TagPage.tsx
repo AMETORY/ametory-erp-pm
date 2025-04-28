@@ -91,7 +91,7 @@ const TagPage: FC<TagPageProps> = ({}) => {
     <AdminLayout>
       <div className="p-8">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold ">Task</h1>
+          <h1 className="text-3xl font-bold ">Tag</h1>
           <Button
             gradientDuoTone="purpleToBlue"
             pill
@@ -145,7 +145,9 @@ const TagPage: FC<TagPageProps> = ({}) => {
                           `Are you sure you want to delete  ${tag.name}?`
                         )
                       ) {
-                        deleteTag(tag.id);
+                        deleteTag(tag.id).then(() => {
+                          getAllTags();
+                        })
                       }
                     }}
                   >

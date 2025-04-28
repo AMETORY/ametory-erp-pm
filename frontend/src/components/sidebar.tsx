@@ -32,6 +32,7 @@ import { MdOutlineAssistant } from "react-icons/md";
 import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 import { PiBroadcast } from "react-icons/pi";
 import { IoPricetag } from "react-icons/io5";
+import { RiShoppingBagLine } from "react-icons/ri";
 
 interface SidebarProps {}
 
@@ -75,13 +76,13 @@ const Sidebar: FC<SidebarProps> = ({}) => {
   };
   return (
     <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-800 flex flex-col">
-      <ul className="space-y-2 font-medium flex-1">
+      <ul className="space-y-2 font-medium flex-1 h-[calc(100vh-100px)] overflow-y-auto">
         <li className="" style={{}}>
           <span
             className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
             onClick={handleNavigation("/")}
           >
-            <Tooltip content="Dashboard">
+            <Tooltip content="Dashboard"  placement="bottom">
               <AiOutlineDashboard />
             </Tooltip>
             {!collapsed && <span className="ms-3">Dashboard</span>}
@@ -164,6 +165,21 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             )}
           </span>
         </li>
+        {checkPermission("inventory:product:read") && (
+          <li className=" cursor-pointer" style={{}}>
+            <span
+              className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+              onClick={handleNavigation("/product")}
+            >
+              <Tooltip content="Product">
+                <RiShoppingBagLine />
+              </Tooltip>
+              {!collapsed && (
+                <span className="flex-1 ms-3 whitespace-nowrap">Product</span>
+              )}
+            </span>
+          </li>
+        )}
         <HR />
         <li className="text-xs text-gray-300" style={{}}>
           Omni Channel
@@ -320,7 +336,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
                 <BsTag />
               </Tooltip>
               {!collapsed && (
-                <span className="flex-1 ms-3 whitespace-nowrap">Taf</span>
+                <span className="flex-1 ms-3 whitespace-nowrap">Tag</span>
               )}
             </span>
           </li>

@@ -14,6 +14,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
@@ -59,6 +60,10 @@ func (h *ContactHandler) CreateContactHandler(c *gin.Context) {
 	}
 	companyID := c.GetHeader("ID-Company")
 	contact.CompanyID = &companyID
+	if contact.Phone != nil {
+		phone := utils.ParsePhoneNumber(*contact.Phone, c.GetHeader("ID-Country"))
+		contact.Phone = &phone
+	}
 
 	if err := h.contactService.CreateContact(&contact); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -222,4 +227,33 @@ func (h *ContactHandler) GetContactCountByTagHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": contactCount, "message": "Contact count retrieved successfully"})
+}
+
+func (h *ContactHandler) ImportContactFromFileHandler(c *gin.Context) {
+	var input struct {
+		FileURL string `json:"file_url" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := c.MustGet("userID").(string)
+	companyID := c.MustGet("companyID").(string)
+
+	data, err := json.Marshal(map[string]string{
+		"file_url":   input.FileURL,
+		"user_id":    userID,
+		"company_id": companyID,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.appService.Redis.Publish(*h.ctx.Ctx, "IMPORT:CONTACT", string(data)).Err()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Contacts imported successfully"})
 }

@@ -53,6 +53,10 @@ var (
 			{"form_template": cruds},
 			{"form": cruds},
 		},
+		"inventory": {
+			{"product": cruds},
+			{"product_category": cruds},
+		},
 		"whatsapp": {
 			{"broadcast": append(cruds, "send")},
 			{"message": append(cruds, "send")},

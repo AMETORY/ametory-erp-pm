@@ -24,6 +24,7 @@ import WhatsappPage from "../pages/WhatsappPage";
 import BroadcastPage from "../pages/BroadcastPage";
 import BroadcastDetail from "../pages/BroadcastDetail";
 import TagPage from "../pages/TagPage";
+import ProductPage from "../pages/ProductPage";
 
 interface PrivateRouteProps {}
 
@@ -53,6 +54,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/setting" element={<SettingPage />} />
       <Route path="/gemini-agent" element={<GeminiAgentPage />} />
       <Route path="/task-attribute" element={<TaskAttributePage />} />
+      <Route path="/product" element={<ProductPage />} />
       <Route path="/whatsapp" element={<WhatsappPage />} />
       <Route path="/broadcast" element={<BroadcastPage />} />
       <Route path="/broadcast/:broadcastId" element={<BroadcastDetail/>} />

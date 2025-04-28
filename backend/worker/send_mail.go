@@ -11,6 +11,7 @@ import (
 )
 
 func SendMail(erpContext *context.ERPContext) {
+	fmt.Println("START SEND MAIL")
 	appService, ok := erpContext.AppService.(*app.AppService)
 	if ok {
 		dataSub := appService.Redis.Subscribe(*erpContext.Ctx, "SEND:MAIL")
