@@ -39,6 +39,9 @@ import { ConnectionModel } from "../models/connection";
 import { getConnections } from "../services/api/connectionApi";
 import Select, { InputActionMeta } from "react-select";
 import Moment from "react-moment";
+import { LuFilter } from "react-icons/lu";
+import { TagModel } from "../models/tag";
+import { getTags } from "../services/api/tagApi";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -63,9 +66,30 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [selectedContact, setSelectedContact] = useState<ContactModel>();
   const [message, setMessage] = useState("");
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
+  const [tags, setTags] = useState<TagModel[]>([]);
+  const [filters, setFilters] = useState([
+    {
+      label: "All Chat",
+      value: "all",
+    },
+    {
+      label: "Unreplied",
+      value: "unreplied",
+    },
+    {
+      label: "Unread",
+      value: "unread",
+    },
+  ]);
+
+  const [selectedFilters, setSelectedFilters] = useState<
+    { value: string; label: string }[]
+  >([]);
+
+  const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
   const [selectedConnection, setSelectedConnection] =
     useState<ConnectionModel>();
-
+  const [drawerFilter, setDrawerFilter] = useState(false);
   useEffect(() => {
     setMounted(true);
     getConnections({ page: 1, size: 50 }).then((resp: any) => {
@@ -76,8 +100,26 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   useEffect(() => {
     if (mounted) {
       getAllSessions();
+      
     }
-  }, [mounted, sessionId]);
+  }, [mounted, sessionId, page, size, search, selectedTags]);
+
+  useEffect(() => {
+    if (mounted) {
+      getAllTags();
+    }
+  }, [mounted]);
+  const getAllTags = async () => {
+    try {
+      setLoading(true);
+      let resp: any = await getTags({ page: 1, size: 100 });
+      setTags(resp.data.items);
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -111,6 +153,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         page,
         size,
         search,
+        tag_ids: selectedTags.map((t) => t.id).join(","),
       });
       setSessions(resp.data.items);
       setPagination(getPagination(resp.data));
@@ -136,6 +179,17 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
             >
               + Chat
             </Button>
+            <Button
+              pill
+              className="flex items-center gap-2"
+              color="gray"
+              onClick={() => {
+                setDrawerFilter(true);
+              }}
+            >
+              <LuFilter className="" />
+              <span>Filter</span>
+            </Button>
           </div>
         </div>
         <div className="flex flex-row w-full h-full flex-1 gap-2">
@@ -159,14 +213,16 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                       }}
                     >
                       <div className="flex flex-col">
-                        <div
-                          className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
-                          style={{
-                            background: e.ref?.color,
-                            color: getContrastColor(e.ref?.color),
-                          }}
-                        >
-                          {e.ref?.name}
+                        <div className="flex flex-wrap gap-2">
+                          <div
+                            className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
+                            style={{
+                              background: e.ref?.color,
+                              color: getContrastColor(e.ref?.color),
+                            }}
+                          >
+                            {e.ref?.name}
+                          </div>
                         </div>
                         <div className="flex gap-1">
                           {e.contact?.avatar && (
@@ -185,6 +241,19 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         <small className="line-clamp-2 overflow-hidden text-ellipsis text-[8pt]">
                           <Moment fromNow>{e.last_online_at}</Moment>
                         </small>
+                        <div className="flex flex-wrap gap-2">
+                          {(e.contact?.tags ?? []).map((el) => (
+                            <div
+                              className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
+                              style={{
+                                background: el.color,
+                                color: getContrastColor(el.color),
+                              }}
+                            >
+                              {el.name}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
@@ -346,6 +415,69 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </Button>
         </Modal.Footer>
       </Modal>
+      <Drawer
+        open={drawerFilter}
+        onClose={function (): void {
+          setDrawerFilter(false);
+        }}
+        position="right"
+        style={{ width: "400px" }}
+      >
+        <Drawer.Header>Filter</Drawer.Header>
+        <Drawer.Items>
+          <div className="mt-8 flex flex-col space-y-4">
+            <div>
+              <Label htmlFor="name" value="Filter" />
+              <Select
+                isMulti
+                value={selectedFilters}
+                options={filters}
+                onChange={(e) => {
+                  setSelectedFilters(
+                    e.map((e) => e.value).includes("all") ? [] : e.map((e) => e)
+                  );
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="name" value="Tag" />
+              <Select
+                isMulti
+                value={selectedTags.map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                  color: tag.color,
+                }))}
+                options={tags.map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                  color: tag.color,
+                }))}
+                onChange={(e) => {
+                  setSelectedTags(
+                    e.map((tag) => ({
+                      id: tag.value,
+                      name: tag.label,
+                      color: tag.color,
+                    }))
+                  );
+                }}
+                formatOptionLabel={(option) => (
+                  <div
+                    className="w-fit px-2 py-1 rounded-lg"
+                    style={{
+                      backgroundColor: option.color,
+                      color: getContrastColor(option.color),
+                    }}
+                  >
+                    <span>{option.label}</span>
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+        </Drawer.Items>
+      </Drawer>
     </AdminLayout>
   );
 };

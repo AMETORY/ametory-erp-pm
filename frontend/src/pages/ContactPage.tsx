@@ -47,10 +47,10 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   const [contacts, setContacts] = useState<ContactModel[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactModel>();
-  const [tags, setTags] = useState<TagModel[]>([]);
   const [products, setProducts] = useState<ProductModel[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const [drawerFilter, setDrawerFilter] = useState(false);
+  const [tags, setTags] = useState<TagModel[]>([]);
   const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
 
   useEffect(() => {
