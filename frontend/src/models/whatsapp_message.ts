@@ -1,5 +1,8 @@
 import { CompanyModel } from "./company";
+import { ConnectionModel } from "./connection";
 import { ContactModel } from "./contact";
+import { MemberModel } from "./member";
+import { UserModel } from "./user";
 
 export interface WhatsappMessageModel {
   id?: string;
@@ -21,6 +24,10 @@ export interface WhatsappMessageModel {
   is_group?: boolean;
   sent_at?: Date;
   is_read?: boolean;
+  member_id?: string;
+  member?: MemberModel;
+  user?: UserModel;
+  response_time?: number;
 }
 
 export interface WhatsappMessageSessionModel {
@@ -36,4 +43,5 @@ export interface WhatsappMessageSessionModel {
   contact?: ContactModel;
   is_human_agent?: boolean;
   count_unread?: number;
+  ref?: ConnectionModel;
 }

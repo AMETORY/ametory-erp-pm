@@ -98,28 +98,42 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
 		return
 	}
-
-	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	splitJID := strings.Split(session.JID, "@")
 	splitSep := strings.Split(splitJID[0], ":")
+	var isGroup bool
 
-	info := make(map[string]interface{})
-	json.Unmarshal([]byte(msg.Info), &info)
+	info := make(map[string]any)
+	var infoStr string = "{}"
+	var responseDuration *float64
+	var lastCustMsg models.WhatsappMessageModel
+	err = h.customerRelationshipService.WhatsappService.GetWhatsappLastCustomerMessages(session.JID, session.Session, &lastCustMsg)
+	if err == nil {
+		json.Unmarshal([]byte(lastCustMsg.Info), &info)
 
-	info["Timestamp"] = time.Now().Format("2006-01-02T15:04:05-07:00")
+		info["Timestamp"] = time.Now().Format("2006-01-02T15:04:05-07:00")
 
-	b, _ := json.Marshal(info)
-	msg.Info = string(b)
+		b, _ := json.Marshal(info)
+		infoStr = string(b)
 
-	isGroup, ok := msg.MessageInfo["IsGroup"].(bool)
-	if !ok {
-		isGroup = false
+		isGroup = lastCustMsg.MessageInfo["IsGroup"].(bool)
+		if lastCustMsg.IsFromMe {
+			responseDuration = lastCustMsg.ResponseTime
+		} else {
+			var dur time.Duration = time.Since(*lastCustMsg.CreatedAt)
+			duration := dur.Seconds()
+			responseDuration = &duration
+			lastCustMsg.IsReplied = true
+			h.erpContext.DB.Save(&lastCustMsg)
+		}
+
+		// fmt.Println("ERROR 2", dur)
 	}
+
+	// fmt.Println("LAST MESSAGE")
+	// utils.LogJson(lastCustMsg)
+
+	userID := c.MustGet("userID").(string)
+	memberID := c.MustGet("memberID").(string)
 
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
 		Sender:   splitSep[0],
@@ -127,15 +141,18 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		Message:  input.Message,
 		// MediaURL: mediaURLSaved,
 		// MimeType: msg.MimeType,
-		MessageInfo: info,
-		Info:        msg.Info,
-		Session:     session.Session,
-		JID:         session.JID,
-		IsFromMe:    true,
-		IsRead:      false,
-		IsGroup:     isGroup,
-		ContactID:   session.ContactID,
-		CompanyID:   session.CompanyID,
+		MessageInfo:  info,
+		Info:         infoStr,
+		Session:      session.Session,
+		JID:          session.JID,
+		IsFromMe:     true,
+		IsRead:       false,
+		IsGroup:      isGroup,
+		ContactID:    session.ContactID,
+		CompanyID:    session.CompanyID,
+		ResponseTime: responseDuration,
+		UserID:       &userID,
+		MemberID:     &memberID,
 	}
 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
 	if err != nil {
@@ -178,7 +195,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 
 	respData, ok := resp.(map[string]any)["data"].(map[string]any)
 	if ok {
-		utils.LogJson(respData["ID"])
+		// utils.LogJson(respData["ID"])
 		msgID, ok2 := respData["ID"].(string)
 		if ok2 {
 			waDataReply.MessageID = &msgID
@@ -193,7 +210,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	msg, err = h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
+	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -700,12 +717,12 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			})
 		}
 	} else {
-		var lastOnlineAt time.Time
-		if whatsappSession.LastOnlineAt != nil {
-			lastOnlineAt = *whatsappSession.LastOnlineAt
-		} else {
-			lastOnlineAt = time.Now()
-		}
+		// var lastOnlineAt time.Time
+		// if whatsappSession.LastOnlineAt != nil {
+		// 	lastOnlineAt = *whatsappSession.LastOnlineAt
+		// } else {
+		// }
+		lastOnlineAt := time.Now()
 		whatsappSession.LastOnlineAt = &lastOnlineAt
 		whatsappSession.LastMessage = convMsg
 		h.erpContext.DB.Save(&whatsappSession)
@@ -914,8 +931,20 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 		var totalUnread int64
 		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ? and is_from_me = ?", v.Session, false, false).Count(&totalUnread)
 		v.CountUnread = int(totalUnread)
+		if v.RefType != nil {
+			var refType = "connection"
+			if *v.RefType == refType {
+				var conn connection.ConnectionModel
+				err = h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "id = ?", v.RefID).Error
+				if err != nil {
+					c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+					return
+				}
+				v.Ref = &conn
+			}
+
+		}
 		newWaSessions = append(newWaSessions, v)
-		// 	var conn connection.ConnectionModel
 	}
 
 	sessions.Items = &newWaSessions

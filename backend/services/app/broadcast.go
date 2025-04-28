@@ -1,6 +1,7 @@
 package app
 
 import (
+	"ametory-pm/config"
 	"ametory-pm/models"
 	"ametory-pm/models/connection"
 	"encoding/json"
@@ -307,24 +308,26 @@ func (b *BroadcastService) sendWithRetryHandling(
 	b.ctx.DB.Where("id = ?", broadcastID).First(&broadcast)
 	time.Sleep(delay)
 	var success bool
-	success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Message))
+	if config.App.Server.SimulateBroadcast {
 
-	// sender.Session
-	// if contact.Phone != nil {
-	// 	waData := whatsmeow_client.WaMessage{
-	// 		JID:     sender.Session,
-	// 		Text:    parseMsgTemplate(contact, broadcast.Message),
-	// 		To:      *contact.Phone,
-	// 		IsGroup: false,
-	// 	}
+		success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Message))
+	} else {
+		if contact.Phone != nil {
+			waData := whatsmeow_client.WaMessage{
+				JID:     sender.Session,
+				Text:    parseMsgTemplate(contact, broadcast.Message),
+				To:      *contact.Phone,
+				IsGroup: false,
+			}
 
-	// 	_, err := b.whatsmeowService.SendMessage(waData)
-	// 	if err != nil {
-	// 		success = false
-	// 	} else {
-	// 		success = true
-	// 	}
-	// }
+			_, err := b.whatsmeowService.SendMessage(waData)
+			if err != nil {
+				success = false
+			} else {
+				success = true
+			}
+		}
+	}
 
 	log := models.MessageLog{
 		BroadcastID: broadcastID,

@@ -21,7 +21,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
 import { PaginationResponse } from "../objects/pagination";
-import { getPagination } from "../utils/helper";
+import { getContrastColor, getPagination } from "../utils/helper";
 import {
   clearWhatsappSession,
   deleteWhatsappSession,
@@ -80,7 +80,12 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   }, [mounted, sessionId]);
 
   useEffect(() => {
-    if (wsMsg?.command == "WHATSAPP_RECEIVED" || wsMsg?.command == "UPDATE_SESSION" || wsMsg?.command == "WHATSAPP_MESSAGE_READ" || wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE") {
+    if (
+      wsMsg?.command == "WHATSAPP_RECEIVED" ||
+      wsMsg?.command == "UPDATE_SESSION" ||
+      wsMsg?.command == "WHATSAPP_MESSAGE_READ" ||
+      wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE"
+    ) {
       getAllSessions();
     }
   }, [wsMsg, profile, sessionId]);
@@ -153,14 +158,27 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         );
                       }}
                     >
-                      {e.contact?.avatar && (
-                        <img
-                          src={e.contact?.avatar.url}
-                          className=" aspect-square rounded-full object-cover w-8 h-8"
-                        />
-                      )}
                       <div className="flex flex-col">
-                        <span className="font-semibold">{e.contact?.name}</span>
+                        <div
+                          className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
+                          style={{
+                            background: e.ref?.color,
+                            color: getContrastColor(e.ref?.color),
+                          }}
+                        >
+                          {e.ref?.name}
+                        </div>
+                        <div className="flex gap-1">
+                          {e.contact?.avatar && (
+                            <img
+                              src={e.contact?.avatar.url}
+                              className=" aspect-square rounded-full object-cover w-8 h-8"
+                            />
+                          )}
+                          <span className="font-semibold">
+                            {e.contact?.name}
+                          </span>
+                        </div>
                         <small className="line-clamp-2 overflow-hidden text-ellipsis">
                           {e.last_message}
                         </small>
@@ -171,7 +189,12 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     </div>
                     <div className="flex flex-col items-end">
                       {(e.count_unread ?? 0) > 0 && (
-                        <div  className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"  color="red">{e.count_unread}</div>
+                        <div
+                          className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"
+                          color="red"
+                        >
+                          {e.count_unread}
+                        </div>
                       )}
                       <div className="group/edit invisible group-hover/item:visible">
                         <Dropdown label="" inline>

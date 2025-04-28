@@ -151,3 +151,7 @@ pre:has(code[class*='language-']) {
 label {
   @apply !font-bold
 }
+
+[data-testid="table-element"] > div {
+  @apply  !drop-shadow-none border
+}

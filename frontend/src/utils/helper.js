@@ -155,3 +155,10 @@ export const randomColor = ({ luminosity = "dark" } = {}) => {
     return color;
 };
 
+
+export const detectEmoticon = (text) => {
+    const emojiRegex = /\p{Emoji}+/gu;
+    const emoticons = text.match(emojiRegex);
+    if (!emoticons) return false
+    return emoticons || [];
+}

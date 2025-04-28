@@ -111,6 +111,13 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
             <Table.HeadCell>Actions</Table.HeadCell>
           </Table.Head>
           <Table.Body>
+            {broadcasts?.length === 0 && (
+              <Table.Row>
+                <Table.Cell colSpan={4} className="text-center">
+                  No broadcast found
+                </Table.Cell>
+              </Table.Row>
+            )}
             {broadcasts?.map((broadcast: any, index) => (
               <Table.Row key={broadcast.id}>
                 <Table.Cell>{index + 1}</Table.Cell>

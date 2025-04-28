@@ -1,4 +1,4 @@
-import { Button, Popover, ToggleSwitch } from "flowbite-react";
+import { Button, Modal, Popover, Tabs, ToggleSwitch } from "flowbite-react";
 import { useContext, useEffect, useRef, useState, type FC } from "react";
 import toast from "react-hot-toast";
 import { RiAttachment2 } from "react-icons/ri";
@@ -24,6 +24,7 @@ import {
 } from "../services/api/whatsappApi";
 import { debounce } from "../utils/helper";
 import { IoCheckmarkDone } from "react-icons/io5";
+import { BsSend } from "react-icons/bs";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -50,6 +51,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const [openAttachment, setOpenAttachment] = useState(false);
   const [connection, setConnection] = useState<ConnectionModel>();
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [modalEmojis, setModalEmojis] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -83,7 +85,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         if (timeout.current) {
           window.clearTimeout(timeout.current);
         }
-       
+
         timeout.current = window.setTimeout(() => {
           if (!msg.is_from_me) {
             markAsRead(msg!.id!);
@@ -107,7 +109,11 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 (m) => m.id == entry.target.getAttribute("id")
               );
               // console.log(message?.message)
-              if (message && !message.is_read &&  !(message?.is_from_me ?? false)) {
+              if (
+                message &&
+                !message.is_read &&
+                !(message?.is_from_me ?? false)
+              ) {
                 setMessages([
                   ...messages.map((m) => {
                     if (m.id == message?.id) {
@@ -184,8 +190,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE"
     ) {
       // console.log(wsMsg.message_ids);
-      setMessages([
-        ]);
+      setMessages([]);
     }
   }, [wsMsg, profile, sessionId]);
   useEffect(() => {
@@ -276,6 +281,36 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     if (session?.id) {
     }
   }, [session?.is_human_agent]);
+
+  const groupBy = (emojis: any[], category: string): { [s: string]: any[] } => {
+    return emojis.reduce((acc, curr) => {
+      const key = curr[category];
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(curr);
+      return acc;
+    }, {});
+  };
+
+  const sendMessage =async () => {
+    try {
+      if (!content) return;
+      setContent("");
+      await createWAMessage(sessionId!, {
+        message: content,
+        files: files,
+      });
+      setOpenAttachment(false);
+      setFiles([]);
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+      setTimeout(() => {
+        setContent("");
+      }, 300);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full ">
@@ -380,14 +415,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   />
                 </Popover>
               )}
-              {!msg.is_from_me && <small>{msg.contact?.name}</small>}
+              {!msg.is_from_me && <small  className="font-semibold">{msg.contact?.name}</small>}
+              {msg.is_from_me && <small className="font-semibold">{msg.member?.user?.full_name}</small>}
               {msg.is_group && !msg.is_from_me && (
-                <small>{msg.message_info?.PushName}</small>
+                <small  className="font-semibold">{msg.message_info?.PushName}</small>
               )}
-
-              <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]} >{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
-                
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
                 {msg.is_read && (
                   <IoCheckmarkDone
@@ -408,57 +442,75 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         </div>
       )}
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
-        <MentionsInput
-          disabled={!session?.is_human_agent && connection?.is_auto_pilot}
-          value={content}
-          onChange={(val: any) => {
-            setContent(val.target.value);
-          }}
-          style={emojiStyle}
-          placeholder={
-            !session?.is_human_agent && connection?.is_auto_pilot
-              ? "Input disabled for auto pilot mode"
-              : "Press ':' for emojis and shift+enter to send"
-          }
-          className="w-full"
-          autoFocus
-          onKeyDown={async (val: any) => {
-            if (val.key === "Enter" && val.shiftKey) {
-              setContent((prev) => prev + "\n");
-              return;
+        <div className="relative w-full">
+          <MentionsInput
+            disabled={!session?.is_human_agent && connection?.is_auto_pilot}
+            value={content}
+            onChange={(val: any) => {
+              setContent(val.target.value);
+            }}
+            style={emojiStyle}
+            placeholder={
+              !session?.is_human_agent && connection?.is_auto_pilot
+                ? "Input disabled for auto pilot mode"
+                : "Press ':' for emojis and shift+enter for new line"
             }
-            if (val.key === "Enter") {
-              try {
-                setContent("")
-                await createWAMessage(sessionId!, {
-                  message: content,
-                  files: files,
-                });
-                setOpenAttachment(false);
-                setFiles([]);
-              } catch (error) {
-                toast.error(`${error}`);
-              } finally {
-                setTimeout(() => {
-                  setContent("");
-                }, 300);
+            className="w-full"
+            autoFocus
+            onKeyDown={async (val: any) => {
+              if (val.key === "Enter" && val.shiftKey) {
+                setContent((prev) => prev + "\n");
+                return;
               }
-
-              return;
-            }
-          }}
-        >
-          <Mention
-            trigger=":"
-            markup="__id__"
-            regex={neverMatchingRegex}
-            data={queryEmojis}
-          />
-        </MentionsInput>
-        <Button color="gray" onClick={() => setOpenAttachment(true)}>
-          <RiAttachment2 />
+              if (val.key === "Enter") {
+                sendMessage();
+                return;
+              }
+            }}
+          >
+            <Mention
+              trigger=":"
+              markup="__id__"
+              regex={neverMatchingRegex}
+              data={queryEmojis}
+            />
+          </MentionsInput>
+          <div
+            className="absolute top-2 right-2 cursor-pointer"
+            onClick={() => setModalEmojis(true)}
+          >
+            😀
+          </div>
+        </div>
+        <Button color="gray" onClick={sendMessage}>
+          <BsSend />
         </Button>
       </div>
+      <Modal dismissible show={modalEmojis} onClose={() => setModalEmojis(false)}>
+        <Modal.Header>Emojis</Modal.Header>
+        <Modal.Body>
+          <div>
+            {Object.entries(groupBy(emojis, "category")).map(
+              ([category, emojis]) => (
+                <div className="mb-4 hover:bg-gray-100 rounded-lg p-2" key={category}>
+                  <h3 className="font-bold">{category}</h3>
+                  <div className=" flex flex-wrap gap-1">
+                    {emojis.map((e: any, index: number) => (
+                      <div
+                        key={index}
+                        className="cursor-pointer text-lg"
+                        onClick={() => setContent((prev) => prev + e.emoji)}
+                      >
+                        {e.emoji}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };

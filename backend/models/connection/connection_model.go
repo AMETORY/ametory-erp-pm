@@ -42,6 +42,7 @@ type ConnectionModel struct {
 	IdleColumnID       *string              `json:"idle_column_id,omitempty" gorm:"column:idle_column_id"`
 	IdleColumn         *models.ColumnModel  `gorm:"foreignKey:IdleColumnID" json:"idle_column,omitempty"`
 	IdleDuration       float64              `json:"idle_duration" gorm:"column:idle_duration;default:7"`
+	Color              string               `json:"color" gorm:"column:color;type:varchar(255);default:'#34C759'"`
 }
 
 func (ConnectionModel) TableName() string {

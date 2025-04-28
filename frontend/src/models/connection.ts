@@ -28,4 +28,5 @@ export interface ConnectionModel {
   idle_column?: ColumnModel;
   idle_column_id?: string;
   idle_duration?: number;
+  color?: string;
 }
