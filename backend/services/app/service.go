@@ -50,6 +50,7 @@ var (
 		},
 		"customer_relationship": {
 			{"whatsapp": cruds},
+			{"whatsapp_template": cruds},
 			{"form_template": cruds},
 			{"form": cruds},
 		},

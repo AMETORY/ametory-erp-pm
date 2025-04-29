@@ -119,6 +119,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		if lastCustMsg.IsFromMe {
 			responseDuration = lastCustMsg.ResponseTime
 		} else {
+			fmt.Println("REPLIED", input.Message)
 			var dur time.Duration = time.Since(*lastCustMsg.CreatedAt)
 			duration := dur.Seconds()
 			responseDuration = &duration
@@ -466,8 +467,8 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("RECEIPT MESSAGE")
-	utils.LogJson(body)
+	// fmt.Println("RECEIPT MESSAGE")
+	// utils.LogJson(body)
 	// GET CONNECTION
 	conn, err := h.appService.ConnectionService.GetConnectionBySession(body.SessionName)
 	if err != nil {

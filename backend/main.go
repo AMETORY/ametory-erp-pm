@@ -158,6 +158,7 @@ func main() {
 	routes.SetupTagRoutes(v1, erpContext)
 	routes.SetupProductRoutes(v1, erpContext)
 	routes.SetupProductCategoryRoutes(v1, erpContext)
+	routes.SetupTemplateRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

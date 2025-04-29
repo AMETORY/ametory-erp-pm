@@ -8,6 +8,8 @@ export interface PaginationRequest {
     team_id?: string;
     order?: string;
     tag_ids?: string
+    is_unread?: boolean | null
+    is_unreplied?: boolean | null
   }
   
   

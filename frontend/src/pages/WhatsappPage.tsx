@@ -102,7 +102,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
       getAllSessions();
       
     }
-  }, [mounted, sessionId, page, size, search, selectedTags]);
+  }, [mounted, sessionId, page, size, search, selectedTags, selectedFilters]);
 
   useEffect(() => {
     if (mounted) {
@@ -148,12 +148,16 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
   const getAllSessions = async () => {
     try {
+      console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
+      console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
       // setLoading(true);
       const resp: any = await getWhatsappSessions(sessionId ?? "", {
         page,
         size,
         search,
         tag_ids: selectedTags.map((t) => t.id).join(","),
+        is_unread: selectedFilters.some((f) => f.value == "unread") ? true : null,
+        is_unreplied: selectedFilters.some((f) => f.value == "unreplied") ? true : null,
       });
       setSessions(resp.data.items);
       setPagination(getPagination(resp.data));
