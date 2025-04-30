@@ -25,6 +25,8 @@ import BroadcastPage from "../pages/BroadcastPage";
 import BroadcastDetail from "../pages/BroadcastDetail";
 import TagPage from "../pages/TagPage";
 import ProductPage from "../pages/ProductPage";
+import TemplatePage from "../pages/TemplatePage";
+import TemplateDetail from "../pages/TemplateDetail";
 
 interface PrivateRouteProps {}
 
@@ -57,6 +59,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/product" element={<ProductPage />} />
       <Route path="/whatsapp" element={<WhatsappPage />} />
       <Route path="/broadcast" element={<BroadcastPage />} />
+      <Route path="/template" element={<TemplatePage />} />
+      <Route path="/template/:templateId" element={<TemplateDetail />} />
       <Route path="/broadcast/:broadcastId" element={<BroadcastDetail/>} />
       <Route path="/whatsapp/:sessionId" element={<WhatsappPage />} />
       <Route

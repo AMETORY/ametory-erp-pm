@@ -468,6 +468,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               }
             }}
           >
+            
             <Mention
               trigger=":"
               markup="__id__"

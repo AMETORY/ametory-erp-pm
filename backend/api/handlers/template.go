@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"ametory-pm/api/middlewares"
-
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
@@ -35,40 +33,44 @@ func (h *TemplateHandler) CreateTemplateHandler(c *gin.Context) {
 	}
 	companyID := c.GetHeader("ID-Company")
 	input.CompanyID = &companyID
+	userID := c.MustGet("userID").(string)
+	input.UserID = &userID
 	err := h.customerRelationshipService.WhatsappService.CreateWhatsappMessageTemplate(&input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Task attribute created successfully", "id": input.ID})
+	c.JSON(200, gin.H{"message": "Template created successfully", "data": input})
 }
 
 func (h *TemplateHandler) GetTemplatesHandler(c *gin.Context) {
 	var memberIDStr = c.MustGet("memberID").(string)
 	var memberID *string
-	ok, _ := middlewares.CheckIsSuperAdminPermission(c.MustGet("user").(models.UserModel))
-	if ok {
-		memberID = nil
-
-	}
 	memberID = &memberIDStr
-	attributes, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplates(*c.Request, c.Query("search"), memberID)
+	var IsSuperAdmin bool = IsSuperAdmin(h.ctx, c)
+
+	if IsSuperAdmin {
+
+		memberID = nil
+	}
+
+	templates, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplates(*c.Request, c.Query("search"), memberID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": attributes, "message": "Task attributes retrieved successfully"})
+	c.JSON(200, gin.H{"data": templates, "message": "Templates retrieved successfully"})
 }
 
 func (h *TemplateHandler) GetTemplateDetailHandler(c *gin.Context) {
 	id := c.Param("id")
-	attribute, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	template, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": attribute, "message": "Task attribute detail retrieved successfully"})
+	c.JSON(200, gin.H{"data": template, "message": "Template detail retrieved successfully"})
 }
 
 func (h *TemplateHandler) UpdateTemplateHandler(c *gin.Context) {
@@ -78,13 +80,36 @@ func (h *TemplateHandler) UpdateTemplateHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	err := h.customerRelationshipService.WhatsappService.UpdateWhatsappMessageTemplate(id, &input)
+
+	template, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, v := range template.Messages {
+		for _, file := range v.Files {
+			h.ctx.DB.Model(&file).Where("id = ?", file.ID).Update("ref_type", "")
+			h.ctx.DB.Model(&file).Where("id = ?", file.ID).Update("ref_id", "")
+		}
+	}
+
+	err = h.customerRelationshipService.WhatsappService.UpdateWhatsappMessageTemplate(id, &input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Task attribute updated successfully"})
+	for _, v := range input.Messages {
+		for _, file := range v.Files {
+			file.RefType = "message_template"
+			file.RefID = v.ID
+			h.ctx.DB.Save(&file)
+		}
+		h.ctx.DB.Save(&v)
+	}
+
+	c.JSON(200, gin.H{"message": "Template updated successfully"})
 }
 
 func (h *TemplateHandler) DeleteTemplateHandler(c *gin.Context) {
@@ -100,5 +125,17 @@ func (h *TemplateHandler) DeleteTemplateHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Task attribute deleted successfully"})
+	c.JSON(200, gin.H{"message": "Template deleted successfully"})
+}
+
+func IsSuperAdmin(erpContext *context.ERPContext, c *gin.Context) bool {
+	user := c.MustGet("user").(models.UserModel)
+	companyID := c.MustGet("companyID").(string)
+	erpContext.DB.Preload("Roles").Find(&user)
+	for _, v := range user.Roles {
+		if v.IsSuperAdmin && *v.CompanyID == companyID {
+			return true
+		}
+	}
+	return false
 }

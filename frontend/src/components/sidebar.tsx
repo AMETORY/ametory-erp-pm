@@ -33,6 +33,7 @@ import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 import { PiBroadcast } from "react-icons/pi";
 import { IoPricetag } from "react-icons/io5";
 import { RiShoppingBagLine } from "react-icons/ri";
+import { TbTemplate } from "react-icons/tb";
 
 interface SidebarProps {}
 
@@ -337,6 +338,19 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               </Tooltip>
               {!collapsed && (
                 <span className="flex-1 ms-3 whitespace-nowrap">Tag</span>
+              )}
+            </span>
+          </li>
+        <li className="" style={{}}>
+            <span
+              className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+              onClick={handleNavigation("/template")}
+            >
+              <Tooltip content="Template">
+                <TbTemplate />
+              </Tooltip>
+              {!collapsed && (
+                <span className="flex-1 ms-3 whitespace-nowrap">Template</span>
               )}
             </span>
           </li>

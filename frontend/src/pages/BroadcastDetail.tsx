@@ -190,6 +190,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       data={[
                         { id: "{{user}}", display: "Full Name" },
                         { id: "{{phone}}", display: "Phone Number" },
+                        { id: "{{agent}}", display: "Agent Name" },
                       ]}
                       style={{
                         backgroundColor: "#cee4e5",

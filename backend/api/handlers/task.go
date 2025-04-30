@@ -271,7 +271,7 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		}
 	}
 
-	fmt.Println("ATTRIBUTE", *input.TaskAttribute)
+	// fmt.Println("ATTRIBUTE", *input.TaskAttribute)
 	if input.TaskAttribute != nil {
 		b, _ := json.Marshal(*input.TaskAttribute)
 		attrStr := string(b)
