@@ -148,8 +148,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
   const getAllSessions = async () => {
     try {
-      console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
-      console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
+      // console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
+      // console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
       // setLoading(true);
       const resp: any = await getWhatsappSessions(sessionId ?? "", {
         page,

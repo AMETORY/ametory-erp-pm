@@ -57,6 +57,7 @@ func AuthMiddleware(ctx *context.ERPContext, checkCompany bool) gin.HandlerFunc 
 		var member models.MemberModel
 		ctx.DB.Preload("Role.Permissions", "company_id = ?", c.Request.Header.Get("ID-Company")).Preload("Company").Where("user_id = ? and company_id = ?", token.Claims.(*jwt.StandardClaims).Id, c.Request.Header.Get("ID-Company")).Find(&member)
 		c.Set("user", user)
+		member.User = user
 		c.Set("member", member)
 		c.Set("memberID", member.ID)
 		c.Next()

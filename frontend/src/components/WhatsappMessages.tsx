@@ -1,4 +1,11 @@
-import { Button, Modal, Popover, Tabs, ToggleSwitch } from "flowbite-react";
+import {
+  Button,
+  Modal,
+  Popover,
+  Table,
+  Tabs,
+  ToggleSwitch,
+} from "flowbite-react";
 import { useContext, useEffect, useRef, useState, type FC } from "react";
 import toast from "react-hot-toast";
 import { RiAttachment2 } from "react-icons/ri";
@@ -25,6 +32,9 @@ import {
 import { debounce } from "../utils/helper";
 import { IoCheckmarkDone } from "react-icons/io5";
 import { BsSend } from "react-icons/bs";
+import { MessageTemplate, TemplateModel } from "../models/template";
+import { getTemplates } from "../services/api/templateApi";
+import { TbTemplate } from "react-icons/tb";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -52,6 +62,8 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const [connection, setConnection] = useState<ConnectionModel>();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [modalEmojis, setModalEmojis] = useState(false);
+  const [templates, setTemplates] = useState<TemplateModel[]>([]);
+  const [modalTemplates, setModalTemplates] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -68,6 +80,8 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           toast.error(`${err}`);
         })
         .finally(() => {});
+
+      getAllTemplates();
     }
   }, [mounted, sessionId]);
 
@@ -92,6 +106,16 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           }
         }, 500);
       }
+    }
+  };
+
+  const getAllTemplates = async () => {
+    try {
+      let resp: any = await getTemplates({ page: 1, size: 10 });
+      setTemplates(resp.data.items);
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
     }
   };
 
@@ -194,9 +218,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     }
   }, [wsMsg, profile, sessionId]);
   useEffect(() => {
-    fetch(
-      "https://gist.githubusercontent.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb/raw/d8e4b78cfe66862cf3809443c1dba017f37b61db/emojis.json"
-    )
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
       .then((response) => {
         return response.json();
       })
@@ -293,7 +315,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     }, {});
   };
 
-  const sendMessage =async () => {
+  const sendMessage = async () => {
     try {
       if (!content) return;
       setContent("");
@@ -310,7 +332,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         setContent("");
       }, 300);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-full ">
@@ -415,12 +437,20 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   />
                 </Popover>
               )}
-              {!msg.is_from_me && <small  className="font-semibold">{msg.contact?.name}</small>}
-              {msg.is_from_me && <small className="font-semibold">{msg.member?.user?.full_name}</small>}
-              {msg.is_group && !msg.is_from_me && (
-                <small  className="font-semibold">{msg.message_info?.PushName}</small>
+              {!msg.is_from_me && (
+                <small className="font-semibold">{msg.contact?.name}</small>
               )}
-              <Markdown remarkPlugins={[remarkGfm]} >{msg.message}</Markdown>
+              {msg.is_from_me && (
+                <small className="font-semibold">
+                  {msg.member?.user?.full_name}
+                </small>
+              )}
+              {msg.is_group && !msg.is_from_me && (
+                <small className="font-semibold">
+                  {msg.message_info?.PushName}
+                </small>
+              )}
+              <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
                 {msg.is_read && (
@@ -453,7 +483,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             placeholder={
               !session?.is_human_agent && connection?.is_auto_pilot
                 ? "Input disabled for auto pilot mode"
-                : "Press ':' for emojis and shift+enter for new line"
+                : "Press ':' for emojis, '/' for templates and shift+enter for new line"
             }
             className="w-full"
             autoFocus
@@ -468,12 +498,23 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               }
             }}
           >
-            
             <Mention
               trigger=":"
               markup="__id__"
               regex={neverMatchingRegex}
               data={queryEmojis}
+            />
+            <Mention
+              trigger="/"
+              data={templates.map((t: any) => ({
+                id: t.id,
+                display: t.title,
+              }))}
+              appendSpaceOnAdd
+              onAdd={(e: any) => {
+                console.log(e);
+              }}
+              markup="@@[__display__](__id__)"
             />
           </MentionsInput>
           <div
@@ -483,17 +524,32 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             😀
           </div>
         </div>
+        <Button
+          color="gray"
+          onClick={() => {
+            setModalTemplates(true);
+          }}
+        >
+          <TbTemplate />
+        </Button>
         <Button color="gray" onClick={sendMessage}>
           <BsSend />
         </Button>
       </div>
-      <Modal dismissible show={modalEmojis} onClose={() => setModalEmojis(false)}>
+      <Modal
+        dismissible
+        show={modalEmojis}
+        onClose={() => setModalEmojis(false)}
+      >
         <Modal.Header>Emojis</Modal.Header>
         <Modal.Body>
           <div>
             {Object.entries(groupBy(emojis, "category")).map(
-              ([category, emojis]) => (
-                <div className="mb-4 hover:bg-gray-100 rounded-lg p-2" key={category}>
+              ([category, emojis], i) => (
+                <div
+                  className="mb-4 hover:bg-gray-100 rounded-lg p-2"
+                  key={i}
+                >
                   <h3 className="font-bold">{category}</h3>
                   <div className=" flex flex-wrap gap-1">
                     {emojis.map((e: any, index: number) => (
@@ -510,6 +566,62 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               )
             )}
           </div>
+        </Modal.Body>
+      </Modal>
+      <Modal
+        show={modalTemplates}
+        onClose={() => setModalTemplates(false)}
+        dismissible
+      >
+        <Modal.Header>Templates</Modal.Header>
+        <Modal.Body>
+          <Table striped>
+            <Table.Head>
+              <Table.HeadCell>Title</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Message</Table.HeadCell>
+            </Table.Head>
+            <Table.Body className="bg-white">
+              {templates.length === 0 && (
+                <Table.Row>
+                  <Table.Cell colSpan={3} className="text-center">
+                    No template found.
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {templates.map((template) => (
+                <Table.Row
+                  key={template.id}
+                  className="bg-white dark:border-gray-700 dark:bg-gray-800 cursor-pointer hover:bg-gray-100"
+               onClick={async () => {
+                let content = `@@[${template.title}](${template.id})`
+                setModalTemplates(false);
+                await createWAMessage(sessionId!, {
+                  message: content,
+                  files: files,
+                });
+                
+               }} >
+                  <Table.Cell>
+                    <span className="font-medium">{template.title}</span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className="font-medium">{template.description}</span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {(template.messages ?? []).map(
+                      (message: MessageTemplate, index: number) => (
+                        <div key={index} className="mb-2">
+                          <h3 className="font-semibold">#Msg {index + 1}</h3>
+                          <div>{message.body}</div>
+                        </div>
+                      )
+                    )}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
         </Modal.Body>
       </Modal>
     </div>
