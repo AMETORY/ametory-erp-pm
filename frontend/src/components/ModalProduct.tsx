@@ -1,13 +1,25 @@
-import { Button, Label, Modal, Textarea, TextInput } from "flowbite-react";
+import {
+  Button,
+  FileInput,
+  Label,
+  Modal,
+  Textarea,
+  TextInput,
+} from "flowbite-react";
 import { useEffect, useState, type FC } from "react";
 import { ProductCategoryModel, ProductModel } from "../models/product";
-import { createProduct, updateProduct } from "../services/api/productApi";
+import {
+  createProduct,
+  deleteProductImage,
+  updateProduct,
+} from "../services/api/productApi";
 import toast from "react-hot-toast";
 import { getProductCategories } from "../services/api/productCategoryApi";
 import Select, { InputActionMeta } from "react-select";
 
 import CurrencyInput from "react-currency-input-field";
 import Barcode from "react-barcode";
+import { uploadFile } from "../services/api/commonApi";
 interface ModalProductProps {
   show: boolean;
   setShow: (show: boolean) => void;
@@ -54,6 +66,51 @@ const ModalProduct: FC<ModalProductProps> = ({
       <Modal.Header>Create Product</Modal.Header>
       <Modal.Body>
         <div className="flex flex-col space-y-4">
+          {(product?.product_images ?? []).length > 0 && (
+            <div className="flex justify-center py-4 items-center">
+              <img
+                className="w-64 h-64 aspect-square object-cover rounded-full"
+                src={product?.product_images![0].url}
+                alt="profile"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Image</label>
+            <FileInput
+              accept="image/*"
+              id="file-upload"
+              onChange={async (el) => {
+                if (el.target.files) {
+                  let f = el.target.files[0];
+                  if (!f) return;
+
+                  if ((product?.product_images ?? []).length > 0) {
+                    await deleteProductImage(
+                      product!.id!,
+                      product!.product_images![0].id!
+                    );
+                  }
+                  uploadFile(
+                    f,
+                    {
+                      ref_id: product!.id!,
+                      ref_type: "product",
+                    },
+                    (val) => {
+                      console.log(val);
+                    }
+                  ).then((v: any) => {
+                    setProduct({
+                      ...product!,
+                      product_images: [ v.data],
+                    });
+                  });
+                }
+              }}
+            />
+          </div>
           <div className="mb-4">
             <Label htmlFor="product-name" value="Product Name" />
             <TextInput

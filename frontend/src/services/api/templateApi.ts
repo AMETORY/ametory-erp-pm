@@ -38,3 +38,31 @@ export const deleteTemplate = async (id: string) => {
     method: "DELETE",
   });
 };
+
+
+export const addProductTemplate = async (id: string, msgId: string, data: any) => {
+  return await customFetch(`api/v1/template/${id}/add-image/${msgId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+};
+export const addMessageTemplate = async (id: string, data: any) => {
+  return await customFetch(`api/v1/template/${id}/add-message`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+};
+export const deleteMessageTemplate = async (id: string, messageId: string) => {
+  return await customFetch(`api/v1/template/${id}/delete-message/${messageId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+};

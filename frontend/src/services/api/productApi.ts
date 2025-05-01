@@ -21,6 +21,13 @@ export const getProducts = async (req: PaginationRequest) => {
   });
 };
 
+export const deleteProductImage = async (id: string, imageId: string) => {
+  return await customFetch(`api/v1/product/${id}/image/${imageId}`, {
+    method: "DELETE",
+  });
+};
+
+
 export const getProduct = async (id: string) => {
   return await customFetch(`api/v1/product/${id}`, {
     method: "GET",
@@ -29,6 +36,15 @@ export const getProduct = async (id: string) => {
 
 export const updateProduct = async (id: string, data: any) => {
   return await customFetch(`api/v1/product/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+};
+export const addImageProduct = async (id: string, data: any) => {
+  return await customFetch(`api/v1/product/${id}/image`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

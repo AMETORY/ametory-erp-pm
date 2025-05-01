@@ -1,4 +1,6 @@
 import { FileModel } from "./file";
+import { MemberModel } from "./member";
+import { ProductModel } from "./product";
 
 export interface TemplateModel {
   id?: string;
@@ -6,6 +8,8 @@ export interface TemplateModel {
   description?: string;
   company_id?: string;
   user_id?: string;
+  member_id?: string | null;
+  member?: MemberModel | null;
   messages?: MessageTemplate[];
 }
 
@@ -21,4 +25,5 @@ export interface MessageTemplate {
   button_text?: string;
   button_url?: string;
   files?: FileModel[];
+  products?: ProductModel[];
 }

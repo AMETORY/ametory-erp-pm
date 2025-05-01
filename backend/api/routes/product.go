@@ -17,7 +17,9 @@ func SetupProductRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		group.GET("/:id", handler.GetProductHandler)
 		group.POST("/create", handler.CreateProductHandler)
 		group.PUT("/:id", handler.UpdateProductHandler)
+
 		group.DELETE("/:id", handler.DeleteProductHandler)
+		group.DELETE("/:id/image/:imageId", handler.DeleteImageProductHandler)
 	}
 
 }

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/inventory"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
@@ -71,6 +73,16 @@ func (p *ProductHandler) UpdateProductHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "ID mismatch"})
 	}
 
+	// product, err := p.inventorySrv.ProductService.GetProductByID(id, c.Request)
+	// if err != nil {
+	// 	c.JSON(500, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
+	// for _, v := range product.ProductImages {
+	// 	p.inventorySrv.ProductService.DeleteImageOfProduct(id, v.ID)
+	// }
+
 	err = p.inventorySrv.ProductService.UpdateProduct(&input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -87,4 +99,18 @@ func (p *ProductHandler) DeleteProductHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Product deleted successfully"})
+}
+
+func (p *ProductHandler) DeleteImageProductHandler(c *gin.Context) {
+	p.ctx.Request = c.Request
+	// Implement logic to delete an image from a product
+
+	id := c.Param("id")
+	imageID := c.Param("imageId")
+	err := p.inventorySrv.ProductService.DeleteImageOfProduct(id, imageID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Image deleted from product successfully"})
 }

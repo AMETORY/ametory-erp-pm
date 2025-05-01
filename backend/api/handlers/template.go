@@ -73,6 +73,45 @@ func (h *TemplateHandler) GetTemplateDetailHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"data": template, "message": "Template detail retrieved successfully"})
 }
 
+func (h *TemplateHandler) AddMessageHandler(c *gin.Context) {
+	var input models.MessageTemplate
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	id := c.Param("id")
+	template, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.customerRelationshipService.WhatsappService.AddMessage(template.ID, &input)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Message added successfully"})
+
+}
+func (h *TemplateHandler) DeleteMessageTemplate(c *gin.Context) {
+
+	id := c.Param("id")
+	msgId := c.Param("msgId")
+	template, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.customerRelationshipService.WhatsappService.DeleteMessage(template.ID, msgId)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Message added successfully"})
+
+}
 func (h *TemplateHandler) UpdateTemplateHandler(c *gin.Context) {
 	id := c.Param("id")
 	var input models.WhatsappMessageTemplate
@@ -138,4 +177,22 @@ func IsSuperAdmin(erpContext *context.ERPContext, c *gin.Context) bool {
 		}
 	}
 	return false
+}
+
+func (p *TemplateHandler) AddImageTemplateHandler(c *gin.Context) {
+	id := c.Param("id")
+	msgId := c.Param("msgId")
+	var input models.ProductModel
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = p.customerRelationshipService.WhatsappService.AddProductWhatsappMessageTemplate(id, msgId, &input)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Product Added successfully"})
 }

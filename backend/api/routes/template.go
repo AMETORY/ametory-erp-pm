@@ -18,6 +18,10 @@ func SetupTemplateRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		templateGroup.GET("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:read"}), handler.GetTemplateDetailHandler)
 		templateGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:create"}), handler.CreateTemplateHandler)
 		templateGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:update"}), handler.UpdateTemplateHandler)
+		templateGroup.PUT("/:id/add-message", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:update"}), handler.AddMessageHandler)
+		templateGroup.PUT("/:id/add-image/:msgId", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:update"}), handler.AddImageTemplateHandler)
+		templateGroup.DELETE("/:id/delete-message/:msgId", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:update"}), handler.DeleteMessageTemplate)
 		templateGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:whatsapp_template:delete"}), handler.DeleteTemplateHandler)
+
 	}
 }
