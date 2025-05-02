@@ -148,6 +148,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	var infoStr string = "{}"
 	var responseDuration *float64
 	var lastCustMsg models.WhatsappMessageModel
+	var refID *string
 	err = h.customerRelationshipService.WhatsappService.GetWhatsappLastCustomerMessages(session.JID, session.Session, &lastCustMsg)
 	if err == nil {
 		json.Unmarshal([]byte(lastCustMsg.Info), &info)
@@ -160,12 +161,15 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		isGroup = lastCustMsg.MessageInfo["IsGroup"].(bool)
 		if lastCustMsg.IsFromMe {
 			responseDuration = lastCustMsg.ResponseTime
+			refID = lastCustMsg.RefID
 		} else {
 			var dur time.Duration = time.Since(*lastCustMsg.CreatedAt)
 			duration := dur.Seconds()
 			responseDuration = &duration
 			lastCustMsg.IsReplied = true
 			h.erpContext.DB.Save(&lastCustMsg)
+			refID = &lastCustMsg.ID
+
 		}
 
 		// fmt.Println("ERROR 2", dur)
@@ -195,6 +199,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		ResponseTime: responseDuration,
 		UserID:       &userID,
 		MemberID:     &memberID,
+		RefID:        refID,
 	}
 	now := time.Now()
 	templateID := parseTemplateID(input.Message)

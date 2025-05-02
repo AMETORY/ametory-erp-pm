@@ -1,14 +1,20 @@
-import { Button, Datepicker, Modal } from "flowbite-react";
-import { useEffect, useState, type FC } from "react";
-import { asyncStorage } from "../utils/async_storage";
-import { LOCAL_STORAGE_TOKEN } from "../utils/constants";
-import AdminLayout from "../components/layouts/admin";
-import Chart from "react-google-charts";
-import { MemberModel } from "../models/member";
-import { getMembers } from "../services/api/commonApi";
-import toast from "react-hot-toast";
+import { Datepicker, Modal } from "flowbite-react";
 import moment from "moment";
+import { useContext, useEffect, useState, type FC } from "react";
+import Chart from "react-google-charts";
+import toast from "react-hot-toast";
 import Select from "react-select";
+import AdminLayout from "../components/layouts/admin";
+import { MemberModel } from "../models/member";
+import {
+  getATRCustomerInteraction,
+  getCustomerInteraction,
+  getHourlyATR,
+  getHourlyCustomerInteraction,
+} from "../services/api/analyticApi";
+import { getMembers } from "../services/api/commonApi";
+import { HourlySumReport } from "../models/analytic";
+import { WebsocketContext } from "../contexts/WebsocketContext";
 
 interface HomeProps {}
 
@@ -34,6 +40,14 @@ const Home: FC<HomeProps> = ({}) => {
   );
   const [dateRange, setDateRange] = useState([start, end]);
   const [modalDateOpen, setModalDateOpen] = useState(false);
+  const [hourlyInteractions, setHourlyInteractions] = useState<
+    HourlySumReport[]
+  >([]);
+  const [hourlyATR, setHourlyATR] = useState<HourlySumReport[]>([]);
+  const [customerInteraction, setCustomerInteraction] = useState<any>();
+  const [averageTimeReply, setAverageTimeReply] = useState<any>();
+  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+    useContext(WebsocketContext);
 
   useEffect(() => {
     setMounted(true);
@@ -50,14 +64,73 @@ const Home: FC<HomeProps> = ({}) => {
           setMembers(res.data.items);
         })
         .catch(toast.error);
+
+      if (wsMsg?.command == "WHATSAPP_RECEIVED") {
+        getCharts();
+      }
     }
-  }, [mounted]);
+  }, [mounted,wsMsg]);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+    getCharts();
+  }, [dateRange, selectedMembers, mounted]);
+
+  const getCharts = () => {
+    getCustomerInteraction(
+      dateRange[0],
+      dateRange[1],
+      selectedMembers.map((e) => e.value)
+    )
+      .then((res: any) => {
+        setCustomerInteraction(res.data);
+      })
+      .catch((error) => {
+        toast.error(`${error}`);
+      });
+
+    getATRCustomerInteraction(
+      dateRange[0],
+      dateRange[1],
+      selectedMembers.map((e) => e.value)
+    )
+      .then((res: any) => {
+        setAverageTimeReply(res.data);
+      })
+      .catch((error) => {
+        toast.error(`${error}`);
+      });
+    getHourlyCustomerInteraction(
+      dateRange[0],
+      dateRange[1],
+      selectedMembers.map((e) => e.value)
+    )
+      .then((res: any) => {
+        setHourlyInteractions(res.data);
+      })
+      .catch((error) => {
+        toast.error(`${error}`);
+      });
+    getHourlyATR(
+      dateRange[0],
+      dateRange[1],
+      selectedMembers.map((e) => e.value)
+    )
+      .then((res: any) => {
+        setHourlyATR(res.data);
+      })
+      .catch((error) => {
+        toast.error(`${error}`);
+      });
+  };
 
   return (
     <AdminLayout>
       <div className="p-4 h-[calc(100vh-100px)] overflow-y-auto">
         <div className="flex flex-row p-2 rounded-lg bg-gray-100 min-h-[60px] justify-between items-center">
-          <div className="p-2 bg-white rounded-lg min-w-[320px]">
+          <div className="p-2 bg-white rounded-lg min-w-[320px] max-w-[600px] select-member">
             <Select
               className="w-full"
               isMulti
@@ -84,7 +157,7 @@ const Home: FC<HomeProps> = ({}) => {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div className="mt-4 border rounded-lg p-2 hover:shadow-lg cursor-pointer">
+          <div className="mt-4 border rounded-lg p-2 hover:shadow-md cursor-pointer">
             <Chart
               width="100%"
               height="300px"
@@ -92,8 +165,8 @@ const Home: FC<HomeProps> = ({}) => {
               loader={<div>Loading Chart</div>}
               data={[
                 ["Conversation", "Total"],
-                ["New Customer", Math.floor(Math.random() * 100) + 1],
-                ["Old Customer", Math.floor(Math.random() * 100) + 1],
+                ["New Customer", customerInteraction?.new ?? 0],
+                ["Existing Customer", customerInteraction?.existing ?? 0],
               ]}
               options={{
                 title: "Customer Interaction",
@@ -102,7 +175,7 @@ const Home: FC<HomeProps> = ({}) => {
               rootProps={{ "data-testid": "7" }}
             />
           </div>
-          <div className="mt-4 border rounded-lg p-2 hover:shadow-lg cursor-pointer">
+          <div className="mt-4 border rounded-lg p-2 hover:shadow-md cursor-pointer">
             <Chart
               width="100%"
               height="300px"
@@ -110,11 +183,11 @@ const Home: FC<HomeProps> = ({}) => {
               loader={<div>Loading Chart</div>}
               data={[
                 ["Conversation", "Seconds"],
-                ["ATR old Customer", Math.floor(Math.random() * 60) + 1],
-                ["ATR new Customer", Math.floor(Math.random() * 60) + 1],
+                ["New Customer", averageTimeReply?.new ?? 0],
+                ["Existing Customer", averageTimeReply?.existing ?? 0],
               ]}
               options={{
-                title: "ATR Customer Interaction",
+                title: "Averate Time Reply",
                 legend: { position: "bottom" },
                 is3D: true,
               }}
@@ -124,48 +197,40 @@ const Home: FC<HomeProps> = ({}) => {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="mt-4 border rounded-lg p-2 hover:shadow-lg cursor-pointer">
+            <div className="mt-4 border rounded-lg p-2 hover:shadow-md cursor-pointer">
               <Chart
                 width="100%"
                 height="300px"
                 chartType="ColumnChart"
                 loader={<div>Loading Chart</div>}
                 data={[
-                  ["Hour", "New Customer", "Old Customer"],
-                  ...Array.from({ length: 24 }).map((_, i) => [
-                    `${i < 10 ? "0" + i : i}:00`,
-                    Math.floor(Math.random() * 100) + 1,
-                    Math.floor(Math.random() * 100) + 1,
-                  ]),
+                  ["Hour", "New Customer", "Existing Customer"],
+                  ...hourlyInteractions.map((v) => [v.hour, v.new, v.existing]),
                 ]}
                 options={{
                   title: "Total Inbound per Hour",
                   legend: { position: "bottom" },
                   hAxis: { title: "Hour" },
                   vAxis: { title: "Number of Inbound" },
+                  tooltip: {
+                    isHtml: true,
+                    
+                  },
                 }}
                 rootProps={{ "data-testid": "1" }}
               />
             </div>
           </div>
           <div>
-            <div className="mt-4 border rounded-lg p-2 hover:shadow-lg cursor-pointer">
+            <div className="mt-4 border rounded-lg p-2 hover:shadow-md cursor-pointer">
               <Chart
                 width="100%"
                 height="300px"
                 chartType="LineChart"
                 loader={<div>Loading Chart</div>}
                 data={[
-                  ["Hour", "ATR New Customer", "ATR Old Customer"],
-                  ...Array.from({ length: 24 }).map((_, i) => [
-                    `${i < 10 ? "0" + i : i}:00`,
-                    Math.floor(Math.random() * 100) +
-                      Math.floor(Math.random() * 10) +
-                      1,
-                    Math.floor(Math.random() * 100) +
-                      Math.floor(Math.random() * 10) +
-                      1,
-                  ]),
+                  ["Hour", "New Customer", "Existing Customer"],
+                  ...hourlyATR.map((v) => [v.hour, v.new, v.existing]),
                 ]}
                 options={{
                   title: "ATR per Hour",
@@ -173,6 +238,11 @@ const Home: FC<HomeProps> = ({}) => {
                   hAxis: { title: "Hour" },
                   vAxis: { title: "Second" },
                   curveType: "function",
+                  tooltip: {
+                    isHtml: true,
+
+                  },
+
                 }}
                 rootProps={{ "data-testid": "2" }}
               />
@@ -289,8 +359,11 @@ const Home: FC<HomeProps> = ({}) => {
                     onClick={() => {
                       const yesterday = new Date();
                       yesterday.setDate(yesterday.getDate() - 1);
-                      yesterday.setHours(23, 59, 59, 999);
-                      setDateRange([yesterday, yesterday]);
+                      yesterday.setHours(0, 0, 0, 0);
+                      const end = new Date();
+                      end.setDate(end.getDate() - 1);
+                      end.setHours(23, 59, 59, 999);
+                      setDateRange([yesterday, end]);
                     }}
                   >
                     Yesterday
@@ -321,7 +394,9 @@ const Home: FC<HomeProps> = ({}) => {
                         1
                       );
                       firstDayOfMonth.setHours(0, 0, 0, 0);
-                      const end = moment(firstDayOfMonth).endOf("month").toDate();
+                      const end = moment(firstDayOfMonth)
+                        .endOf("month")
+                        .toDate();
                       end.setHours(23, 59, 59, 999);
                       setDateRange([firstDayOfMonth, end]);
                     }}

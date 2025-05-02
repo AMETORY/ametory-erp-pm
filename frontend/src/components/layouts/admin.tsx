@@ -1,33 +1,25 @@
 import { useContext, useEffect, useState, type FC } from "react";
-import {
-  HiArrowSmRight,
-  HiChartPie,
-  HiInbox,
-  HiShoppingBag,
-  HiTable,
-  HiUser,
-} from "react-icons/hi";
-import Topnav from "../topnav";
+import { Toaster } from "react-hot-toast";
+import useWebSocket, { ReadyState } from "react-use-websocket";
 import { CollapsedContext } from "../../contexts/CollapsedContext";
-import Sidebar from "../sidebar";
-import { getProfile } from "../../services/api/authApi";
 import {
   ActiveCompanyContext,
   CompaniesContext,
   CompanyIDContext,
 } from "../../contexts/CompanyContext";
-import useWebSocket, { ReadyState } from "react-use-websocket";
+import { LoadingContext } from "../../contexts/LoadingContext";
+import { MemberContext, ProfileContext } from "../../contexts/ProfileContext";
+import { WebsocketContext } from "../../contexts/WebsocketContext";
+import { getProfile } from "../../services/api/authApi";
+import { getSetting } from "../../services/api/commonApi";
 import { asyncStorage } from "../../utils/async_storage";
 import {
   LOCAL_STORAGE_COMPANY_ID,
   LOCAL_STORAGE_TOKEN,
 } from "../../utils/constants";
-import { WebsocketContext } from "../../contexts/WebsocketContext";
-import { MemberContext, ProfileContext } from "../../contexts/ProfileContext";
-import { Toaster } from "react-hot-toast";
 import Loading from "../Loading";
-import { LoadingContext } from "../../contexts/LoadingContext";
-import { getSetting } from "../../services/api/commonApi";
+import Sidebar from "../sidebar";
+import Topnav from "../topnav";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
