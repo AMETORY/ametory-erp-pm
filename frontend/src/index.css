@@ -161,3 +161,22 @@ label {
 [data-testid="table-element"] > div {
   @apply  !drop-shadow-none border
 }
+
+.daterange {
+  @apply border border-gray-300 rounded-md
+}
+.daterange input {
+  @apply !border-none !outline-none
+}
+.daterange input:focus {
+  @apply !border-none !outline-0
+}
+
+.daterange .focus\:ring-blue-500:focus {
+  --tw-ring-opacity: 0;
+  --tw-ring-color: none;
+}
+.daterange .focus\:ring-cyan-500:focus {
+  --tw-ring-opacity: 0;
+  --tw-ring-color: none;
+}

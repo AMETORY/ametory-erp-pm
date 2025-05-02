@@ -1,6 +1,9 @@
 package app
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type ColumnTemplate struct {
 	Industry string `json:"industry"`
@@ -12,6 +15,16 @@ type ColumnTemplate struct {
 }
 
 var templates = `[
+    {
+      "industry": "Default",
+      "columns": [
+        { "name": "New Chat", "icon": "💬", "color": "#B3E5FC" },
+        { "name": "Prospek", "icon": "💼", "color": "#4CAF50" },
+        { "name": "Payment Link", "icon": "💸", "color": "#81C784" },
+        { "name": "Order", "icon": "🛍️", "color": "#FFC107" },
+        { "name": "Solved", "icon": "🤝", "color": "#4CAF50" }
+      ]
+    },
     {
       "industry": "IT & Software Development",
       "columns": [
@@ -197,7 +210,7 @@ func (a AppService) CreateDefaultColumnsFromTemplate() []ColumnTemplate {
 	columns := []ColumnTemplate{}
 	err := json.Unmarshal([]byte(templates), &columns)
 	if err != nil {
-
+		fmt.Println("ERROR", err)
 	}
 	return columns
 }

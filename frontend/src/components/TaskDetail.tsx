@@ -38,6 +38,7 @@ import {
   BsFloppy,
   BsPencil,
   BsQuote,
+  BsTrash,
   BsWhatsapp,
   BsYoutube,
 } from "react-icons/bs";
@@ -74,6 +75,7 @@ import { generateContent } from "../services/api/geminiApi";
 import {
   addComment,
   addTaskPlugin,
+  deleteTask,
   getTask,
   getTaskPluginData,
   getTaskPlugins,
@@ -208,9 +210,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
     });
   };
   useEffect(() => {
-    fetch(
-      process.env.REACT_APP_BASE_URL+"/assets/static/emojis.json"
-    )
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
       .then((response) => {
         return response.json();
       })
@@ -1049,6 +1049,26 @@ const TaskDetail: FC<TaskDetailProps> = ({
               <RiFullscreenFill
                 className="cursor-pointer"
                 onClick={onSwitchFullscreen}
+              />
+            </Tooltip>
+            <Tooltip content="Delete Task" placement="left">
+              <BsTrash
+                className="cursor-pointer text-red-400 hover:text-red-600"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Are you sure you want to delete this task? This action is irreversible."
+                    )
+                  ) {
+                    deleteTask(task.id!)
+                      .catch(toast.error)
+                      .then(() => {
+                        toast.success("Task deleted successfully");
+                        setIsEditted(false);
+                        setActiveTask(undefined);
+                      });
+                  }
+                }}
               />
             </Tooltip>
           </div>
