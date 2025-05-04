@@ -1,5 +1,6 @@
 import { ConnectionModel } from "./connection";
 import { ContactModel } from "./contact";
+import { TemplateModel } from "./template";
 
 export interface BroadcastModel {
   id?: string;
@@ -17,6 +18,9 @@ export interface BroadcastModel {
   group_count?: number;
   success_count?: number;
   completed_count?: number;
+  template_id?: string;
+  template?: TemplateModel;
+  delay_time?: number;
 }
 
 export interface MessageLog {

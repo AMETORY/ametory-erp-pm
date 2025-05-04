@@ -71,6 +71,8 @@ func (h *BroadcastHandler) CreateBroadcastHandler(c *gin.Context) {
 	}
 	companyID := c.GetHeader("ID-Company")
 	input.CompanyID = &companyID
+	memberID := c.MustGet("memberID").(string)
+	input.MemberID = &memberID
 	err := h.broadcastServ.CreateBroadcast(&input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

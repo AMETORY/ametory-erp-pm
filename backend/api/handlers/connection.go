@@ -195,7 +195,8 @@ func (h *ConnectionHandler) ConnectDeviceHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err := h.whatsappWebService.CreateQR(connection.SessionName, fmt.Sprintf("%s/api/v1/whatsapp-webhook", config.App.Server.BaseURL), connection.APIKey)
+	baseURL := config.App.Server.BaseURL
+	resp, err := h.whatsappWebService.CreateQR(connection.SessionName, fmt.Sprintf("%s/api/v1/whatsapp-webhook", baseURL), connection.APIKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -9,16 +9,24 @@ import {
   Table,
   Textarea,
   TextInput,
+  ToggleSwitch,
 } from "flowbite-react";
 import { Mention, MentionsInput } from "react-mentions";
 import { PaginationResponse } from "../objects/pagination";
-import { createBroadcast, getBroadcasts } from "../services/api/broadcastApi";
+import {
+  createBroadcast,
+  deleteBroadcast,
+  getBroadcasts,
+} from "../services/api/broadcastApi";
 import { SearchContext } from "../contexts/SearchContext";
 import { LoadingContext } from "../contexts/LoadingContext";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { BroadcastModel } from "../models/broadcast";
 import { parseMentions } from "../utils/helper-ui";
+import { TemplateModel } from "../models/template";
+import { getTemplates } from "../services/api/templateApi";
+import Select from "react-select";
 
 interface BroadcastPageProps {}
 const neverMatchingRegex = /($a)/;
@@ -34,6 +42,9 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [description, setDescription] = useState("");
   const [broadcasts, setBroadcasts] = useState<BroadcastModel[]>([]);
+  const [useTemplate, setUseTemplate] = useState(false);
+  const [templates, setTemplates] = useState<TemplateModel[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateModel>();
   const nav = useNavigate();
   useEffect(() => {
     setMounted(true);
@@ -41,16 +52,21 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
 
   useEffect(() => {
     if (mounted) {
-      getBroadcasts({ page, size, search }).then((res: any) => {
-        setBroadcasts(res.data);
-        setPagination(res.pagination);
+      getAllBroadcast();
+      getTemplates({ page: 1, size: 100 }).then((res: any) => {
+        setTemplates(res.data.items);
       });
     }
   }, [mounted, page, size, search]);
+
+  const getAllBroadcast = () => {
+    getBroadcasts({ page, size, search }).then((res: any) => {
+      setBroadcasts(res.data);
+      setPagination(res.pagination);
+    });
+  };
   useEffect(() => {
-    fetch(
-      process.env.REACT_APP_BASE_URL+"/assets/static/emojis.json"
-    )
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
       .then((response) => {
         return response.json();
       })
@@ -75,12 +91,16 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
         toast.error("description is required");
         return;
       }
-      if (message.trim().length === 0) {
+      if (message.trim().length === 0 && selectedTemplate === undefined) {
         toast.error("Message is required");
         return;
       }
       setLoading(true);
-      let resp: any = await createBroadcast({ message, description });
+      let resp: any = await createBroadcast({
+        message,
+        description,
+        template_id: selectedTemplate?.id,
+      });
       nav(`/broadcast/${resp.data.id}`);
     } catch (error) {
       toast.error(`${error}`);
@@ -125,13 +145,36 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                 <Table.Cell>
                   {parseMentions(broadcast.message, () => {})}
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className="flex items-center justify-center gap-2">
                   <a
                     href="#"
                     className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
                     onClick={() => nav(`/broadcast/${broadcast.id}`)}
                   >
                     View
+                  </a>
+                  <a
+                    href="#"
+                    className="font-medium text-red-600 hover:underline dark:text-red-500"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Are you sure you want to delete this broadcast?"
+                        )
+                      ) {
+                        setLoading(true);
+                        deleteBroadcast(broadcast.id)
+                          .then(() => {
+                            getAllBroadcast();
+                          })
+                          .catch(() => {
+                            toast.error("Delete failed");
+                          })
+                          .finally(() => setLoading(false));
+                      }
+                    }}
+                  >
+                    Delete
                   </a>
                 </Table.Cell>
               </Table.Row>
@@ -152,7 +195,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
         <Modal show={showModal} onClose={() => setShowModal(false)}>
           <Modal.Header>Create new broadcast</Modal.Header>
           <Modal.Body>
-            <form>
+            <form className="pb-32 space-y-4">
               <div className="mb-2 block">
                 <Label htmlFor="description" value="Description" />
                 <Textarea
@@ -163,39 +206,74 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
-              <div className="mb-2 block">
-                <Label htmlFor="message" value="Message" />
+              {!useTemplate && (
+                <div className="mb-2 block">
+                  <Label htmlFor="message" value="Message" />
 
-                <MentionsInput
-                  value={message}
-                  onChange={(val) => {
-                    setMessage(val.target.value);
-                  }}
-                  style={emojiStyle}
-                  placeholder={
-                    "Press ':' for emojis, and template using '@' and shift+enter to send"
-                  }
-                  autoFocus
-                >
-                  <Mention
-                    trigger="@"
-                    data={[
-                      { id: "{{user}}", display: "Full Name" },
-                      { id: "{{phone}}", display: "Phone Number" },
-                    ]}
-                    style={{
-                      backgroundColor: "#cee4e5",
+                  <MentionsInput
+                    value={message}
+                    onChange={(val) => {
+                      setMessage(val.target.value);
                     }}
-                    appendSpaceOnAdd
-                  />
-                  <Mention
-                    trigger=":"
-                    markup="__id__"
-                    regex={neverMatchingRegex}
-                    data={queryEmojis}
-                  />
-                </MentionsInput>
+                    style={emojiStyle}
+                    placeholder={
+                      "Press ':' for emojis, and template using '@' and shift+enter to send"
+                    }
+                    autoFocus
+                  >
+                    <Mention
+                      trigger="@"
+                      data={[
+                        { id: "{{user}}", display: "Full Name" },
+                        { id: "{{phone}}", display: "Phone Number" },
+                      ]}
+                      style={{
+                        backgroundColor: "#cee4e5",
+                      }}
+                      appendSpaceOnAdd
+                    />
+                    <Mention
+                      trigger=":"
+                      markup="__id__"
+                      regex={neverMatchingRegex}
+                      data={queryEmojis}
+                    />
+                  </MentionsInput>
+                </div>
+              )}
+
+              <div>
+                <ToggleSwitch
+                  checked={useTemplate}
+                  onChange={(e) => {
+                    setUseTemplate(e);
+                    if (e) {
+                      setMessage("");
+                    }
+                  }}
+                  label="Use Template"
+                />
               </div>
+              {useTemplate && (
+                <div>
+                  <Label>Template</Label>
+                  <Select
+                    options={templates.map((t: any) => ({
+                      value: t.id,
+                      label: t.title,
+                    }))}
+                    value={{
+                      value: selectedTemplate?.id,
+                      label: selectedTemplate?.title,
+                    }}
+                    onChange={(val) =>
+                      setSelectedTemplate(
+                        templates.find((t: any) => t.id === val?.value)
+                      )
+                    }
+                  />
+                </div>
+              )}
             </form>
           </Modal.Body>
           <Modal.Footer>

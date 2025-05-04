@@ -75,9 +75,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   }, []);
 
   useEffect(() => {
-    fetch(
-      process.env.REACT_APP_BASE_URL+"/assets/static/emojis.json"
-    )
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
       .then((response) => {
         return response.json();
       })
@@ -167,48 +165,63 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <p className="">{broadcast?.description}</p>
               )}
             </div>
-            <div>
-              <Label>Message</Label>
-              <p className="">
-                {isEditable ? (
-                  <MentionsInput
-                    value={broadcast?.message ?? ""}
-                    onChange={(val) => {
-                      setBroadcast({
-                        ...broadcast!,
-                        message: val.target.value,
-                      });
-                    }}
-                    style={emojiStyle}
-                    placeholder={
-                      "Press ':' for emojis, and template using '@' and shift+enter to send"
-                    }
-                    autoFocus
-                  >
-                    <Mention
-                      trigger="@"
-                      data={[
-                        { id: "{{user}}", display: "Full Name" },
-                        { id: "{{phone}}", display: "Phone Number" },
-                        { id: "{{agent}}", display: "Agent Name" },
-                      ]}
-                      style={{
-                        backgroundColor: "#cee4e5",
-                      }}
-                      appendSpaceOnAdd
-                    />
-                    <Mention
-                      trigger=":"
-                      markup="__id__"
-                      regex={neverMatchingRegex}
-                      data={queryEmojis}
-                    />
-                  </MentionsInput>
-                ) : (
-                  parseMentions(broadcast?.message ?? "", (type, id) => {})
+            {broadcast?.template_id ? (
+              <div>
+                <Label>Template</Label>
+                <div>{broadcast?.template?.title}</div>
+                {(broadcast?.template?.messages ?? []).map(
+                  (msg: any, index: number) => (
+                    <div className="p-4 border rounded-lg">
+                      {parseMentions(msg.body, () => {})}
+                    </div>
+                  )
                 )}
-              </p>
-            </div>
+              </div>
+            ) : (
+              <div>
+                <Label>Message</Label>
+                <p className="">
+                  {isEditable ? (
+                    <MentionsInput
+                      value={broadcast?.message ?? ""}
+                      onChange={(val) => {
+                        setBroadcast({
+                          ...broadcast!,
+                          message: val.target.value,
+                        });
+                      }}
+                      style={emojiStyle}
+                      placeholder={
+                        "Press ':' for emojis, and template using '@' and shift+enter to send"
+                      }
+                      autoFocus
+                    >
+                      <Mention
+                        trigger="@"
+                        data={[
+                          { id: "{{user}}", display: "Full Name" },
+                          { id: "{{phone}}", display: "Phone Number" },
+                          { id: "{{agent}}", display: "Agent Name" },
+                        ]}
+                        style={{
+                          backgroundColor: "#cee4e5",
+                        }}
+                        appendSpaceOnAdd
+                      />
+                      <Mention
+                        trigger=":"
+                        markup="__id__"
+                        regex={neverMatchingRegex}
+                        data={queryEmojis}
+                      />
+                    </MentionsInput>
+                  ) : (
+                    parseMentions(broadcast?.message ?? "", (type, id) => {})
+                  )}
+                </p>
+              </div>
+            )}
+
             <div>
               <Label>Status</Label>
               <div className="w-fit">
@@ -254,6 +267,16 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <Button
                   color="success"
                   onClick={() => {
+                    if ((broadcast.connections ?? []).length === 0) {
+                      toast.error(
+                        "Broadcast must have at least one connection"
+                      );
+                      return;
+                    }
+                    if ((broadcast.contacts ?? []).length === 0) {
+                      toast.error("Broadcast must have at least one contact");
+                      return;
+                    }
                     setLoading(true);
                     updateBroadcast(broadcast?.id!, {
                       ...broadcast,
@@ -358,6 +381,24 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             </div>
           </div>
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
+            <div>
+              <Label>Delay Time (ms)</Label>
+              {isEditable ? (
+                <TextInput
+                  type="number"
+                  disabled={!isEditable}
+                  value={broadcast?.delay_time ?? 0}
+                  onChange={(val) => {
+                    setBroadcast({
+                      ...broadcast!,
+                      delay_time: Number(val.target.value),
+                    });
+                  }}
+                />
+              ) : (
+                <div>{broadcast?.delay_time ?? 0}ms</div>
+              )}
+            </div>
             <div>
               <Label>Scheduled At</Label>
               {isEditable ? (
@@ -487,27 +528,35 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             </div>
             <div>
               <Label>Progress</Label>
-              <p className="">{money((broadcast?.completed_count ?? 0)/(broadcast?.contact_count ?? 0) * 100)}%</p>
+              <p className="">
+                {money(
+                  ((broadcast?.completed_count ?? 0) /
+                    (broadcast?.contact_count ?? 0)) *
+                    100
+                )}
+                %
+              </p>
             </div>
 
-            {broadcast?.status === "COMPLETED" && (
-              <Chart
-                chartType="PieChart"
-                width="100%"
-                height="300px"
-                data={[
-                  ["Status", "Count"],
-                  ["Succeed", broadcast?.success_count ?? 0],
-                  ["Failed", broadcast?.failed_count ?? 0],
-                ]}
-                options={{
-                  colors: ["#10b981", "#ef4444", "#f59e0b"],
-                  pieHole: 0.4,
-                  legend: { position: "bottom" },
-                  is3D: true,
-                }}
-              />
-            )}
+            {broadcast?.status === "COMPLETED" ||
+              (broadcast?.status === "PROCESSING" && (
+                <Chart
+                  chartType="PieChart"
+                  width="100%"
+                  height="300px"
+                  data={[
+                    ["Status", "Count"],
+                    ["Succeed", broadcast?.success_count ?? 0],
+                    ["Failed", broadcast?.failed_count ?? 0],
+                  ]}
+                  options={{
+                    colors: ["#10b981", "#ef4444", "#f59e0b"],
+                    pieHole: 0.4,
+                    legend: { position: "bottom" },
+                    is3D: true,
+                  }}
+                />
+              ))}
           </div>
         </div>
         <div className="bg-white border rounded p-6 flex flex-col space-y-4">

@@ -3,7 +3,7 @@ import React from "react";
 const mentionPattern = /([@#])\[([^\]]+)\]\(([^)]+)\)/g;
 
 export const parseMentions = (text: string, handleClick: (type: string, id: string) => void): JSX.Element[] => {
-    text = text.replaceAll("\n", "<br />")
+    // text = text.replaceAll("\n", "<br />")
     const parts = text.split(mentionPattern);
   
     // Process the parts to create React elements
@@ -17,8 +17,10 @@ export const parseMentions = (text: string, handleClick: (type: string, id: stri
       const id = parts[i + 3];
   
       // Add text before mention
-      if (before)
-      elements.push(<span key={`text-${i}`}>{before.split("<br />").map((t, i) => <React.Fragment key={i}>{t}</React.Fragment>)}</span>);
+      if (before) {
+        elements.push(<span key={`text-${i}`} style={{whiteSpace: "pre-wrap"}}>{before}</span>);
+        
+      }
   
       // Add mention element based on prefix
       if (prefix && name && id) {
@@ -63,8 +65,6 @@ export const parseMentions = (text: string, handleClick: (type: string, id: stri
   
       i += 4; // Move to the next group of parts
     }
-  
     return elements;
   };
-  
   

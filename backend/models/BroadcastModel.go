@@ -27,6 +27,11 @@ type BroadcastModel struct {
 	SuccessCount        int                          `json:"success_count" gorm:"-"`
 	FailedCount         int                          `json:"failed_count" gorm:"-"`
 	CompletedCount      int                          `json:"completed_count" gorm:"-"`
+	TemplateID          *string                      `json:"template_id,omitempty"`
+	Template            any                          `gorm:"-" json:"template,omitempty"`
+	MemberID            *string                      `json:"member_id,omitempty" gorm:"column:member_id;constraint:OnDelete:CASCADE;"`
+	Member              *models.MemberModel          `gorm:"foreignKey:MemberID" json:"member,omitempty"`
+	DelayTime           int                          `json:"delay_time" gorm:"default:1000"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
@@ -56,6 +61,12 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 	b.SuccessCount = int(countData.Success)
 	b.FailedCount = int(countData.Failed)
 	b.CompletedCount = int(countData.Complete)
+
+	if b.TemplateID != nil {
+		var template models.WhatsappMessageTemplate
+		tx.Model(&models.WhatsappMessageTemplate{}).Where("id = ?", *b.TemplateID).First(&template)
+		b.Template = template
+	}
 
 	return nil
 }

@@ -10,8 +10,10 @@ import (
 	"math/rand"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
@@ -25,9 +27,10 @@ import (
 )
 
 type BroadcastService struct {
-	ctx              *context.ERPContext
-	appService       *AppService
-	whatsmeowService *whatsmeow_client.WhatsmeowService
+	ctx                         *context.ERPContext
+	appService                  *AppService
+	whatsmeowService            *whatsmeow_client.WhatsmeowService
+	customerRelationshipService *customer_relationship.CustomerRelationshipService
 }
 
 func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
@@ -47,10 +50,16 @@ func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
 	if !ok {
 		panic("ThirdPartyServices is not instance of whatsmeow_client.WhatsmeowService")
 	}
+	var customerRelationshipService *customer_relationship.CustomerRelationshipService
+	customerRelationshipSrv, ok := ctx.CustomerRelationshipService.(*customer_relationship.CustomerRelationshipService)
+	if ok {
+		customerRelationshipService = customerRelationshipSrv
+	}
 	return &BroadcastService{
-		ctx:              ctx,
-		appService:       appService,
-		whatsmeowService: whatsmeowService,
+		ctx:                         ctx,
+		appService:                  appService,
+		whatsmeowService:            whatsmeowService,
+		customerRelationshipService: customerRelationshipService,
 	}
 }
 
@@ -201,7 +210,7 @@ func (s *BroadcastService) startBroadcast(b *models.BroadcastModel) {
 	utils.LogJson((batches))
 	for i, batch := range batches {
 		sender := b.Connections[i%len(b.Connections)]
-		go s.sendBatchWithDelay(sender, b.ID, batch, 1*time.Second)
+		go s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Millisecond)
 		var group = models.BroadcastGrouping{
 			BaseModel:   shared.BaseModel{ID: uuid.New().String()},
 			BroadcastID: b.ID,
@@ -305,27 +314,115 @@ func (b *BroadcastService) sendWithRetryHandling(
 	retryHandler func(retry models.MessageRetry),
 ) {
 	var broadcast models.BroadcastModel
-	b.ctx.DB.Where("id = ?", broadcastID).First(&broadcast)
+	b.ctx.DB.Where("id = ?", broadcastID).Preload("Member.User").First(&broadcast)
 	time.Sleep(delay)
 	var success bool
 	if config.App.Server.SimulateBroadcast {
+		if broadcast.TemplateID == nil {
+			success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Member, broadcast.Message))
+		} else {
+			// USE TEMPLATE
+			var template mdl.WhatsappMessageTemplate
+			template, err := b.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*broadcast.TemplateID)
+			if err == nil {
+				for _, v := range template.Messages {
+					success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Member, v.Body))
+					for _, file := range v.Files {
+						fmt.Println("SIMULATE SEND FILE", file.URL)
+					}
+				}
+			}
 
-		success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Message))
+		}
 	} else {
 		if contact.Phone != nil {
-			waData := whatsmeow_client.WaMessage{
-				JID:     sender.Session,
-				Text:    parseMsgTemplate(contact, broadcast.Message),
-				To:      *contact.Phone,
-				IsGroup: false,
+			if broadcast.TemplateID == nil {
+				waData := whatsmeow_client.WaMessage{
+					JID:     sender.Session,
+					Text:    parseMsgTemplate(contact, broadcast.Member, broadcast.Message),
+					To:      *contact.Phone,
+					IsGroup: false,
+				}
+
+				_, err := b.whatsmeowService.SendMessage(waData)
+				if err != nil {
+					success = false
+				} else {
+					success = true
+				}
+			} else {
+				// USE TEMPLATE
+
+				var template mdl.WhatsappMessageTemplate
+				template, err := b.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*broadcast.TemplateID)
+				if err == nil {
+					for _, msg := range template.Messages {
+						waData := whatsmeow_client.WaMessage{
+							JID:     sender.Session,
+							Text:    parseMsgTemplate(contact, broadcast.Member, msg.Body),
+							To:      *contact.Phone,
+							IsGroup: false,
+						}
+						_, err := b.whatsmeowService.SendMessage(waData)
+						if err != nil {
+							success = false
+						} else {
+							success = true
+						}
+
+						for _, v := range msg.Files {
+							if strings.Contains(v.MimeType, "image") && v.URL != "" {
+								resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+									JID:      sender.Session,
+									Text:     "",
+									To:       *contact.Phone,
+									IsGroup:  false,
+									FileType: "image",
+									FileUrl:  v.URL,
+								})
+								fmt.Println("RESPONSE", resp)
+							} else {
+								resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+									JID:      sender.Session,
+									Text:     "",
+									To:       *contact.Phone,
+									IsGroup:  false,
+									FileType: "document",
+									FileUrl:  v.URL,
+								})
+								fmt.Println("RESPONSE", resp)
+							}
+
+						}
+						for _, v := range msg.Products {
+							desc := ""
+							var images []mdl.FileModel
+							b.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+
+							if v.Description != nil {
+								desc = *v.Description
+							}
+							dataMsg := fmt.Sprintf(`*%s*
+_%s_
+
+%s
+				`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
+							productMsg := whatsmeow_client.WaMessage{
+								JID:      sender.Session,
+								Text:     dataMsg,
+								To:       *contact.Phone,
+								IsGroup:  false,
+								FileType: "image",
+							}
+							resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
+							fmt.Println("RESPONSE", resp)
+
+						}
+					}
+				}
+
 			}
 
-			_, err := b.whatsmeowService.SendMessage(waData)
-			if err != nil {
-				success = false
-			} else {
-				success = true
-			}
 		}
 	}
 
@@ -420,7 +517,7 @@ func (s BroadcastService) logHandler(log models.MessageLog) {
 	s.ctx.DB.Create(&log)
 }
 
-func parseMsgTemplate(contact mdl.ContactModel, msg string) string {
+func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg string) string {
 	re := regexp.MustCompile(`@\[([^\]]+)\]|\(\{\{([^}]+)\}\}\)`)
 
 	// Replace
@@ -436,6 +533,10 @@ func parseMsgTemplate(contact mdl.ContactModel, msg string) string {
 		}
 		if matches[0] == "({{phone}})" {
 			return *contact.Phone
+		}
+
+		if matches[0] == "({{agent}})" && member != nil {
+			return member.User.FullName
 		}
 		return s // Kalau tidak ada datanya, biarkan
 	})
