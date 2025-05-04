@@ -1,8 +1,18 @@
 import { Button, Label, Modal, TextInput } from "flowbite-react";
-import type { FC } from "react";
-import { ColumnModel } from "../models/column";
-import { updateColumn } from "../services/api/projectApi";
+import { useEffect, useState, type FC } from "react";
+import { ColumnActionModel, ColumnModel } from "../models/column";
+import Select from "react-select";
+import {
+  addNewColumnAction,
+  deleteColumnAction,
+  editColumnAction,
+  getColumn,
+  updateColumn,
+} from "../services/api/projectApi";
 import toast from "react-hot-toast";
+import { Mention, MentionsInput } from "react-mentions";
+import { parseMentions } from "../utils/helper-ui";
+const neverMatchingRegex = /($a)/;
 
 interface ModalColumnProps {
   projectId: string;
@@ -10,6 +20,7 @@ interface ModalColumnProps {
   showModal: boolean;
   setShowModal: (val: boolean) => void;
   onChangeColumn: (column: ColumnModel) => void;
+  onAddAction: (column: ColumnModel) => void;
 }
 
 const ModalColumn: FC<ModalColumnProps> = ({
@@ -18,68 +29,419 @@ const ModalColumn: FC<ModalColumnProps> = ({
   showModal,
   setShowModal,
   onChangeColumn,
+  onAddAction,
 }) => {
+  const [selectedAction, setSelectedAction] = useState<ColumnActionModel>();
+  const [emojis, setEmojis] = useState([]);
+  let triggers = [
+    {
+      label: "IDLE",
+      value: "IDLE",
+    },
+    {
+      label: "Move In",
+      value: "MOVE_IN",
+    },
+    {
+      label: "Move Out",
+      value: "MOVE_OUT",
+    },
+  ];
+  let idleTimeType = [
+    {
+      label: "Days",
+      value: "days",
+    },
+    {
+      label: "Hours",
+      value: "hours",
+    },
+    {
+      label: "Minutes",
+      value: "minutes",
+    },
+  ];
+
+  useEffect(() => {
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
+      .then((response) => {
+        return response.json();
+      })
+      .then((jsonData) => {
+        setEmojis(jsonData.emojis);
+      });
+  }, []);
+  const queryEmojis = (query: any, callback: (emojis: any) => void) => {
+    if (query.length === 0) return;
+
+    const matches = emojis
+      .filter((emoji: any) => {
+        return emoji.name.indexOf(query.toLowerCase()) > -1;
+      })
+      .slice(0, 10);
+    return matches.map(({ emoji }) => ({ id: emoji }));
+  };
   return (
-    <Modal show={showModal} onClose={() => setShowModal(false)}>
-      <Modal.Header>Edit Column</Modal.Header>
-      <Modal.Body className="space-y-6">
-        <div>
-          <div className="mb-2 block">
-            <Label htmlFor="icon" value=" Icon" />
+    <>
+      <Modal size="4xl" show={showModal} onClose={() => setShowModal(false)}>
+        <Modal.Header>Edit Column</Modal.Header>
+        <Modal.Body className="space-y-6">
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="icon" value=" Icon" />
+            </div>
+            <TextInput
+              id="icon"
+              value={column.icon}
+              onChange={(e) =>
+                onChangeColumn({ ...column, icon: e.target.value })
+              }
+              placeholder=" Icon"
+            />
           </div>
-          <TextInput
-            id="icon"
-            value={column.icon}
-            onChange={(e) =>
-              onChangeColumn({ ...column, icon: e.target.value })
-            }
-            placeholder=" Icon"
-          />
-        </div>
-        <div>
-          <div className="mb-2 block">
-            <Label htmlFor="name" value="Name" />
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="name" value="Name" />
+            </div>
+            <TextInput
+              id="name"
+              value={column.name}
+              onChange={(e) =>
+                onChangeColumn({ ...column, name: e.target.value })
+              }
+              placeholder="Name"
+            />
           </div>
-          <TextInput
-            id="name"
-            value={column.name}
-            onChange={(e) =>
-              onChangeColumn({ ...column, name: e.target.value })
-            }
-            placeholder="Name"
-          />
-        </div>
-        <div>
-          <div className="mb-2 block">
-            <Label htmlFor="color" value="Color" />
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="color" value="Color" />
+            </div>
+            <input
+              id="color"
+              type="color"
+              value={column.color}
+              onChange={(e) =>
+                onChangeColumn({ ...column, color: e.target.value })
+              }
+            />
           </div>
-          <input
-            id="color"
-            type="color"
-            value={column.color}
-            onChange={(e) =>
-              onChangeColumn({ ...column, color: e.target.value })
-            }
-          />
-        </div>
-      </Modal.Body>
-      <Modal.Footer className="flex justify-end">
-        <Button
-          onClick={() => {
-            updateColumn(projectId!, {
-              ...column,
-            })
-              .then(() => setShowModal(false))
-              .catch(toast.error);
-          }}
-        >
-          Save
-        </Button>
-        <Button color="gray" onClick={() => setShowModal(false)}>
-          Cancel
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          <div>
+            <div className="mb-2 block">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="action" value="Actions" />
+                <Button
+                  size="xs"
+                  color="gray"
+                  onClick={() => {
+                    addNewColumnAction(projectId!, column!.id!, {
+                      name: "New Action",
+                      action: "send_whatsapp_message",
+                      action_trigger: "IDLE",
+                      action_data: {
+                        message: "Hello",
+                        idle_time: 1,
+                        idle_time_type: "days",
+                      },
+                    }).then(() => {
+                      getColumn(projectId!, column!.id!).then((resp: any) => {
+                        onChangeColumn(resp.data);
+                        onAddAction(resp.data);
+                      });
+                    });
+                  }}
+                >
+                  + Action
+                </Button>
+              </div>
+              <table className="w-full text-sm mt-4">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="text-left px-2 py-2 border">Name</th>
+                    <th className="text-left px-2 py-2 border">
+                      Action Trigger
+                    </th>
+                    <th className="text-left px-2 py-2 border">Action</th>
+                    <th className="text-left px-2 py-2 border">Action Data</th>
+                    <th className="text-left px-2 py-2 border"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {column.actions?.map((action) => (
+                    <tr key={action.id}>
+                      <td className="px-2 py-2 border">{action.name}</td>
+                      <td className="px-2 py-2 border">
+                        {action.action_trigger.replaceAll("_", " ")}
+                      </td>
+                      <td className="px-2 py-2 border">
+                        {action.action.toUpperCase().replaceAll("_", " ")}
+                      </td>
+
+                      <td className="px-2 py-2 border">
+                        {Object.keys(action.action_data).map((key) => (
+                          <div key={key}>
+                            <Label>
+                              {key
+                                .replaceAll("_", " ")
+                                .replace(/^\w/, (c) => c.toUpperCase())}
+                            </Label>
+                            <div>{key == "message" ? parseMentions(action.action_data[key], (type, id) => {}) : action.action_data[key]}</div>
+                          </div>
+                        ))}
+                      </td>
+                      <td className="px-2 py-2 border">
+                        <a
+                          href="#"
+                          className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
+                          onClick={() => setSelectedAction(action)}
+                        >
+                          Edit
+                        </a>
+                        <a
+                          href="#"
+                          className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
+                          onClick={(el) => {
+                            el.preventDefault();
+                            if (
+                              window.confirm(
+                                `Are you sure you want to delete  ${action.name}?`
+                              )
+                            ) {
+                              deleteColumnAction(
+                                projectId!,
+                                column!.id!,
+                                action!.id!
+                              ).then(() => {
+                                getColumn(projectId!, column!.id!).then(
+                                  (resp: any) => {
+                                    onChangeColumn(resp.data);
+                                    onAddAction(resp.data);
+                                  }
+                                );
+                              });
+                            }
+                          }}
+                        >
+                          Delete
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="flex justify-end">
+          <Button
+            onClick={() => {
+              updateColumn(projectId!, {
+                ...column,
+              })
+                .then(() => setShowModal(false))
+                .catch(toast.error);
+            }}
+          >
+            Save
+          </Button>
+          <Button color="gray" onClick={() => setShowModal(false)}>
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        dismissible
+        show={!!selectedAction}
+        onClose={() => setSelectedAction(undefined)}
+      >
+        <Modal.Header>Edit Action</Modal.Header>
+        <Modal.Body className="space-y-6">
+          <div className="flex flex-col space-y-4 pb-32">
+            <div>
+              <Label htmlFor="name" value="Name" />
+              <TextInput
+                id="name"
+                value={selectedAction?.name}
+                onChange={(e) =>
+                  setSelectedAction({
+                    ...selectedAction!,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="trigger" value="Trigger" />
+              <Select
+                options={triggers}
+                value={triggers.find(
+                  (e) => e.value === selectedAction?.action_trigger
+                )}
+                onChange={(e) =>
+                  setSelectedAction({
+                    ...selectedAction!,
+                    action_trigger: e!.value!,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="action" value="Action" />
+              {/* <TextInput
+                id="action"
+                value={selectedAction?.action}
+                onChange={(e) =>
+                  setSelectedAction({
+                    ...selectedAction!,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Action"
+                readOnly
+              /> */}
+              <p>{selectedAction?.action.toUpperCase().replaceAll("_", " ")}</p>
+            </div>
+            {selectedAction?.action === "send_whatsapp_message" && (
+              <>
+                <div>
+                  <Label htmlFor="action_data" value="Message" />
+                  <MentionsInput
+                    value={selectedAction?.action_data?.message}
+                    onChange={(val) => {
+                      setSelectedAction({
+                        ...selectedAction!,
+                        action_data: {
+                          ...selectedAction!.action_data!,
+                          message: val.target.value,
+                        },
+                      });
+                    }}
+                    style={emojiStyle}
+                    placeholder={
+                      "Press ':' for emojis, and template using '@' and shift+enter to send"
+                    }
+                    autoFocus
+                  >
+                    <Mention
+                      trigger="@"
+                      data={[
+                        { id: "{{user}}", display: "Full Name" },
+                        { id: "{{phone}}", display: "Phone Number" },
+                      ]}
+                      style={{
+                        backgroundColor: "#cee4e5",
+                      }}
+                      appendSpaceOnAdd
+                    />
+                    <Mention
+                      trigger=":"
+                      markup="__id__"
+                      regex={neverMatchingRegex}
+                      data={queryEmojis}
+                    />
+                  </MentionsInput>
+                </div>
+              </>
+            )}
+            {selectedAction?.action_trigger === "IDLE" && (
+              <>
+                <div>
+                  <Label htmlFor="idle_time" value="Idle Time" />
+                  <TextInput
+                    type="number"
+                    value={selectedAction?.action_data?.idle_time}
+                    onChange={(e) =>
+                      setSelectedAction({
+                        ...selectedAction!,
+                        action_data: {
+                          ...selectedAction!.action_data!,
+                          idle_time: Number(e.target.value),
+                        },
+                      })
+                    }
+                    placeholder="Idle Time"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="idle_time_type" value="Idle Time Periode" />
+                  <Select
+                    options={idleTimeType}
+                    value={idleTimeType.find(
+                      (e) =>
+                        e.value === selectedAction?.action_data!.idle_time_type
+                    )}
+                    onChange={(e) =>
+                      setSelectedAction({
+                        ...selectedAction!,
+                        action_data: {
+                          ...selectedAction!.action_data!,
+                          idle_time_type: e!.value!,
+                        },
+                      })
+                    }
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="flex justify-end">
+          <Button
+            onClick={() => {
+              editColumnAction(projectId!, column!.id!, selectedAction!).then(
+                () => {
+                  setSelectedAction(undefined);
+                  getColumn(projectId!, column!.id!).then((resp: any) => {
+                    onChangeColumn(resp.data);
+                    onAddAction(resp.data);
+                  });
+                }
+              );
+            }}
+          >
+            Save
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 };
 export default ModalColumn;
+
+const emojiStyle = {
+  control: {
+    fontSize: 16,
+    lineHeight: 1.2,
+    minHeight: 160,
+  },
+
+  highlighter: {
+    padding: 9,
+    border: "1px solid transparent",
+  },
+
+  input: {
+    fontSize: 16,
+    lineHeight: 1.2,
+    padding: 9,
+    border: "1px solid silver",
+    borderRadius: 10,
+  },
+
+  suggestions: {
+    list: {
+      backgroundColor: "white",
+      border: "1px solid rgba(0,0,0,0.15)",
+      fontSize: 16,
+    },
+
+    item: {
+      padding: "5px 15px",
+      borderBottom: "1px solid rgba(0,0,0,0.15)",
+
+      "&focused": {
+        backgroundColor: "#cee4e5",
+      },
+    },
+  },
+};

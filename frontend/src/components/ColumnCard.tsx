@@ -42,6 +42,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
   const { profile, setProfile } = useContext(ProfileContext);
   const [tasks, setTasks] = useState<TaskModel[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [selectedColumn, setSelectedColumn] = useState<ColumnModel>();
   const {
     isOver,
     setNodeRef,
@@ -116,7 +117,9 @@ const ColumnCard: FC<ColumnCardProps> = ({
         <div className="flex gap-2">
           <BsPencil
             className="group/edit invisible group-hover/item:visible text-gray-600"
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setSelectedColumn(column);
+              setShowModal(true)}}
           />
           <RiDragMoveFill
             {...listeners}
@@ -161,6 +164,9 @@ const ColumnCard: FC<ColumnCardProps> = ({
         projectId={projectId}
         onChangeColumn={onChangeColumn}
         column={column}
+        onAddAction={(val) => {
+          setSelectedColumn(val);
+        }}
       />
     </div>
   );

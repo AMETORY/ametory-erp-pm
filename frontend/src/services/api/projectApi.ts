@@ -45,6 +45,27 @@ export const addNewColumn = async (id: string, data: any) => {
     body: JSON.stringify(data),
   });
 };
+export const addNewColumnAction = async (id: string,columnId : string, data: any) => {
+  return await customFetch(`api/v1/project/${id}/column/${columnId}/add-action`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+export const editColumnAction = async (id: string,columnId : string, data: any) => {
+  return await customFetch(`api/v1/project/${id}/column/${columnId}/edit-action`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+export const deleteColumnAction = async (id: string,columnId : string, actionId: string) => {
+  return await customFetch(`api/v1/project/${id}/column/${columnId}/delete-action/${actionId}`, {
+    method: "DELETE",
+  });
+};
+export const getColumn = async (id: string,columnId : string ) => {
+  return await customFetch(`api/v1/project/${id}/column/${columnId}`, {
+  });
+};
 export const rearrangeColumns = async (id: string, data: any) => {
   return await customFetch(`api/v1/project/${id}/rearrange-columns`, {
     method: "PUT",

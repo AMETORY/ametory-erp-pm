@@ -127,6 +127,55 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 	})
 
 	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &input.ColumnID, &taskId, "MOVE_TASK", nil)
+	member := c.MustGet("member").(models.MemberModel)
+	fmt.Println("GET ACTIONS")
+	var waSession models.WhatsappMessageSession
+	if task.RefID != nil && *task.RefType == "whatsapp_session" {
+		h.ctx.DB.Preload("Contact").First(&waSession, "id = ?", task.RefID)
+	}
+	// CATCH COLUMN ACTION
+	actions, _ := h.pmService.ProjectService.GetColumnActionsByColumnID(input.ColumnID)
+	for _, act := range actions {
+		if waSession.ID != "" && act.ActionData != nil {
+			actionData := map[string]any{}
+			err := json.Unmarshal(*act.ActionData, &actionData)
+			if err != nil {
+				fmt.Println("ERROR UNMARSHAL", err)
+				continue
+			}
+			// MOVE IN
+			if act.ActionTrigger == "MOVE_IN" && act.Action == "send_whatsapp_message" {
+
+				if waSession.Contact.Phone != nil {
+					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
+					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
+				}
+			}
+
+		}
+	}
+
+	// MOVE OUT
+	actionOuts, _ := h.pmService.ProjectService.GetColumnActionsByColumnID(input.SourceColumnID)
+	for _, act := range actionOuts {
+		if waSession.ID != "" && act.ActionData != nil {
+			actionData := map[string]any{}
+			err := json.Unmarshal(*act.ActionData, &actionData)
+			if err != nil {
+				fmt.Println("ERROR UNMARSHAL", err)
+				continue
+			}
+			// MOVE OUT
+			if act.ActionTrigger == "MOVE_OUT" && act.Action == "send_whatsapp_message" {
+
+				if waSession.Contact.Phone != nil {
+					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
+					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
+				}
+			}
+		}
+	}
+
 	c.JSON(200, gin.H{"message": "Task moved successfully"})
 }
 

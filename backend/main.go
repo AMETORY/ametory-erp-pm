@@ -7,6 +7,8 @@ import (
 	"ametory-pm/services/app"
 	"ametory-pm/worker"
 	ctx "context"
+	"flag"
+	"fmt"
 	"net/mail"
 	"os"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/gin-contrib/cors"
+	"github.com/robfig/cron"
 
 	"github.com/gin-gonic/gin"
 )
@@ -142,6 +145,14 @@ func main() {
 	broadcastSrv := app.NewBroadcastService(erpContext)
 	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
 
+	flagIdleColum := flag.Bool("check-idle-column", false, "check idle column")
+	flag.Parse()
+	if *flagIdleColum {
+		fmt.Println("CHECK IDLE COLUMN")
+		worker.CheckIdleColumn(erpContext)
+		os.Exit(0)
+	}
+
 	routes.NewCommonRoutes(r, erpContext)
 	v1 := r.Group("/api/v1")
 	routes.SetupWSRoutes(v1, erpContext)
@@ -167,6 +178,12 @@ func main() {
 	}()
 	go func() {
 		worker.ImportContact(erpContext)
+	}()
+
+	go func() {
+		c := cron.New()
+		c.AddFunc("@every 1m", func() { worker.CheckIdleColumn(erpContext) })
+		c.Start()
 	}()
 
 	r.Run(":" + config.App.Server.Port)

@@ -262,6 +262,144 @@ func (h *ProjectHandler) AddNewColumnHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "add column to project successfully"})
 }
 
+func (h *ProjectHandler) GetColumnByIDHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	columnId := c.Param("columnId")
+
+	column, err := h.pmService.ProjectService.GetColumnByID(columnId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(404, gin.H{"error": "Column not found"})
+		} else {
+			c.JSON(500, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	if column.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Column not found in project"})
+		return
+	}
+
+	c.JSON(200, gin.H{"data": column, "message": "Column retrieved successfully"})
+}
+
+func (h *ProjectHandler) DeleteColumnActionHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	columnId := c.Param("columnId")
+	actionId := c.Param("actionId")
+
+	column, err := h.pmService.ProjectService.GetColumnByID(columnId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(404, gin.H{"error": "Column not found"})
+		} else {
+			c.JSON(500, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	if column.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Column not found in project"})
+		return
+	}
+
+	err = h.pmService.ProjectService.DeleteColumnAction(actionId)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"message":    "Column action deleted successfully",
+		"project_id": projectId,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &columnId, nil, "DELETE_COLUMN_ACTION", nil)
+	c.JSON(200, gin.H{"message": "Column action deleted successfully"})
+}
+func (h *ProjectHandler) EditColumnActionHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	columnId := c.Param("columnId")
+
+	var input models.ColumnAction
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.pmService.ProjectService.UpdateColumnAction(input.ID, &input); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"message":    "Column action edited successfully",
+		"project_id": projectId,
+		"column_id":  columnId,
+		"command":    "RELOAD",
+		"sender_id":  c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &columnId, nil, "EDIT_COLUMN_ACTION", nil)
+	c.JSON(200, gin.H{"message": "Column action edited successfully"})
+}
+
+func (h *ProjectHandler) AddNewColumnActionHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	columnId := c.Param("columnId")
+	// fmt.Println("Column ID", columnId)
+	var input models.ColumnAction
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	column, err := h.pmService.ProjectService.GetColumnByID(columnId)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	if column.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Column not found in project"})
+		return
+	}
+	input.ColumnID = columnId
+
+	err = h.pmService.ProjectService.CreateColumnAction(&input)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	// msg := gin.H{
+	// 	"message":    "add column action to project successfully",
+	// 	"project_id": projectId,
+	// 	"column_id":  columnId,
+	// 	"command":    "RELOAD",
+	// 	"sender_id":  c.MustGet("userID").(string),
+	// }
+	// b, _ := json.Marshal(msg)
+	// h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+	// 	url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+	// 	return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// })
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), &columnId, nil, "ADD_COLUMN_ACTION", nil)
+	c.JSON(200, gin.H{"message": "add column to project successfully"})
+}
+
 func (h *ProjectHandler) UpdateColumnHandler(c *gin.Context) {
 	projectId := c.Param("id")
 

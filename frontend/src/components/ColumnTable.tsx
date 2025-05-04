@@ -166,8 +166,14 @@ const ColumnTable: FC<ColumnTableProps> = ({
         projectId={projectId}
         onChangeColumn={onChangeColumn}
         column={column}
+        onAddAction={() => {
+
+        }}
       />
     </div>
   );
 };
 export default ColumnTable;
+
+
+// http://localhost:8081/api/v1/project/a9e5c750-d0b9-49fd-a50c-03849dc4b232/column/1da9939f-5a3e-4c4d-b5d4-7a79f90d859c/add-action
