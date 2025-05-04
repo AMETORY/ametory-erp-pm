@@ -10,4 +10,5 @@ type ServerConfig struct {
 	Debug             bool   `mapstructure:"debug"`
 	TokenExpiredDay   int    `mapstructure:"token_expired_day"`
 	SimulateBroadcast bool   `mapstructure:"simulate_broadcast"`
+	SkipVerify        bool   `mapstructure:"skip_verify"`
 }

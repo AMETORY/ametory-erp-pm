@@ -10,6 +10,7 @@ node_modules
 
 # production
 /build
+/build-respiro
 
 backend/assets/files/*
 backend/ametory-pm
@@ -26,6 +27,10 @@ yarn-debug.log*
 yarn-error.log*
 
 build
+build-respiro
+crm-respiro
+respiro.sh
 config.yaml
 frontend/.env.staging
+frontend/.env.respiro
 ametory-pm.zip

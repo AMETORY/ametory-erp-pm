@@ -14,6 +14,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 )
 
 type AuthHandler struct {
@@ -99,6 +100,13 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	if h.appService.Config.Server.SkipVerify {
+		now := time.Now()
+		user.VerifiedAt = &now
+		user.VerificationToken = ""
+		h.ctx.DB.Omit(clause.Associations).Save(&user)
 	}
 	var company models.CompanyModel
 	company.Name = input.CompanyName
