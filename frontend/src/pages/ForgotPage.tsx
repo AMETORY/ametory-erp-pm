@@ -1,17 +1,17 @@
 import { Button } from "flowbite-react";
 import type { FC } from "react";
 import { useContext, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
 import { LOCAL_STORAGE_TOKEN } from "../utils/constants";
 import Logo from "../components/logo";
-import { processLogin } from "../services/api/authApi";
+import { processForgot } from "../services/api/authApi";
 import { LoadingContext } from "../contexts/LoadingContext";
 import toast, { Toaster } from "react-hot-toast";
 
-interface LoginProps {}
+interface ForgotProps {}
 
-const Login: FC<LoginProps> = ({}) => {
+const Forgot: FC<ForgotProps> = ({}) => {
   const { loading, setLoading } = useContext(LoadingContext);
 
   const navigate = useNavigate();
@@ -22,13 +22,14 @@ const Login: FC<LoginProps> = ({}) => {
     event.preventDefault();
     try {
       setLoading(true);
-      let resp: any = await processLogin({
-        email,
-        password,
+      let resp: any = await processForgot({
+        email_or_phone_number: email,
       });
 
-      await asyncStorage.setItem(LOCAL_STORAGE_TOKEN, resp.token);
-      window.location.reload();
+     toast.success("New Password sent to your Email, Please Check your Email");
+     setTimeout(() => {
+         navigate("/login");
+     }, 3000);
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -58,7 +59,7 @@ const Login: FC<LoginProps> = ({}) => {
                 <Logo />
               </div>
               <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                Sign in to your account
+                Reset Password
               </h1>
               <form
                 onSubmit={handleSubmit}
@@ -83,52 +84,10 @@ const Login: FC<LoginProps> = ({}) => {
                     required
                   />
                 </div>
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    id="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="remember"
-                        aria-describedby="remember"
-                        type="checkbox"
-                        className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor="remember"
-                        className="text-gray-500 dark:text-gray-300"
-                      >
-                        Remember me
-                      </label>
-                    </div>
-                  </div>
-                  <Link
-                    to="/forgot"
-                    className="text-sm font-medium text-primary-600 hover:underline dark:text-primary-500"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+               
+                
                 <Button type="submit" className="w-full">
-                  Sign in
+                  Send
                 </Button>
                 <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                   Don’t have an account yet?{" "}
@@ -148,4 +107,4 @@ const Login: FC<LoginProps> = ({}) => {
     </div>
   );
 };
-export default Login;
+export default Forgot;

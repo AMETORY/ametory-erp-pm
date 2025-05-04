@@ -8,6 +8,7 @@ import Verify from "../pages/Verify";
 import AcceptInvitation from "../pages/AcceptInvitation";
 import FormPublicPage from "../pages/FormPublicPage";
 import MemberRegisterPage from "../pages/MemberRegisterPage";
+import Forgot from "../pages/ForgotPage";
 
 interface PublicRouteProps {}
 
@@ -16,6 +17,7 @@ const PublicRoute: FC<PublicRouteProps> = ({}) => {
     <Routes>
       <Route path="/public/form/:formCode" element={<FormPublicPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot" element={<Forgot />} />
       <Route path="/register" element={<Registration />} />
       <Route path="/invitation/verify/:token" element={<AcceptInvitation />} />
       <Route path="/verify/:token" element={<Verify />} />

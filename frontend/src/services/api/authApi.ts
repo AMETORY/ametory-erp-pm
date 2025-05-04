@@ -19,6 +19,15 @@ export const processLogin = async (data: any) => {
     body: JSON.stringify(data),
   });
 };
+export const processForgot = async (data: any) => {
+  return await customFetch("api/v1/auth/forgot", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+};
 
 
 export const changePassword = async (data: any) => {
