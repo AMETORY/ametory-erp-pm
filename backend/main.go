@@ -182,7 +182,7 @@ func main() {
 
 	go func() {
 		c := cron.New()
-		c.AddFunc("@every 1m", func() { worker.CheckIdleColumn(erpContext) })
+		c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
 		c.Start()
 	}()
 

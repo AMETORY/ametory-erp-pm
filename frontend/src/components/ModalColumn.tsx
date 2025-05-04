@@ -1,4 +1,4 @@
-import { Button, Label, Modal, TextInput } from "flowbite-react";
+import { Button, Label, Modal, TextInput, ToggleSwitch } from "flowbite-react";
 import { useEffect, useState, type FC } from "react";
 import { ColumnActionModel, ColumnModel } from "../models/column";
 import Select from "react-select";
@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import { Mention, MentionsInput } from "react-mentions";
 import { parseMentions } from "../utils/helper-ui";
+import { BsCheck, BsCheck2Circle } from "react-icons/bs";
 const neverMatchingRegex = /($a)/;
 
 interface ModalColumnProps {
@@ -55,10 +56,6 @@ const ModalColumn: FC<ModalColumnProps> = ({
     {
       label: "Hours",
       value: "hours",
-    },
-    {
-      label: "Minutes",
-      value: "minutes",
     },
   ];
 
@@ -189,6 +186,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                         ))}
                       </td>
                       <td className="px-2 py-2 border">
+                        {action.status == "ACTIVE" ? <BsCheck2Circle className="text-green-500" size={20} /> : ""}
                         <a
                           href="#"
                           className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
@@ -379,6 +377,17 @@ const ModalColumn: FC<ModalColumnProps> = ({
                         },
                       })
                     }
+                  />
+                </div>
+                <div>
+                 <ToggleSwitch
+                    onChange={(e) =>
+                      setSelectedAction({
+                        ...selectedAction!,
+                        status: e ? "ACTIVE" : "INACTIVE",
+                      })
+                    }
+                    checked={selectedAction?.status === "ACTIVE"}
                   />
                 </div>
               </>

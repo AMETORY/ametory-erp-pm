@@ -144,7 +144,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 				continue
 			}
 			// MOVE IN
-			if act.ActionTrigger == "MOVE_IN" && act.Action == "send_whatsapp_message" {
+			if act.ActionTrigger == "MOVE_IN" && act.Action == "send_whatsapp_message" && act.Status == "ACTIVE" {
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
@@ -166,7 +166,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 				continue
 			}
 			// MOVE OUT
-			if act.ActionTrigger == "MOVE_OUT" && act.Action == "send_whatsapp_message" {
+			if act.ActionTrigger == "MOVE_OUT" && act.Action == "send_whatsapp_message" && act.Status == "ACTIVE" {
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
