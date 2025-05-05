@@ -862,7 +862,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             </TabItem>
             <TabItem title="Tag">
               <ul>
-                {tags.map((item: any) => (
+                {(tags??[]).map((item: any) => (
                   <li className="flex items-center gap-2 py-2">
                     <Checkbox
                       checked={selectedTags

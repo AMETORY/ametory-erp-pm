@@ -150,7 +150,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 	var emailData objects.EmailData = objects.EmailData{
 		FullName: user.FullName,
 		Email:    user.Email,
-		Subject:  "Selamat datang di Ametory Project Manager",
+		Subject:  "Selamat datang di " + h.appService.Config.Server.AppName,
 		Notif:    "Silakan verifikasi akun Anda, dengan mengklik link berikut",
 		Link:     fmt.Sprintf("%s/verify/%s", h.appService.Config.Server.FrontendURL, user.VerificationToken),
 		Password: input.Password,

@@ -6,4 +6,5 @@ type EmailConfig struct {
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	From     string `mapstructure:"from"`
+	Tls      bool   `mapstructure:"tls"`
 }
