@@ -9,11 +9,14 @@ import (
 	ctx "context"
 	"flag"
 	"fmt"
+	"log"
 	"net/mail"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/auth"
 	"github.com/AMETORY/ametory-erp-modules/company"
@@ -49,6 +52,20 @@ func main() {
 	}
 
 	ctx := ctx.Background()
+	t := time.Now()
+	filename := t.Format("2006-01-02")
+	logDir := "log"
+	logPath := filepath.Join(logDir, filename+".log")
+
+	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
+		log.Fatalf("error creating directory: %v", err)
+	}
+	f, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
 	cfg, err := config.InitConfig()
 	if err != nil {
 		panic(err)
