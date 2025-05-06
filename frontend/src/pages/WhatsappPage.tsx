@@ -26,13 +26,14 @@ import {
   clearWhatsappSession,
   deleteWhatsappSession,
   getWhatsappSessions,
+  updateWhatsappSession,
 } from "../services/api/whatsappApi";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import toast from "react-hot-toast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import WhatsappMessages from "../components/WhatsappMessages";
-import { getContacts, sendContactMessage } from "../services/api/contactApi";
+import { getContacts, sendContactMessage, updateContact } from "../services/api/contactApi";
 import { ContactModel } from "../models/contact";
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import { ConnectionModel } from "../models/connection";
@@ -42,6 +43,7 @@ import Moment from "react-moment";
 import { LuFilter } from "react-icons/lu";
 import { TagModel } from "../models/tag";
 import { getTags } from "../services/api/tagApi";
+import ModalSession from "../components/ModalSession";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -67,6 +69,9 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [message, setMessage] = useState("");
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
   const [tags, setTags] = useState<TagModel[]>([]);
+  const [selectedSession, setSelectedSession] =
+    useState<WhatsappMessageSessionModel>();
+  const [modalInfo, setModalInfo] = useState(false);
   const [filters, setFilters] = useState([
     {
       label: "All Chat",
@@ -100,7 +105,6 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   useEffect(() => {
     if (mounted) {
       getAllSessions();
-      
     }
   }, [mounted, sessionId, page, size, search, selectedTags, selectedFilters]);
 
@@ -156,8 +160,12 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         size,
         search,
         tag_ids: selectedTags.map((t) => t.id).join(","),
-        is_unread: selectedFilters.some((f) => f.value == "unread") ? true : null,
-        is_unreplied: selectedFilters.some((f) => f.value == "unreplied") ? true : null,
+        is_unread: selectedFilters.some((f) => f.value == "unread")
+          ? true
+          : null,
+        is_unreplied: selectedFilters.some((f) => f.value == "unreplied")
+          ? true
+          : null,
       });
       setSessions(resp.data.items);
       setPagination(getPagination(resp.data));
@@ -305,6 +313,15 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                             }}
                           >
                             Delete Chat
+                          </Dropdown.Item>
+                          <Dropdown.Item
+                            className="flex gap-2"
+                            onClick={() => {
+                              setSelectedSession(e);
+                              setModalInfo(true);
+                            }}
+                          >
+                            Info
                           </Dropdown.Item>
                         </Dropdown>
                       </div>
@@ -482,6 +499,22 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </Drawer.Items>
       </Drawer>
+        <ModalSession
+          show={modalInfo}
+          onClose={() => setModalInfo(false)}
+          onSave={async(val) => {
+            console.log(val);
+            try {
+              await updateContact(val?.contact!.id!, val?.contact);
+              await updateWhatsappSession(val?.id!, val);
+              getAllSessions();
+              setModalInfo(false)
+            } catch (error) {
+              
+            }
+          }}
+          session={selectedSession}
+        />
     </AdminLayout>
   );
 };

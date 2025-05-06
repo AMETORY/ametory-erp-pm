@@ -180,11 +180,14 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 
 	userID := c.MustGet("userID").(string)
 	memberID := c.MustGet("memberID").(string)
+	member := c.MustGet("member").(models.MemberModel)
+
+	parsedMessage := parseMsgTemplate(*session.Contact, &member, input.Message)
 
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
 		Sender:   splitSep[0],
 		Receiver: *session.Contact.Phone,
-		Message:  input.Message,
+		Message:  parsedMessage,
 		// MediaURL: mediaURLSaved,
 		// MimeType: msg.MimeType,
 		MessageInfo:  info,
@@ -802,6 +805,8 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			pushName, ok := body.Info["PushName"].(string)
 			if ok {
 				contact.Name = pushName
+				contact.CompanyID = conn.CompanyID
+				contact.IsCustomer = true
 			}
 			err := h.erpContext.DB.Create(&contact).Error
 			if err != nil {
@@ -1163,6 +1168,7 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 	waSessions := sessions.Items.(*[]models.WhatsappMessageSession)
 	newWaSessions := []models.WhatsappMessageSession{}
 	for _, v := range *waSessions {
+		fmt.Println("SESSION", v)
 		var totalUnread int64
 		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ? and is_from_me = ?", v.Session, false, false).Count(&totalUnread)
 		v.CountUnread = int(totalUnread)
@@ -1171,11 +1177,25 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 			if *v.RefType == refType {
 				var conn connection.ConnectionModel
 				err = h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "id = ?", v.RefID).Error
-				if err != nil {
-					c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-					return
+				if err == nil {
+					v.Ref = &conn
+				} else {
+					// GET EXIST CONNECTION
+					err := h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "session_name = ?", v.SessionName).Error
+					if err == nil {
+						fmt.Println("NEW CONNECTION", conn)
+						v.SessionName = conn.SessionName
+						resp, err := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).GetJIDBySessionName(conn.SessionName)
+						if err == nil {
+							v.JID = resp["jid"].(string)
+						}
+						// v.JID = conn.
+						v.RefID = &conn.ID
+						v.Ref = &conn
+						h.erpContext.DB.Save(&v)
+					}
+
 				}
-				v.Ref = &conn
 			}
 
 		}

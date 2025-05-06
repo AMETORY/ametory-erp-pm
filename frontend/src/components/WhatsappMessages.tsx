@@ -505,6 +505,18 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               data={queryEmojis}
             />
             <Mention
+              trigger="@"
+              data={[
+                { id: "{{user}}", display: "Full Name" },
+                { id: "{{phone}}", display: "Phone Number" },
+                { id: "{{agent}}", display: "Agent Name" },
+              ]}
+              style={{
+                backgroundColor: "#cee4e5",
+              }}
+              appendSpaceOnAdd
+            />
+            <Mention
               trigger="/"
               data={templates.map((t: any) => ({
                 id: t.id,
@@ -546,10 +558,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           <div>
             {Object.entries(groupBy(emojis, "category")).map(
               ([category, emojis], i) => (
-                <div
-                  className="mb-4 hover:bg-gray-100 rounded-lg p-2"
-                  key={i}
-                >
+                <div className="mb-4 hover:bg-gray-100 rounded-lg p-2" key={i}>
                   <h3 className="font-bold">{category}</h3>
                   <div className=" flex flex-wrap gap-1">
                     {emojis.map((e: any, index: number) => (
@@ -593,15 +602,15 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 <Table.Row
                   key={template.id}
                   className="bg-white dark:border-gray-700 dark:bg-gray-800 cursor-pointer hover:bg-gray-100"
-               onClick={async () => {
-                let content = `@@[${template.title}](${template.id})`
-                setModalTemplates(false);
-                await createWAMessage(sessionId!, {
-                  message: content,
-                  files: files,
-                });
-                
-               }} >
+                  onClick={async () => {
+                    let content = `@@[${template.title}](${template.id})`;
+                    setModalTemplates(false);
+                    await createWAMessage(sessionId!, {
+                      message: content,
+                      files: files,
+                    });
+                  }}
+                >
                   <Table.Cell>
                     <span className="font-medium">{template.title}</span>
                   </Table.Cell>

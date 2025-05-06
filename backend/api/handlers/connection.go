@@ -224,9 +224,21 @@ func (h *ConnectionHandler) ConnectDeviceHandler(c *gin.Context) {
 
 func (h *ConnectionHandler) DeleteConnectionHandler(c *gin.Context) {
 	id := c.Param("id")
+	connection, err := h.appService.ConnectionService.GetConnection(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.whatsappWebService.DisconnectDeviceByJID(connection.Session)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	if err := h.appService.ConnectionService.DeleteConnection(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Connection delete successfully"})
 }

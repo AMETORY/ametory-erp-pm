@@ -343,7 +343,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 					To:      *contact.Phone,
 					IsGroup: false,
 				}
-
+				fmt.Println("SEND MESSAGE", *contact.Phone)
+				utils.LogJson(waData)
 				_, err := b.whatsmeowService.SendMessage(waData)
 				if err != nil {
 					success = false

@@ -190,11 +190,12 @@ func (h *ContactHandler) UpdateContactHandler(c *gin.Context) {
 
 	_, err := h.contactService.UpdateContact(id, &contact)
 	if err != nil {
+		fmt.Println("ERROR")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Contact created successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Contact updated successfully"})
 }
 
 func (h *ContactHandler) DeleteContactHandler(c *gin.Context) {
