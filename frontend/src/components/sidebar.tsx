@@ -221,7 +221,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               nav(`/broadcast`);
             }}
           >
-            <Tooltip content="Whatsapp">
+            <Tooltip content="Broadcast">
               <PiBroadcast />
             </Tooltip>
             {!collapsed && (

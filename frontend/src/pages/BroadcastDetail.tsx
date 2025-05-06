@@ -117,6 +117,26 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     }
   }, [wsMsg]);
 
+  const update = (connections?: ConnectionModel[]) => {
+    setLoading(true);
+
+    updateBroadcast(broadcast?.id!, {
+      ...broadcast!,
+      connections: connections || broadcast?.connections,
+    })
+      .then(() => {
+        getDetail();
+      })
+      .catch((error) => {
+        toast.error(`${error}`);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {}, [broadcast?.connections]);
+
   useEffect(() => {
     getConnections({ page: 1, size: 100 }).then((res: any) => {
       setConnections(res.data);
@@ -360,23 +380,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 </Button>
               )}
               {broadcast?.status === "DRAFT" && (
-                <Button
-                  onClick={() => {
-                    setLoading(true);
-                    updateBroadcast(broadcast?.id!, broadcast)
-                      .then(() => {
-                        getDetail();
-                      })
-                      .catch((error) => {
-                        toast.error(`${error}`);
-                      })
-                      .finally(() => {
-                        setLoading(false);
-                      });
-                  }}
-                >
-                  Save
-                </Button>
+                <Button onClick={() => update()}>Save</Button>
               )}
             </div>
           </div>
@@ -491,11 +495,17 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     value={broadcast?.connections ?? []}
                     isMulti
                     onChange={(val) => {
-                      console.log(val);
-                      setBroadcast({
-                        ...broadcast!,
-                        connections: val.map((item: any) => item),
-                      });
+                      // console.log(val);
+
+                      // setTimeout(() => {
+
+                      // }, 500);
+                      if (val.length !== 0) {
+                        update(val.map((item: any) => item));
+                      } else {
+                        update([])
+                        
+                      }
                     }}
                     formatOptionLabel={(option) => (
                       <div className="flex items-center space-x-3">
@@ -538,8 +548,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               </p>
             </div>
 
-            {broadcast?.status === "COMPLETED" ||
-              (broadcast?.status === "PROCESSING" && (
+            {(broadcast?.status === "COMPLETED" ||
+              broadcast?.status === "PROCESSING") && (
                 <Chart
                   chartType="PieChart"
                   width="100%"
@@ -556,7 +566,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     is3D: true,
                   }}
                 />
-              ))}
+              )}
           </div>
         </div>
         <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -862,7 +872,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             </TabItem>
             <TabItem title="Tag">
               <ul>
-                {(tags??[]).map((item: any) => (
+                {(tags ?? []).map((item: any) => (
                   <li className="flex items-center gap-2 py-2">
                     <Checkbox
                       checked={selectedTags

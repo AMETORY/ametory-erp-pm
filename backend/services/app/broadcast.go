@@ -175,7 +175,7 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 }
 
 func (s *BroadcastService) UpdateBroadcast(id string, broadcast *models.BroadcastModel) error {
-	return s.ctx.DB.Where("id = ?", id).Save(broadcast).Error
+	return s.ctx.DB.Where("id = ?", id).Updates(broadcast).Error
 }
 
 func (s *BroadcastService) DeleteBroadcast(id string) error {

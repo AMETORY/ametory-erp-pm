@@ -3,6 +3,7 @@ package handlers
 import (
 	"ametory-pm/models"
 	"ametory-pm/services/app"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -127,6 +128,16 @@ func (h *BroadcastHandler) UpdateBroadcastHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+
+	if len(input.Connections) == 0 {
+		fmt.Println("CLEAR CONNECTIOn")
+		err := h.ctx.DB.Exec("DELETE FROM broadcast_connections where broadcast_model_id = ?", id).Error
+		if err != nil {
+			fmt.Println("ERROR CLEAR CONNECTION", err)
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 	}
 	c.JSON(200, gin.H{"message": "Broadcast updated successfully"})
 }
