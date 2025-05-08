@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import AdminLayout from "../components/layouts/admin";
 import {
   addContactBroadcast,
+  addContactFromFileBroadcast,
   deleteContactBroadcast,
   getBroadcast,
   sendBroadcast,
@@ -16,6 +17,7 @@ import {
   Button,
   Checkbox,
   Datepicker,
+  FileInput,
   Label,
   Modal,
   Pagination,
@@ -44,6 +46,7 @@ import { BsCheck2Circle, BsInfoCircle } from "react-icons/bs";
 import { FaXmark } from "react-icons/fa6";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import Chart from "react-google-charts";
+import { uploadFile } from "../services/api/commonApi";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -503,8 +506,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       if (val.length !== 0) {
                         update(val.map((item: any) => item));
                       } else {
-                        update([])
-                        
+                        update([]);
                       }
                     }}
                     formatOptionLabel={(option) => (
@@ -550,23 +552,23 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
 
             {(broadcast?.status === "COMPLETED" ||
               broadcast?.status === "PROCESSING") && (
-                <Chart
-                  chartType="PieChart"
-                  width="100%"
-                  height="300px"
-                  data={[
-                    ["Status", "Count"],
-                    ["Succeed", broadcast?.success_count ?? 0],
-                    ["Failed", broadcast?.failed_count ?? 0],
-                  ]}
-                  options={{
-                    colors: ["#10b981", "#ef4444", "#f59e0b"],
-                    pieHole: 0.4,
-                    legend: { position: "bottom" },
-                    is3D: true,
-                  }}
-                />
-              )}
+              <Chart
+                chartType="PieChart"
+                width="100%"
+                height="300px"
+                data={[
+                  ["Status", "Count"],
+                  ["Succeed", broadcast?.success_count ?? 0],
+                  ["Failed", broadcast?.failed_count ?? 0],
+                ]}
+                options={{
+                  colors: ["#10b981", "#ef4444", "#f59e0b"],
+                  pieHole: 0.4,
+                  legend: { position: "bottom" },
+                  is3D: true,
+                }}
+              />
+            )}
           </div>
         </div>
         <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -893,6 +895,36 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   </li>
                 ))}
               </ul>
+            </TabItem>
+            <TabItem title="From File">
+              <div>
+                <FileInput
+                  id="file"
+                  name="file"
+                  onChange={async(e) => {
+                    const file = e.target.files![0];
+                    if (file) {
+                      try {
+                        setLoading(true);
+                        const resp: any = await uploadFile(file, {}, (v: any) => {
+                          console.log(v);
+                        });
+                        let res2 : any = await addContactFromFileBroadcast(broadcast!.id!, {
+                          file_url: resp.data.url
+                        })
+
+                        console.log(res2);
+                        setShowModal(false)
+                        getDetail();
+                      } catch (error) {
+                        console.error(error);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  }}
+                />
+              </div>
             </TabItem>
           </Tabs>
         </Modal.Body>

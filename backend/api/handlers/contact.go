@@ -221,7 +221,8 @@ func (h *ContactHandler) GetContactsHandler(c *gin.Context) {
 }
 
 func (h *ContactHandler) GetContactCountByTagHandler(c *gin.Context) {
-	contactCount, err := h.contactService.CountContactByTag()
+	companyID := c.GetHeader("ID-Company")
+	contactCount, err := h.contactService.CountContactByTag(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

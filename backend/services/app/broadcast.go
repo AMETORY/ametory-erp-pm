@@ -131,7 +131,7 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 	var contacts []mdl.ContactModel
 	var selectContacts []models.CustomContactModel
 	var totalRows int64
-	db := s.ctx.DB.Model(&mdl.ContactModel{}).
+	db := s.ctx.DB.Model(&mdl.ContactModel{}).Preload("Tags").
 		Joins("JOIN broadcast_contacts on broadcast_contacts.contact_model_id = contacts.id").
 		Joins("JOIN broadcasts on broadcasts.id = broadcast_contacts.broadcast_model_id").
 		Where("(contacts.name LIKE ? OR contacts.phone LIKE ?)", "%"+search+"%", "%"+search+"%").

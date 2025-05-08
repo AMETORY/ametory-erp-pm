@@ -3,15 +3,25 @@ package handlers
 import (
 	"ametory-pm/models"
 	"ametory-pm/services/app"
+	"bytes"
+	"crypto/rand"
+	"errors"
 	"fmt"
+	"io"
+	"log"
+	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/AMETORY/ametory-erp-modules/contact"
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -168,6 +178,35 @@ func (h *BroadcastHandler) SendBroadcastHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Broadcast sent successfully"})
 }
 
+func (h *BroadcastHandler) AddContactFromFileHandler(c *gin.Context) {
+	id := c.Param("id")
+	var input struct {
+		FileURL string `json:"file_url" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	contacts, err := h.importFile(map[string]string{
+		"file_url":   input.FileURL,
+		"user_id":    c.MustGet("userID").(string),
+		"company_id": c.GetHeader("ID-Company"),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	utils.LogJson(contacts)
+	fmt.Println("contacts", len(contacts))
+	if err := h.broadcastServ.AddContact(id, contacts); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contacts imported successfully", "data": input.FileURL})
+}
 func (h *BroadcastHandler) AddContactHandler(c *gin.Context) {
 	id := c.Param("id")
 	var input struct {
@@ -216,4 +255,165 @@ func (h *BroadcastHandler) DeleteContactHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Contact deleted successfully"})
+}
+
+func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactModel, error) {
+	resp, err := http.Get(data["file_url"])
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	file, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	xlsx, err := excelize.OpenReader(bytes.NewReader(file))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	firstSheet := xlsx.GetSheetName(0)
+	rows, err := xlsx.GetRows(firstSheet)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	var contacts []mdl.ContactModel
+
+	for i, row := range rows {
+		if i == 0 {
+			continue
+		}
+		for j, r := range row {
+			fmt.Printf("%v.\t %s: %s\n", j+1, rows[0][j], r)
+		}
+		fmt.Println("------------------------------------------------")
+		var phone *string
+		if cleanString(rows[i][2]) != "" {
+			phoneStr := utils.ParsePhoneNumber(cleanString(rows[i][2]), "")
+			phone = &phoneStr
+		}
+		userID := data["user_id"]
+		companyID := data["company_id"]
+
+		var tags []mdl.TagModel
+		tagStr := "IMPORT"
+		if rows[i][4] != "" {
+			tagStr = "IMPORT," + cleanString(rows[i][4])
+		}
+
+		if cleanString(tagStr) != "" {
+			dataTags := strings.Split(cleanString(tagStr), ",")
+			for _, v := range dataTags {
+				fmt.Println("TAG", cleanString(v))
+				var checkTag mdl.TagModel
+				err := h.ctx.DB.Where("name = ? and company_id = ?", cleanString(v), companyID).First(&checkTag).Error
+				if err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						tag := mdl.TagModel{
+							Name:      cleanString(v),
+							CompanyID: &companyID,
+							Color:     randomColor(),
+						}
+						err := h.ctx.DB.Create(&tag).Error
+						if err != nil {
+							log.Println(err)
+							continue
+						}
+						tags = append(tags, tag)
+					}
+				} else {
+					tags = append(tags, checkTag)
+				}
+			}
+		}
+		var products []mdl.ProductModel
+		if cleanString(rows[i][5]) != "" {
+			dataProducts := strings.Split(cleanString(rows[i][5]), ",")
+			for _, v := range dataProducts {
+				fmt.Println("PRODUCT", cleanString(v))
+				var checkProduct mdl.ProductModel
+				err := h.ctx.DB.Where("name = ? or sku = ?", cleanString(v), cleanString(v)).Where("company_id = ?", companyID).First(&checkProduct).Error
+				if err == nil {
+					products = append(products, checkProduct)
+				}
+			}
+		}
+
+		newContact := mdl.ContactModel{
+			Name:       rows[i][0],
+			Email:      rows[i][1],
+			Phone:      phone,
+			UserID:     &userID,
+			CompanyID:  &companyID,
+			Tags:       tags,
+			Products:   products,
+			IsCustomer: true,
+		}
+
+		if newContact.Phone != nil {
+			var existingContact mdl.ContactModel
+			if err := h.ctx.DB.Where("phone = ? and company_id = ?", newContact.Phone, *newContact.CompanyID).First(&existingContact).Error; err == nil {
+				newContact.ID = existingContact.ID
+			}
+		}
+		if newContact.Email != "" {
+			var existingContact mdl.ContactModel
+			if err := h.ctx.DB.Where("email = ? and company_id = ?", newContact.Email, *newContact.CompanyID).First(&existingContact).Error; err == nil {
+				newContact.ID = existingContact.ID
+			}
+		}
+
+		err := h.ctx.DB.Save(&newContact).Error
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		contacts = append(contacts, newContact)
+		fmt.Println("------------------------------------------------")
+		fmt.Println("ADD", newContact.Name)
+	}
+
+	fmt.Println("TOTAL ADDED", len(contacts))
+
+	return contacts, nil
+}
+
+func cleanString(s string) string {
+	return strings.TrimSpace(s)
+}
+
+func randomColor() string {
+	colors := []string{
+		"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF",
+		"#33FFF5", "#F5FF33", "#FF8C33", "#FF3380", "#33FFBD",
+		"#FFC400", "#00BFFF", "#FF00FF", "#008000", "#4B0082",
+		"#9400D3", "#00FF00", "#FFD700", "#C71585", "#00FFFF",
+		"#FF1493", "#00BFFF", "#32CD32", "#6495ED", "#DC143C",
+		"#006400", "#8B008B", "#B03060", "#FF6347", "#1E90FF",
+		"#228B22", "#FF7F24", "#FFC0CB", "#8B0A1A", "#4682B4",
+		"#228B22", "#00688B", "#C71585", "#00BFFF", "#9400D3",
+		"#FFD700", "#00FF00", "#FF1493", "#4B0082", "#9400D3",
+		"#FFC400", "#00BFFF", "#FF00FF", "#008000", "#4B0082",
+		"#9400D3", "#00FF00", "#FFD700", "#C71585", "#00FFFF",
+		"#FF1493", "#00BFFF", "#32CD32", "#6495ED", "#DC143C",
+		"#006400", "#8B008B", "#B03060", "#FF6347", "#1E90FF",
+		"#228B22", "#FF7F24", "#FFC0CB", "#8B0A1A", "#4682B4",
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(colors))))
+	if err != nil {
+		log.Println(err)
+		return "#000000" // default to black if there's an error
+	}
+	return colors[n.Int64()]
 }

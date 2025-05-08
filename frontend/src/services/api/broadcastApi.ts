@@ -45,6 +45,12 @@ export const addContactBroadcast = async (id: string, data: any) => {
     body: JSON.stringify(data),
   });
 };
+export const addContactFromFileBroadcast = async (id: string, data: any) => {
+  return await customFetch(`api/v1/broadcast/${id}/add-contact-from-file`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
 export const deleteContactBroadcast = async (id: string, data: any) => {
   return await customFetch(`api/v1/broadcast/${id}/delete-contact`, {
     method: "DELETE",

@@ -20,6 +20,7 @@ func SetBroadcastRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		broadcastGroup.PUT("/:id/send", middlewares.RbacUserMiddleware(erpContext, []string{"whatsapp:broadcast:send"}), broadcastHandler.SendBroadcastHandler)
 		broadcastGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"whatsapp:broadcast:delete"}), broadcastHandler.DeleteBroadcastHandler)
 		broadcastGroup.POST("/:id/add-contact", middlewares.RbacUserMiddleware(erpContext, []string{"whatsapp:broadcast:update"}), broadcastHandler.AddContactHandler)
+		broadcastGroup.POST("/:id/add-contact-from-file", middlewares.RbacUserMiddleware(erpContext, []string{"whatsapp:broadcast:update"}), broadcastHandler.AddContactFromFileHandler)
 		broadcastGroup.DELETE("/:id/delete-contact", middlewares.RbacUserMiddleware(erpContext, []string{"whatsapp:broadcast:update"}), broadcastHandler.DeleteContactHandler)
 
 	}

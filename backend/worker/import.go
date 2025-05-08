@@ -93,7 +93,7 @@ func ImportContact(erpContext *context.ERPContext) {
 					for _, v := range dataTags {
 						fmt.Println("TAG", cleanString(v))
 						var checkTag models.TagModel
-						err := erpContext.DB.Where("name = ?", cleanString(v)).First(&checkTag).Error
+						err := erpContext.DB.Where("name = ? and company_id = ?", cleanString(v), companyID).First(&checkTag).Error
 						if err != nil {
 							if errors.Is(err, gorm.ErrRecordNotFound) {
 								tag := models.TagModel{
@@ -119,7 +119,7 @@ func ImportContact(erpContext *context.ERPContext) {
 					for _, v := range dataProducts {
 						fmt.Println("PRODUCT", cleanString(v))
 						var checkProduct models.ProductModel
-						err := erpContext.DB.Where("name = ? or sku = ?", cleanString(v), cleanString(v)).First(&checkProduct).Error
+						err := erpContext.DB.Where("name = ? or sku = ?", cleanString(v), cleanString(v)).Where("company_id = ?", companyID).First(&checkProduct).Error
 						if err == nil {
 							products = append(products, checkProduct)
 						}
