@@ -286,6 +286,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
             ))}
           </Table.Body>
         </Table>
+        
         <Pagination
           className="mt-4"
           currentPage={page}
@@ -295,6 +296,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
           }}
           showIcons
         />
+        <small>Total Record: {pagination?.total ?? 0} items</small>
       </div>
       {selectedContact && (
         <Modal show={showModal} onClose={() => setShowModal(false)}>
