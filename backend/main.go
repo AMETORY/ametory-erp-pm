@@ -180,10 +180,15 @@ func main() {
 	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
 
 	flagIdleColum := flag.Bool("check-idle-column", false, "check idle column")
+	flagTestEmail := flag.String("test-email", "", "test email")
 	flag.Parse()
 	if *flagIdleColum {
 		fmt.Println("CHECK IDLE COLUMN")
 		worker.CheckIdleColumn(erpContext)
+		os.Exit(0)
+	}
+	if *flagTestEmail != "" {
+		worker.TestEmail(*erpContext, *flagTestEmail)
 		os.Exit(0)
 	}
 

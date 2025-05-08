@@ -74,6 +74,7 @@ const Topnav: React.FC<TopnavProps> = () => {
                     "no company"
                   }
                   color="gray"
+                  className="line-clamp-2"
                 >
                   {companies?.map((c) => (
                     <Dropdown.Item

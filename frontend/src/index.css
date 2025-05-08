@@ -186,3 +186,7 @@ label {
   --tw-ring-opacity: 0;
   --tw-ring-color: none;
 }
+
+[data-testid="flowbite-dropdown-target"] {
+  @apply line-clamp-2 max-h-[40px] truncate
+}

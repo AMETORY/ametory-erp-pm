@@ -27,6 +27,7 @@ func ImportContact(erpContext *context.ERPContext) {
 	if ok {
 		dataSub := appService.Redis.Subscribe(*erpContext.Ctx, "IMPORT:CONTACT")
 		for {
+			fmt.Println("REQUEST IMPORT START")
 			msg, err := dataSub.ReceiveMessage(*erpContext.Ctx)
 			if err != nil {
 				log.Println(err)
@@ -39,6 +40,7 @@ func ImportContact(erpContext *context.ERPContext) {
 				continue
 			}
 
+			fmt.Println("GET FILE", data["file_url"])
 			resp, err := http.Get(data["file_url"])
 			if err != nil {
 				log.Println(err)

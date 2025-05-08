@@ -70,7 +70,7 @@ func (s *BroadcastService) CreateBroadcast(broadcast *models.BroadcastModel) err
 func (s *BroadcastService) GetBroadcasts(pagination *Pagination, httpRequest http.Request, search string) ([]models.BroadcastModel, error) {
 	var broadcasts []models.BroadcastModel
 	db := s.ctx.DB.Scopes(paginate(broadcasts, pagination, s.ctx.DB))
-	if err := db.Find(&broadcasts).Error; err != nil {
+	if err := db.Where("company_id = ?", httpRequest.Header.Get("ID-Company")).Find(&broadcasts).Error; err != nil {
 		return nil, err
 	}
 	return broadcasts, nil

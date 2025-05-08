@@ -32,7 +32,7 @@ func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest h
 		Preload("Project").
 		Preload("NewSessionColumn").
 		Preload("IdleColumn").
-		Preload("GeminiAgent").Find(&connections).Error; err != nil {
+		Preload("GeminiAgent").Where("company_id = ?", httpRequest.Header.Get("ID-Company")).Find(&connections).Error; err != nil {
 		return nil, err
 	}
 	return connections, nil

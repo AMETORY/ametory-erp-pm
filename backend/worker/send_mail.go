@@ -44,3 +44,15 @@ func SendMail(erpContext *context.ERPContext) {
 		}
 	}
 }
+
+func TestEmail(erpContext context.ERPContext, email string) {
+	var emailData objects.EmailData
+	emailData.Subject = "Test Email"
+	emailData.FullName = "Test Email"
+	emailData.Email = email
+	erpContext.EmailSender.SetAddress(emailData.FullName, emailData.Email)
+	if err := erpContext.EmailSender.SendEmail(emailData.Subject, emailData, []string{}); err != nil {
+		log.Println(err)
+		fmt.Println(err)
+	}
+}
