@@ -3,6 +3,7 @@ import AdminLayout from "../components/layouts/admin";
 import {
   Badge,
   Button,
+  Datepicker,
   Drawer,
   Dropdown,
   Label,
@@ -33,22 +34,32 @@ import { ProfileContext } from "../contexts/ProfileContext";
 import toast from "react-hot-toast";
 import { LoadingContext } from "../contexts/LoadingContext";
 import WhatsappMessages from "../components/WhatsappMessages";
-import { getContacts, sendContactMessage, updateContact } from "../services/api/contactApi";
+import {
+  getContacts,
+  sendContactMessage,
+  updateContact,
+} from "../services/api/contactApi";
 import { ContactModel } from "../models/contact";
-import { FaMagnifyingGlass } from "react-icons/fa6";
+import { FaDownload, FaMagnifyingGlass } from "react-icons/fa6";
 import { ConnectionModel } from "../models/connection";
 import { getConnections } from "../services/api/connectionApi";
 import Select, { InputActionMeta } from "react-select";
 import Moment from "react-moment";
-import { LuFilter } from "react-icons/lu";
+import { LuDownload, LuFilter } from "react-icons/lu";
 import { TagModel } from "../models/tag";
 import { getTags } from "../services/api/tagApi";
 import ModalSession from "../components/ModalSession";
+import { getMembers } from "../services/api/commonApi";
+import { MemberModel } from "../models/member";
+import moment from "moment";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
+  const [members, setMembers] = useState<MemberModel[]>([]);
   const { loading, setLoading } = useContext(LoadingContext);
-
+  const [selectedMembers, setSelectedMembers] = useState<
+    { value: string; label: string }[]
+  >([]);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
   const { profile, setProfile } = useContext(ProfileContext);
@@ -72,6 +83,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [selectedSession, setSelectedSession] =
     useState<WhatsappMessageSessionModel>();
   const [modalInfo, setModalInfo] = useState(false);
+  const [downloadModal, setDownloadModal] = useState(false);
+  const [modalDateOpen, setModalDateOpen] = useState(false);
   const [filters, setFilters] = useState([
     {
       label: "All Chat",
@@ -87,11 +100,30 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     },
   ]);
 
+  const today = new Date();
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const end = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59
+  );
+  const [dateRange, setDateRange] = useState([start, end]);
+
   const [selectedFilters, setSelectedFilters] = useState<
     { value: string; label: string }[]
   >([]);
 
   const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
+  const [selectedDownloadTags, setSelectedDownloadTags] = useState<TagModel[]>(
+    []
+  );
   const [selectedConnection, setSelectedConnection] =
     useState<ConnectionModel>();
   const [drawerFilter, setDrawerFilter] = useState(false);
@@ -111,6 +143,15 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   useEffect(() => {
     if (mounted) {
       getAllTags();
+    }
+  }, [mounted]);
+  useEffect(() => {
+    if (mounted) {
+      getMembers({ page: 1, size: 10 })
+        .then((res: any) => {
+          setMembers(res.data.items);
+        })
+        .catch(toast.error);
     }
   }, [mounted]);
   const getAllTags = async () => {
@@ -182,14 +223,15 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           <h1 className="text-3xl font-bold ">Whatsapp</h1>
           <div className="flex gap-2">
             <Button
-              gradientDuoTone="purpleToBlue"
               pill
+              className="flex items-center gap-2"
+              color="gray"
               onClick={() => {
-                setOpenChannelForm(true);
-                getAllContact("");
+                setDownloadModal(true);
               }}
             >
-              + Chat
+              <LuDownload className="" />
+              <span>Download</span>
             </Button>
             <Button
               pill
@@ -201,6 +243,16 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
             >
               <LuFilter className="" />
               <span>Filter</span>
+            </Button>
+            <Button
+              gradientDuoTone="purpleToBlue"
+              pill
+              onClick={() => {
+                setOpenChannelForm(true);
+                getAllContact("");
+              }}
+            >
+              + Chat
             </Button>
           </div>
         </div>
@@ -499,22 +551,318 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </Drawer.Items>
       </Drawer>
-        <ModalSession
-          show={modalInfo}
-          onClose={() => setModalInfo(false)}
-          onSave={async(val) => {
-            console.log(val);
-            try {
-              await updateContact(val?.contact!.id!, val?.contact);
-              await updateWhatsappSession(val?.id!, val);
-              getAllSessions();
-              setModalInfo(false)
-            } catch (error) {
-              
-            }
-          }}
-          session={selectedSession}
-        />
+      <ModalSession
+        show={modalInfo}
+        onClose={() => setModalInfo(false)}
+        onSave={async (val) => {
+          console.log(val);
+          try {
+            await updateContact(val?.contact!.id!, val?.contact);
+            await updateWhatsappSession(val?.id!, val);
+            getAllSessions();
+            setModalInfo(false);
+          } catch (error) {}
+        }}
+        session={selectedSession}
+      />
+      <Modal show={downloadModal} onClose={() => setDownloadModal(false)}>
+        <Modal.Header>
+          <h3 className="text-lg font-semibold">Download</h3>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="flex flex-col pb-32 space-y-4">
+            <div>
+              <Label>Member</Label>
+              <Select
+                className="w-full"
+                isMulti
+                placeholder="Select Members"
+                options={members.map((member) => ({
+                  label: member.user?.full_name ?? "",
+                  value: member.id ?? "",
+                }))}
+                value={selectedMembers}
+                onChange={(selectedOptions) => {
+                  setSelectedMembers(selectedOptions.map((e) => e));
+                  // setSelectedMembers(selectedOptions.map((option) => ({ id: option.value })));
+                }}
+              />
+            </div>
+            <div>
+              <Label className=" font-semibold">Date Range</Label>
+              <div
+                className="p-2 bg-white rounded-lg min-w-[240px] cursor-pointer border border-gray-400"
+                onClick={() => setModalDateOpen(true)}
+              >
+                {moment(dateRange[0]).format("DD MMM YYYY")}{" "}
+                {moment(dateRange[0]).format("HH:mm")} -{" "}
+                {moment(dateRange[1]).format("DD MMM YYYY")}{" "}
+                {moment(dateRange[1]).format("HH:mm")}
+              </div>
+            </div>
+            <div>
+              <Label className=" font-semibold">Tag</Label>
+              <Select
+                isMulti
+                value={selectedDownloadTags.map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                  color: tag.color,
+                }))}
+                options={tags.map((tag) => ({
+                  value: tag.id,
+                  label: tag.name,
+                  color: tag.color,
+                }))}
+                onChange={(e) => {
+                  setSelectedDownloadTags(
+                    e.map((tag) => ({
+                      id: tag.value,
+                      name: tag.label,
+                      color: tag.color,
+                    }))
+                  );
+                }}
+                formatOptionLabel={(option) => (
+                  <div
+                    className="w-fit px-2 py-1 rounded-lg"
+                    style={{
+                      backgroundColor: option.color,
+                      color: getContrastColor(option.color),
+                    }}
+                  >
+                    <span>{option.label}</span>
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="w-full flex justify-end">
+            <Button
+              onClick={() => {
+                var data = {
+                  start_date: dateRange[0],
+                  end_date: dateRange[1],
+                  member_ids: selectedMembers.map((e) => e.value),
+                  tag_ids: selectedDownloadTags.map((e) => e.id),
+                };
+
+                console.log(data);
+              }}
+            >
+              <FaDownload /> Download Now
+            </Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        size="4xl"
+        show={modalDateOpen}
+        onClose={() => setModalDateOpen(false)}
+        dismissible
+      >
+        <Modal.Header>Date Range</Modal.Header>
+        <Modal.Body>
+          <div className="flex flex-col pb-32">
+            <div className="grid grid-cols-2 gap-2 ">
+              <div className="flex daterange">
+                <Datepicker
+                  value={dateRange[0]}
+                  onChange={(v) => setDateRange([v!, dateRange[1]])}
+                  className="min-w-[200px]"
+                />
+                <div className="flex w-full">
+                  <input
+                    type="time"
+                    id="time"
+                    className="rounded-none rounded-s-lg bg-gray-50 border text-gray-900 leading-none focus:ring-blue-500 focus:border-blue-500 block flex-1 w-full text-sm border-gray-300 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    value={moment(dateRange[0]).format("HH:mm")}
+                    onChange={(e) => {
+                      const newDate = new Date(dateRange[0]);
+                      newDate.setHours(parseInt(e.target.value.split(":")[0]));
+                      newDate.setMinutes(
+                        parseInt(e.target.value.split(":")[1])
+                      );
+                      setDateRange([newDate, dateRange[1]]);
+                    }}
+                  />
+                  <span className="inline-flex  items-center px-3 text-sm text-gray-900 bg-gray-200  rounded-s-0 border-0 border-gray-300 rounded-e-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <div className="flex daterange">
+                <Datepicker
+                  value={dateRange[1]}
+                  onChange={(v) => setDateRange([dateRange[0], v!])}
+                  className="min-w-[200px]"
+                />
+                <div className="flex w-full">
+                  <input
+                    type="time"
+                    id="time"
+                    className="rounded-none rounded-s-lg bg-gray-50 border text-gray-900 leading-none focus:ring-blue-500 focus:border-blue-500 block flex-1 w-full text-sm border-gray-300 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    value={moment(dateRange[1]).format("HH:mm")}
+                    onChange={(e) => {
+                      const newDate = new Date(dateRange[1]);
+                      newDate.setHours(parseInt(e.target.value.split(":")[0]));
+                      newDate.setMinutes(
+                        parseInt(e.target.value.split(":")[1])
+                      );
+                      setDateRange([dateRange[0], newDate]);
+                    }}
+                  />
+                  <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200  rounded-s-0 border-0 border-gray-300 rounded-e-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
+                    <svg
+                      className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <ul className="grid grid-cols-2 gap-4">
+                <li>
+                  <button
+                    className="rs-input clear-start text-center hover:font-semibold hover:bg-gray-50"
+                    onClick={() => {
+                      const start = new Date();
+                      start.setHours(0, 0, 0, 0);
+                      const end = new Date();
+                      end.setHours(23, 59, 59, 999);
+                      setDateRange([start, end]);
+                    }}
+                  >
+                    Today
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className="rs-input clear-start text-center hover:font-semibold hover:bg-gray-50"
+                    onClick={() => {
+                      const yesterday = new Date();
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      yesterday.setHours(0, 0, 0, 0);
+                      const end = new Date();
+                      end.setDate(end.getDate() - 1);
+                      end.setHours(23, 59, 59, 999);
+                      setDateRange([yesterday, end]);
+                    }}
+                  >
+                    Yesterday
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className="rs-input clear-start text-center hover:font-semibold hover:bg-gray-50"
+                    onClick={() => {
+                      const lastWeek = new Date();
+                      lastWeek.setDate(lastWeek.getDate() - 7);
+                      lastWeek.setHours(0, 0, 0, 0);
+                      const end = new Date();
+                      end.setHours(23, 59, 59, 999);
+                      setDateRange([lastWeek, end]);
+                    }}
+                  >
+                    Last Week
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className="rs-input clear-start text-center hover:font-semibold hover:bg-gray-50"
+                    onClick={() => {
+                      const firstDayOfMonth = new Date(
+                        new Date().getFullYear(),
+                        new Date().getMonth(),
+                        1
+                      );
+                      firstDayOfMonth.setHours(0, 0, 0, 0);
+                      const end = moment(firstDayOfMonth)
+                        .endOf("month")
+                        .toDate();
+                      end.setHours(23, 59, 59, 999);
+                      setDateRange([firstDayOfMonth, end]);
+                    }}
+                  >
+                    This Month
+                  </button>
+                </li>
+                {[...Array(4)].map((_, i) => {
+                  const quarter = i + 1;
+                  const start = new Date(
+                    new Date().getFullYear(),
+                    (quarter - 1) * 3,
+                    1
+                  );
+                  const end = new Date(
+                    new Date().getFullYear(),
+                    quarter * 3,
+                    0
+                  );
+                  return (
+                    <li key={i}>
+                      <button
+                        key={i}
+                        className="rs-input clear-start text-center hover:font-semibold hover:bg-gray-50"
+                        onClick={() => {
+                          const endCopy = new Date(end);
+                          endCopy.setHours(23, 59, 59, 999);
+                          setDateRange([start, endCopy]);
+                        }}
+                      >
+                        Q{quarter}
+                      </button>
+                    </li>
+                  );
+                })}
+
+                {[...Array(4)].map((_, i) => {
+                  const year = new Date().getFullYear() - (i === 0 ? 0 : i);
+                  return (
+                    <li key={i}>
+                      <button
+                        key={i}
+                        className="rs-input clear-start text-center hover:font-semibold hover:bg-gray-50"
+                        onClick={() => {
+                          const endCopy = new Date(year, 11, 31);
+                          endCopy.setHours(23, 59, 59, 999);
+                          setDateRange([new Date(year, 0, 1), endCopy]);
+                        }}
+                      >
+                        {year == new Date().getFullYear() ? "This Year" : year}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
     </AdminLayout>
   );
 };

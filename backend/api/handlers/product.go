@@ -36,7 +36,7 @@ func (p *ProductHandler) GetProductHandler(c *gin.Context) {
 }
 
 func (p *ProductHandler) ListProductsHandler(c *gin.Context) {
-	products, err := p.inventorySrv.ProductService.GetProducts(*c.Request, c.Query("search"))
+	products, err := p.inventorySrv.ProductService.GetProducts(*c.Request, c.Query("search"), nil)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
