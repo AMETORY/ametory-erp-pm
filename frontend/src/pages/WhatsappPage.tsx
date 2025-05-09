@@ -701,6 +701,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     document.body.removeChild(link);
                     window.URL.revokeObjectURL(url);
                   }, 0);
+                  setDownloadModal(false);
+                  setSelectedTags([]);
                 } catch (error) {
                   toast.error(`${error}`);
                 } finally {

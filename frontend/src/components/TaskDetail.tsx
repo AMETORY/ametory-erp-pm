@@ -310,7 +310,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
             })
             .catch((err) => {
               console.error(err);
-              window.location.href = "/whatsapp";
+              // window.location.href = "/whatsapp";
             });
         }
       })

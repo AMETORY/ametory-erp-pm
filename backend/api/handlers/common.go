@@ -239,6 +239,22 @@ func (h *CommonHandler) AcceptMemberInvitationHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Member invitation accepted successfully"})
 }
 
+func (h *CommonHandler) DeleteFileHandler(c *gin.Context) {
+	fileID := c.Param("id")
+
+	err := h.fileService.DeleteFile(fileID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(404, gin.H{"error": "File not found"})
+		} else {
+			c.JSON(500, gin.H{"error": "Failed to delete file", "message": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "File deleted successfully"})
+}
+
 func (h *CommonHandler) UploadFileHandler(c *gin.Context) {
 	h.ctx.Request = c.Request
 

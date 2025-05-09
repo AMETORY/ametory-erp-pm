@@ -339,6 +339,17 @@ func (h *ProjectHandler) EditColumnActionHandler(c *gin.Context) {
 		return
 	}
 
+	for _, file := range input.Files {
+		h.ctx.DB.Model(&file).Where("id = ?", file.ID).Update("ref_type", "")
+		h.ctx.DB.Model(&file).Where("id = ?", file.ID).Update("ref_id", "")
+	}
+
+	for _, file := range input.Files {
+		file.RefType = "column_action"
+		file.RefID = input.ID
+		h.ctx.DB.Save(&file)
+	}
+
 	msg := gin.H{
 		"message":    "Column action edited successfully",
 		"project_id": projectId,

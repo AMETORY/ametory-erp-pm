@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
@@ -133,8 +134,13 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 	if task.RefID != nil && *task.RefType == "whatsapp_session" {
 		h.ctx.DB.Preload("Contact").First(&waSession, "id = ?", task.RefID)
 	}
+
+	fmt.Println("SESSION", waSession.SessionName)
+
 	// CATCH COLUMN ACTION
 	actions, _ := h.pmService.ProjectService.GetColumnActionsByColumnID(input.ColumnID)
+	// fmt.Println("ACTIONS")
+	// utils.LogJson(actions)
 	for _, act := range actions {
 		if waSession.ID != "" && act.ActionData != nil {
 			actionData := map[string]any{}
@@ -143,12 +149,24 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 				fmt.Println("ERROR UNMARSHAL", err)
 				continue
 			}
+
+			fmt.Println("ACTION TRIGGER", act.Column.Name, act.ActionTrigger)
+			fmt.Println("ACTION ", act.Column.Name, act.Action)
+			fmt.Println("ACTION Status", act.Column.Name, act.Status)
 			// MOVE IN
 			if act.ActionTrigger == "MOVE_IN" && act.Action == "send_whatsapp_message" && act.Status == "ACTIVE" {
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
 					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
+
+					for _, v := range act.Files {
+						if strings.Contains(v.MimeType, "image") && v.URL != "" {
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "image", v.URL)
+						} else {
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "document", v.URL)
+						}
+					}
 				}
 			}
 
@@ -165,12 +183,23 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 				fmt.Println("ERROR UNMARSHAL", err)
 				continue
 			}
+			fmt.Println("ACTION TRIGGER", act.Column.Name, act.ActionTrigger)
+			fmt.Println("ACTION ", act.Column.Name, act.Action)
+			fmt.Println("ACTION Status", act.Column.Name, act.Status)
+
 			// MOVE OUT
 			if act.ActionTrigger == "MOVE_OUT" && act.Action == "send_whatsapp_message" && act.Status == "ACTIVE" {
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
 					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
+					for _, v := range act.Files {
+						if strings.Contains(v.MimeType, "image") && v.URL != "" {
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "image", v.URL)
+						} else {
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "document", v.URL)
+						}
+					}
 				}
 			}
 		}

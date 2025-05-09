@@ -1,3 +1,4 @@
+import { FileModel } from "./file";
 import { TaskModel } from "./task";
 
 export interface ColumnModel {
@@ -22,4 +23,5 @@ export interface ColumnActionModel {
   action_trigger: string;
   action_data: any;
   status: string;
+  files: FileModel[];
 }

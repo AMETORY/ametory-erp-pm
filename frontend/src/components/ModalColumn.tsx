@@ -12,7 +12,11 @@ import {
 import toast from "react-hot-toast";
 import { Mention, MentionsInput } from "react-mentions";
 import { parseMentions } from "../utils/helper-ui";
-import { BsCheck, BsCheck2Circle } from "react-icons/bs";
+import { BsCamera, BsCheck, BsCheck2Circle, BsTrash } from "react-icons/bs";
+import { deleteFile, uploadFile } from "../services/api/commonApi";
+import { HiOutlineDocumentAdd, HiPaperClip } from "react-icons/hi";
+import { IoDocumentsOutline } from "react-icons/io5";
+import { GoPaperclip } from "react-icons/go";
 const neverMatchingRegex = /($a)/;
 
 interface ModalColumnProps {
@@ -80,7 +84,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
   };
   return (
     <>
-      <Modal size="4xl" show={showModal} onClose={() => setShowModal(false)}>
+      <Modal size="7xl" show={showModal} onClose={() => setShowModal(false)}>
         <Modal.Header>Edit Column</Modal.Header>
         <Modal.Body className="space-y-6">
           <div>
@@ -159,6 +163,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                     </th>
                     <th className="text-left px-2 py-2 border">Action</th>
                     <th className="text-left px-2 py-2 border">Action Data</th>
+                    <th className="text-left px-2 py-2 border">Files</th>
                     <th className="text-left px-2 py-2 border"></th>
                   </tr>
                 </thead>
@@ -181,12 +186,44 @@ const ModalColumn: FC<ModalColumnProps> = ({
                                 .replaceAll("_", " ")
                                 .replace(/^\w/, (c) => c.toUpperCase())}
                             </Label>
-                            <div>{key == "message" ? parseMentions(action.action_data[key], (type, id) => {}) : action.action_data[key]}</div>
+                            <div>
+                              {key == "message"
+                                ? parseMentions(
+                                    action.action_data[key],
+                                    (type, id) => {}
+                                  )
+                                : action.action_data[key]}
+                            </div>
                           </div>
                         ))}
                       </td>
                       <td className="px-2 py-2 border">
-                        {action.status == "ACTIVE" ? <BsCheck2Circle className="text-green-500" size={20} /> : ""}
+                        <div className="grid grid-cols-2 ">
+                          {action.files?.map((file) => (
+                            <div key={file.id}>
+                              {file.mime_type.includes("image") ? (
+                                <img
+                                  src={file.url}
+                                  className="w-16 h-16 rounded-lg border object-cover"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-lg border flex justify-center items-center ">
+                                  <GoPaperclip />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 border">
+                        {action.status == "ACTIVE" ? (
+                          <BsCheck2Circle
+                            className="text-green-500"
+                            size={20}
+                          />
+                        ) : (
+                          ""
+                        )}
                         <a
                           href="#"
                           className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
@@ -299,6 +336,20 @@ const ModalColumn: FC<ModalColumnProps> = ({
               /> */}
               <p>{selectedAction?.action.toUpperCase().replaceAll("_", " ")}</p>
             </div>
+            <div>
+              <ToggleSwitch
+                label={
+                  selectedAction?.status === "ACTIVE" ? "Active" : "Inactive"
+                }
+                onChange={(e) => {
+                  setSelectedAction({
+                    ...selectedAction!,
+                    status: e ? "ACTIVE" : "INACTIVE",
+                  });
+                }}
+                checked={selectedAction?.status === "ACTIVE"}
+              />
+            </div>
             {selectedAction?.action === "send_whatsapp_message" && (
               <>
                 <div>
@@ -338,6 +389,201 @@ const ModalColumn: FC<ModalColumnProps> = ({
                       data={queryEmojis}
                     />
                   </MentionsInput>
+                </div>
+                <div className="mt-8">
+                  <h4 className="font-semibold">Files</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative h-fit">
+                      <div
+                        className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 border h-[300px]"
+                        onClick={() => {
+                          document.getElementById(`image-action`)?.click();
+                        }}
+                      >
+                        {(selectedAction?.files ?? []).filter((f) =>
+                          f.mime_type.includes("image")
+                        ).length === 0 ? (
+                          <div className="flex flex-col items-center">
+                            <span>Add Photo to message</span>
+                            <BsCamera />
+                          </div>
+                        ) : (
+                          <img
+                            className="w-32 h-32 object-cover"
+                            src={
+                              (selectedAction?.files ?? []).find((f) =>
+                                f.mime_type.includes("image")
+                              )?.url
+                            }
+                          />
+                        )}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          id={`image-action`}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              uploadFile(file, {}, () => {}).then(
+                                (resp: any) => {
+                                  let files = selectedAction?.files ?? [];
+                                  if (
+                                    files.filter((f) =>
+                                      f.mime_type.includes("image")
+                                    ).length === 0
+                                  ) {
+                                    files = [...files, resp.data];
+                                  } else {
+                                    files = files.map((f) => {
+                                      if (f.mime_type.includes("image")) {
+                                        return resp.data;
+                                      }
+                                      return f;
+                                    });
+                                  }
+                                  setSelectedAction({
+                                    ...selectedAction,
+                                    files: files,
+                                  });
+                                }
+                              );
+                            }
+                          }}
+                        />
+                      </div>
+                      <BsTrash
+                        size={20}
+                        className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
+                        onClick={() => {
+                          if (
+                            (selectedAction?.files ?? []).find((f) =>
+                              f.mime_type.includes("image")
+                            )
+                          ) {
+                            const confirmFirst = window.confirm(
+                              "Are you sure you want to delete this image?"
+                            );
+                            if (!confirmFirst) return;
+
+                            deleteFile(
+                              (selectedAction?.files ?? []).find((f) =>
+                                f.mime_type.includes("image")
+                              )?.id!
+                            ).then(() => {
+                              setSelectedAction({
+                                ...selectedAction!,
+                                files: (selectedAction?.files ?? []).filter(
+                                  (f) => !f.mime_type.includes("image")
+                                ),
+                              });
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="relative h-fit">
+                      <div
+                        className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 border h-[300px]"
+                        onClick={() => {
+                          document.getElementById(`image-action-file`)?.click();
+                        }}
+                      >
+                        {(selectedAction?.files ?? []).filter(
+                          (f) => !f.mime_type.includes("image")
+                        ).length === 0 ? (
+                          <div className="flex flex-col items-center">
+                            <span>Add File to message</span>
+                            <HiOutlineDocumentAdd size={32} />
+                          </div>
+                        ) : (
+                          // <IoAttach className="rotate-[30deg]" size={32}/>
+                          <div className="flex items-center flex-col px-8">
+                            <IoDocumentsOutline size={32} />
+                            <small className="text-center mt-4">
+                              {
+                                (selectedAction?.files ?? []).find(
+                                  (f) => !f.mime_type.includes("image")
+                                )?.file_name
+                              }
+                            </small>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".doc,.docx,.pdf,.xls,.xlsx,.txt"
+                          id={`image-action-file`}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              uploadFile(file, {}, () => {}).then(
+                                (resp: any) => {
+                                  if (file) {
+                                    uploadFile(file, {}, () => {}).then(
+                                      (resp: any) => {
+                                        let files = selectedAction?.files ?? [];
+                                        if (
+                                          files.filter(
+                                            (f) =>
+                                              !f.mime_type.includes("image")
+                                          ).length === 0
+                                        ) {
+                                          files = [...files, resp.data];
+                                        } else {
+                                          files = files.map((f) => {
+                                            if (
+                                              !f.mime_type.includes("image")
+                                            ) {
+                                              return resp.data;
+                                            }
+                                            return f;
+                                          });
+                                        }
+                                        setSelectedAction({
+                                          ...selectedAction,
+                                          files: files,
+                                        });
+                                      }
+                                    );
+                                  }
+                                }
+                              );
+                            }
+                          }}
+                        />
+                      </div>
+                      <BsTrash
+                        size={20}
+                        className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
+                        onClick={() => {
+                          if (
+                            (selectedAction?.files ?? []).find(
+                              (f) => !f.mime_type.includes("image")
+                            )
+                          ) {
+                            const confirmFirst = window.confirm(
+                              "Are you sure you want to delete this file?"
+                            );
+                            if (!confirmFirst) return;
+
+                            deleteFile(
+                              (selectedAction?.files ?? []).find(
+                                (f) => !f.mime_type.includes("image")
+                              )?.id!
+                            ).then(() => {
+                              setSelectedAction({
+                                ...selectedAction!,
+                                files: (selectedAction?.files ?? []).filter(
+                                  (f) => f.mime_type.includes("image")
+                                ),
+                              });
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -380,7 +626,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                   />
                 </div>
                 <div>
-                 <ToggleSwitch
+                  <ToggleSwitch
                     onChange={(e) =>
                       setSelectedAction({
                         ...selectedAction!,

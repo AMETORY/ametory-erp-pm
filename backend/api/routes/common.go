@@ -38,6 +38,7 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 
 	commonHander := handlers.NewCommonHandler(erpContext)
 	r.POST("/api/v1/file/upload", middlewares.AuthMiddleware(erpContext, false), commonHander.UploadFileHandler)
+	r.DELETE("/api/v1/file/:id", middlewares.AuthMiddleware(erpContext, false), commonHander.DeleteFileHandler)
 	r.GET("/api/v1/members", middlewares.AuthMiddleware(erpContext, false), commonHander.GetMembersHandler)
 	r.GET("/api/v1/roles", middlewares.AuthMiddleware(erpContext, false), commonHander.GetRolesHandler)
 	r.GET("/api/v1/accept-invitation/:token", commonHander.AcceptMemberInvitationHandler)

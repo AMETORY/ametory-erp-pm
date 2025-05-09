@@ -1892,6 +1892,18 @@ func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) (any
 	// utils.LogJson(replyData)
 	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
 }
+func sendWAFileMessage(erpContext *context.ERPContext, jid, to, message, fileType, fileUrl string) (any, error) {
+	replyData := whatsmeow_client.WaMessage{
+		JID:      jid,
+		Text:     message,
+		To:       to,
+		IsGroup:  false,
+		FileType: fileType,
+		FileUrl:  fileUrl,
+	}
+	// utils.LogJson(replyData)
+	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
+}
 
 type geminiResponse struct {
 	Response string         `json:"response"`

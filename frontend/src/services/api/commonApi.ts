@@ -46,6 +46,12 @@ export const acceptInvitation = async (token: string) => {
   });
 };
 
+export const deleteFile = (id: string) => {
+  return customFetch(`api/v1/file/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export const uploadFile = async (
   file: File,
   reqs: Record<string, any>,
