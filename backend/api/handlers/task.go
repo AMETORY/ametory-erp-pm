@@ -162,9 +162,9 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 
 					for _, v := range act.Files {
 						if strings.Contains(v.MimeType, "image") && v.URL != "" {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "image", v.URL)
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "image", v.URL)
 						} else {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "document", v.URL)
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "document", v.URL)
 						}
 					}
 				}
@@ -195,9 +195,9 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
 					for _, v := range act.Files {
 						if strings.Contains(v.MimeType, "image") && v.URL != "" {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "image", v.URL)
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "image", v.URL)
 						} else {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg, "document", v.URL)
+							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "document", v.URL)
 						}
 					}
 				}
