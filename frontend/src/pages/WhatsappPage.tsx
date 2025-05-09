@@ -710,7 +710,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 }
               }}
             >
-              <FaDownload /> Export Now
+              <PiExport className="mr-1" /> Export Now
             </Button>
           </div>
         </Modal.Footer>

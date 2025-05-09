@@ -23,7 +23,12 @@ import toast from "react-hot-toast";
 import { getGeminiAgents } from "../services/api/geminiApi";
 import { GeminiAgent } from "../models/gemini";
 import Select, { InputActionMeta } from "react-select";
-import { BsCheck2, BsCheck2Circle, BsTelegram, BsWhatsapp } from "react-icons/bs";
+import {
+  BsCheck2,
+  BsCheck2Circle,
+  BsTelegram,
+  BsWhatsapp,
+} from "react-icons/bs";
 import { FaCircleXmark } from "react-icons/fa6";
 import { ContactModel } from "../models/contact";
 import { getProjects } from "../services/api/projectApi";
@@ -77,16 +82,19 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
   const getIcon = (type?: string) => {
     switch (type) {
       case "whatsapp":
-        return  <BsWhatsapp className="mr-2 w-4" />;
+        return <BsWhatsapp className="mr-2 w-4" />;
       case "telegram":
         return <BsTelegram className="mr-2 w-4" />;
       case "gemini":
         return "📲";
     }
-  }
+  };
   return (
     <div className=" flex flex-col mt-16">
-      <h3 className="text-2xl font-bold flex items-center"> {getIcon(connection?.type)} {connection?.name}</h3>
+      <h3 className="text-2xl font-bold flex items-center">
+        {" "}
+        {getIcon(connection?.type)} {connection?.name}
+      </h3>
       <p className="text-lg">{connection?.description}</p>
       <div className="flex w-fit">
         {connection?.status == "PENDING" && (
@@ -114,6 +122,33 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
               });
             }}
           />
+        </div>
+      )}
+      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+        <div className="mt-4">
+          <Label className="font-bold">Auto Response Time</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <TextInput
+              type="time"
+              value={connection?.auto_response_start_time}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  auto_response_start_time: e.target.value,
+                });
+              }}
+            />
+            <TextInput
+              type="time"
+              value={connection?.auto_response_end_time}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  auto_response_end_time: e.target.value,
+                });
+              }}
+            />
+          </div>
         </div>
       )}
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (

@@ -308,6 +308,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
               updateConnection(activeConnection.id!, activeConnection).then(
                 () => {
                   getAllConnections();
+                  alert("Connection updated successfully");
                 }
               );
             }}

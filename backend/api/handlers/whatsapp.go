@@ -1133,8 +1133,37 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
 
+	autopilot := false
+	if !whatsappSession.IsHumanAgent {
+		autopilot = true
+	}
+	fmt.Println("AUTO RESPONSE TIME", conn.AutoResponseStartTime, conn.AutoResponseStartTime)
+	if conn.AutoResponseStartTime != nil && conn.AutoResponseEndTime != nil {
+		fmt.Println("AUTO RESPONSE TIME", *conn.AutoResponseStartTime, *conn.AutoResponseStartTime)
+		autoResponseStartTime, err := time.ParseInLocation("2006-01-02 15:04", now.Format("2006-01-02")+" "+*conn.AutoResponseStartTime, time.Local)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Println("START TIME", now, autoResponseStartTime)
+		autoResponseEndTime, err := time.ParseInLocation("2006-01-02 15:04", now.Format("2006-01-02")+" "+*conn.AutoResponseEndTime, time.Local)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Println("END TIME", now, autoResponseEndTime)
+		if now.After(autoResponseStartTime) && now.Before(autoResponseEndTime) {
+			autopilot = true
+		}
+
+	}
+
+	fmt.Println("AUTO PILOT", autopilot)
+
 	var replyResponse *models.WhatsappMessageModel
-	if conn.GeminiAgent != nil && conn.IsAutoPilot && !whatsappSession.IsHumanAgent {
+	if conn.GeminiAgent != nil && conn.IsAutoPilot && autopilot {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
 		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
 		
@@ -1175,7 +1204,7 @@ params: jika tipe command dibutuhkan parameter
 		}
 
 		userHistories := []models.WhatsappMessageModel{}
-		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.SessionID).Order("created_at desc").Limit(10).Find(&userHistories)
+		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.SessionID).Order("created_at desc").Limit(100).Find(&userHistories)
 
 		userHistories = reverse(userHistories)
 
@@ -1194,7 +1223,7 @@ params: jika tipe command dibutuhkan parameter
 
 		}
 
-		// utils.LogJson(chatHistories)
+		utils.LogJson(chatHistories)
 		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -1217,14 +1246,15 @@ params: jika tipe command dibutuhkan parameter
 		}
 		sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
 		replyResponse = &models.WhatsappMessageModel{
-			Receiver: body.Sender,
-			Message:  response.Response,
-			MimeType: body.MimeType,
-			Session:  body.SessionID,
-			JID:      body.JID,
-			IsFromMe: true,
-			Info:     string(infoByte),
-			IsGroup:  body.Info["IsGroup"].(bool),
+			Receiver:    body.Sender,
+			Message:     response.Response,
+			MimeType:    body.MimeType,
+			Session:     body.SessionID,
+			JID:         body.JID,
+			IsFromMe:    true,
+			Info:        string(infoByte),
+			IsGroup:     body.Info["IsGroup"].(bool),
+			IsAutoPilot: true,
 		}
 	}
 

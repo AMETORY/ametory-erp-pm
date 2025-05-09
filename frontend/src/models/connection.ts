@@ -30,4 +30,6 @@ export interface ConnectionModel {
   idle_column_id?: string;
   idle_duration?: number;
   color?: string;
+  auto_response_start_time?: string;
+  auto_response_end_time?: string;
 }
