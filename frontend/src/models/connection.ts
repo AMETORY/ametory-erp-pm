@@ -8,6 +8,7 @@ export interface ConnectionModel {
   description?: string;
   type?: string;
   username?: string;
+  session?: string;
   session_name?: string;
   password?: string;
   channel_id?: string;

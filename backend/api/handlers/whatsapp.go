@@ -6,6 +6,7 @@ import (
 	"ametory-pm/models/whatsapp"
 	"ametory-pm/services"
 	"ametory-pm/services/app"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
 )
@@ -533,6 +535,114 @@ func (h *WhatsappHandler) CreateQR(c *gin.Context) {
 	// }
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": resp})
+}
+func (h *WhatsappHandler) ExportHandler(c *gin.Context) {
+	var input struct {
+		StartDate time.Time `json:"start_date"`
+		EndDate   time.Time `json:"end_date"`
+		MemberIDs []string  `json:"member_ids"`
+		TagIDs    []string  `json:"tag_ids"`
+		Sessions  []string  `json:"sessions"`
+	}
+
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// var sessions []models.WhatsappMessageSession
+	// err = h.erpContext.DB.Preload("Contact").Where("session_name IN (?)", input.ConnectionNames).Find(&sessions).Error
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
+	// Assuming `sessions` is already populated with the data to be exported
+	file := excelize.NewFile()
+	sheet1 := file.GetSheetName(0)
+
+	headerStyle, err := file.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 14,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#DCE6F1"}, // Soft blue
+			Pattern: 1,
+		},
+	})
+	row := 1
+	headers := []string{"Tgl", "Nama", "Nomor WA", "Percakapan", "Tag"}
+	colWidth := []float64{15, 20, 20, 75, 30}
+	for i, header := range headers {
+		file.SetCellValue(sheet1, fmt.Sprintf("%s%d", utils.NumToAlphabet(i+1), row), header)
+		file.SetColWidth(sheet1, utils.NumToAlphabet(i+1), utils.NumToAlphabet(i+1), colWidth[i])
+		// Apply styles: bold font, bigger font, center align, and soft blue background
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		file.SetCellStyle(sheet1, fmt.Sprintf("A%d", row), fmt.Sprintf("%s%d", utils.NumToAlphabet(len(headers)), row), headerStyle)
+
+	}
+
+	companyID := c.GetHeader("ID-Company")
+
+	var messages []models.WhatsappMessageModel
+	db := h.erpContext.DB.Preload("Member.User").Preload("Contact.Tags").Model(&models.WhatsappMessageModel{}).Where("whatsapp_messages.company_id = ?", companyID)
+	db = db.Joins("JOIN contacts on contacts.id = whatsapp_messages.contact_id")
+	if len(input.TagIDs) > 0 {
+		db = db.Joins("LEFT JOIN contact_tags on contact_tags.contact_model_id = contacts.id")
+		db = db.Where("contact_tags.tag_model_id IN (?)", input.TagIDs)
+	}
+
+	if len(input.Sessions) > 0 {
+		db = db.Where("whatsapp_messages.j_id IN (?)", input.Sessions)
+	}
+	db = db.Where("whatsapp_messages.created_at between ? and ?", input.StartDate, input.EndDate)
+	db = db.Where("whatsapp_messages.is_from_me = ?", false)
+	db = db.Where("whatsapp_messages.message != ''")
+	db = db.Order("created_at ASC")
+	db.Find(&messages)
+
+	row++
+
+	for _, msg := range messages {
+		var tags = []string{}
+		for _, tag := range msg.Contact.Tags {
+			tags = append(tags, tag.Name)
+		}
+		cells := []string{msg.CreatedAt.Format("02-01-2006 15:04"), msg.Contact.Name, *msg.Contact.Phone, msg.Message, strings.Join(tags, ", ")}
+
+		for i, c := range cells {
+			file.SetCellValue(sheet1, fmt.Sprintf("%s%d", utils.NumToAlphabet(i+1), row), c)
+
+		}
+		row++
+	}
+
+	// for i, message := range messages {
+
+	// }
+
+	var buf bytes.Buffer
+	if err := file.Write(&buf); err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write XLSX file"})
+		return
+	}
+
+	c.Header("Content-Description", "File Transfer")
+	c.Header("Content-Disposition", "attachment; filename=sessions.xlsx")
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+
 }
 func (h *WhatsappHandler) UpdateWebhook(c *gin.Context) {
 	if h.waService == nil {

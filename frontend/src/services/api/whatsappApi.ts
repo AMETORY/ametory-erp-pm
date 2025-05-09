@@ -64,3 +64,12 @@ export const createWAMessage = async (sessionId: string, message: any) => {
     body: JSON.stringify(message),
   });
 };
+export const exportXls = async (data: any) => {
+
+  return  await customFetch(`api/v1/whatsapp/export`, {
+    method: "POST",
+    body: JSON.stringify(data),
+    isBlob: true
+  });
+  
+};

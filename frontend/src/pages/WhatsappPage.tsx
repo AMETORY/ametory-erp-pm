@@ -26,6 +26,7 @@ import { getContrastColor, getPagination } from "../utils/helper";
 import {
   clearWhatsappSession,
   deleteWhatsappSession,
+  exportXls,
   getWhatsappSessions,
   updateWhatsappSession,
 } from "../services/api/whatsappApi";
@@ -52,6 +53,7 @@ import ModalSession from "../components/ModalSession";
 import { getMembers } from "../services/api/commonApi";
 import { MemberModel } from "../models/member";
 import moment from "moment";
+import { PiExport } from "react-icons/pi";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -85,6 +87,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [modalInfo, setModalInfo] = useState(false);
   const [downloadModal, setDownloadModal] = useState(false);
   const [modalDateOpen, setModalDateOpen] = useState(false);
+
   const [filters, setFilters] = useState([
     {
       label: "All Chat",
@@ -124,6 +127,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [selectedDownloadTags, setSelectedDownloadTags] = useState<TagModel[]>(
     []
   );
+  const [selectedDownloadConnections, setSelectedDownloadConnections] =
+    useState<ConnectionModel[]>([]);
   const [selectedConnection, setSelectedConnection] =
     useState<ConnectionModel>();
   const [drawerFilter, setDrawerFilter] = useState(false);
@@ -230,8 +235,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 setDownloadModal(true);
               }}
             >
-              <LuDownload className="" />
-              <span>Download</span>
+              <PiExport className="" />
+              <span>Export</span>
             </Button>
             <Button
               pill
@@ -567,11 +572,36 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
       />
       <Modal show={downloadModal} onClose={() => setDownloadModal(false)}>
         <Modal.Header>
-          <h3 className="text-lg font-semibold">Download</h3>
+          <h3 className="text-lg font-semibold">Export</h3>
         </Modal.Header>
         <Modal.Body>
           <div className="flex flex-col pb-32 space-y-4">
             <div>
+              <Label>Connections</Label>
+              <Select
+                options={connections.filter(
+                  (item: any) => item.status === "ACTIVE"
+                )}
+                value={selectedDownloadConnections}
+                isMulti
+                onChange={(val) => {
+                  setSelectedDownloadConnections(val.map((e) => e));
+                }}
+                formatOptionLabel={(option) => (
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {option.name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {option.session_name}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
+            {/* <div>
               <Label>Member</Label>
               <Select
                 className="w-full"
@@ -587,7 +617,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   // setSelectedMembers(selectedOptions.map((option) => ({ id: option.value })));
                 }}
               />
-            </div>
+            </div> */}
             <div>
               <Label className=" font-semibold">Date Range</Label>
               <div
@@ -641,18 +671,44 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         <Modal.Footer>
           <div className="w-full flex justify-end">
             <Button
-              onClick={() => {
-                var data = {
-                  start_date: dateRange[0],
-                  end_date: dateRange[1],
-                  member_ids: selectedMembers.map((e) => e.value),
-                  tag_ids: selectedDownloadTags.map((e) => e.id),
-                };
+              onClick={async () => {
+                try {
+                  // if (selectedDownloadConnections.length === 0) {
+                  //   toast.error("Please select at least one connection");
+                  //   return;
+                  // }
+                  setLoading(true);
+                  var data = {
+                    start_date: dateRange[0],
+                    end_date: dateRange[1],
+                    member_ids: selectedMembers.map((e) => e.value),
+                    tag_ids: selectedDownloadTags.map((e) => e.id),
+                    sessions: selectedDownloadConnections.map(
+                      (e) => e.session
+                    ),
+                  };
 
-                console.log(data);
+                  const response:any = await exportXls(data);
+                  const blob = new Blob([response], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `whatsapp_${new Date().toISOString()}.xlsx`;
+                  link.style.display = 'none';
+                  document.body.appendChild(link);
+                  link.click();
+                  setTimeout(() => {
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  }, 0);
+                } catch (error) {
+                  toast.error(`${error}`);
+                } finally {
+                  setLoading(false);
+                }
               }}
             >
-              <FaDownload /> Download Now
+              <FaDownload /> Export Now
             </Button>
           </div>
         </Modal.Footer>

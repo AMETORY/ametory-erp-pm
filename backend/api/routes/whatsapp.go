@@ -25,6 +25,7 @@ func NewWhatsappRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		waGroup.GET("/devices", waHandler.GetDevice)
 		waGroup.PUT("/update-webhook", waHandler.UpdateWebhook)
 		waGroup.POST("/create-qr", waHandler.CreateQR)
+		waGroup.POST("/export", waHandler.ExportHandler)
 		waGroup.GET("/get-qr/:session", waHandler.GetQR)
 		waGroup.GET("/conversations/:jid", waHandler.GetConversationsHandler)
 		waGroup.GET("/messages/:jid", waHandler.GetMessagesHandler)
