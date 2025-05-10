@@ -1163,6 +1163,21 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	fmt.Println("AUTO PILOT", autopilot)
 
 	var replyResponse *models.WhatsappMessageModel
+
+	if conn.GeminiAgent == nil && conn.IsAutoPilot && autopilot && conn.AutoResponseMessage != "" {
+		sendWAMessage(h.erpContext, body.JID, body.Sender, conn.AutoResponseMessage)
+		replyResponse = &models.WhatsappMessageModel{
+			Receiver:    body.Sender,
+			Message:     conn.AutoResponseMessage,
+			MimeType:    body.MimeType,
+			Session:     body.SessionID,
+			JID:         body.JID,
+			IsFromMe:    true,
+			Info:        string(infoByte),
+			IsGroup:     body.Info["IsGroup"].(bool),
+			IsAutoPilot: true,
+		}
+	}
 	if conn.GeminiAgent != nil && conn.IsAutoPilot && autopilot {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
 		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s

@@ -6,6 +6,7 @@ import {
   ButtonGroup,
   Label,
   Spinner,
+  Textarea,
   TextInput,
   ToggleSwitch,
 } from "flowbite-react";
@@ -104,12 +105,29 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           <Badge color="success">{connection?.status}</Badge>
         )}
       </div>
+
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
           <Label className="font-bold">Phone Number</Label>
           <p>{connection?.session_name}</p>
         </div>
       )}
+
+      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+        <div className="mt-4">
+          <Label className="font-bold">Session Auth</Label>
+          <ToggleSwitch
+            checked={connection?.session_auth ?? false}
+            onChange={(e) => {
+              onUpdate({
+                ...connection!,
+                session_auth: e,
+              });
+            }}
+          />
+        </div>
+      )}
+
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
           <Label className="font-bold">Auto Pilot</Label>
@@ -151,31 +169,37 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           </div>
         </div>
       )}
+
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
-          <Label className="font-bold">Session Auth</Label>
-          <ToggleSwitch
-            checked={connection?.session_auth ?? false}
+          <Label className="font-bold">Auto Response Message</Label>
+          <Textarea
+            value={connection?.auto_response_message}
             onChange={(e) => {
               onUpdate({
                 ...connection!,
-                session_auth: e,
+                auto_response_message: e.target.value,
               });
             }}
+            placeholder="Enter auto response message"
           />
+          <small className="" style={{ lineHeight: "0.8" }}>
+            if you don't set any gemini agent auto response message will be sent
+            to user during the time frame.
+          </small>
         </div>
       )}
+
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
           <Label className="font-bold">Gemini Agent</Label>
           <Select
-            options={geminiAgents}
-            value={connection?.gemini_agent}
-            formatOptionLabel={(option) => (
-              <div>
-                <p>{option.name}</p>
-              </div>
-            )}
+            isClearable
+            options={geminiAgents.map((e) => ({ label: e.name, value: e.id }))}
+            value={{
+              label: connection?.gemini_agent?.name,
+              value: connection?.gemini_agent?.id,
+            }}
             styles={{
               container: (provided) => ({
                 ...provided,
@@ -184,10 +208,13 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
               }),
             }}
             onChange={(e) => {
+              let selected = geminiAgents.find(
+                (agent) => agent.id == e?.value!
+              );
               onUpdate({
                 ...connection!,
-                gemini_agent_id: e?.id,
-                gemini_agent: e!,
+                gemini_agent_id: selected?.id,
+                gemini_agent: selected!,
               });
             }}
           />

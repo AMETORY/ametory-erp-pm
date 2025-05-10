@@ -77,7 +77,8 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           setConnection(res.connection);
         })
         .catch((err) => {
-          toast.error(`${err}`);
+          // toast.error(`${err}`);
+          window.location.href = "/whatsapp";
         })
         .finally(() => {});
 

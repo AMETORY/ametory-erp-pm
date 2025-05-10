@@ -45,6 +45,7 @@ type ConnectionModel struct {
 	Color                 string               `json:"color" gorm:"column:color;type:varchar(255);default:'#34C759'"`
 	AutoResponseStartTime *string              `json:"auto_response_start_time" gorm:"type:varchar(32)"`
 	AutoResponseEndTime   *string              `json:"auto_response_end_time" gorm:"type:varchar(32)"`
+	AutoResponseMessage   string               `json:"auto_response_message" gorm:"column:auto_response_message;type:varchar(255)"`
 }
 
 func (ConnectionModel) TableName() string {
