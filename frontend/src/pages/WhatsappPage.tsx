@@ -262,7 +262,10 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </div>
         <div className="flex flex-row w-full h-full flex-1 gap-2">
-          <div className="w-[300px] h-full">
+          <div className="w-[300px]" style={{
+            height: "calc(100vh - 160px)",
+            overflowY: "auto"
+          }}>
             <ul className="space-y-2">
               {sessions.map((e) => (
                 <li
