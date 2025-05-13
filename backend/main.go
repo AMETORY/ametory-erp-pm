@@ -27,6 +27,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/inventory"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
+	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/tag"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
@@ -144,6 +145,12 @@ func main() {
 		for _, v := range appService.GenerateDefaultPermissions() {
 			erpContext.DB.Create(&v)
 		}
+		var companies []models.CompanyModel
+		erpContext.DB.Model(&models.CompanyModel{}).Find(&companies)
+		for _, v := range companies {
+			appService.GenerateDefaultRoles(v.ID)
+		}
+
 	}
 
 	emailSender := thirdparty.NewSMTPSender(cfg.Email.Server, cfg.Email.Port, cfg.Email.Username, cfg.Email.Password, mail.Address{Name: cfg.Email.From, Address: cfg.Email.From})

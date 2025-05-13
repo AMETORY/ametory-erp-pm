@@ -123,6 +123,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
             + Create new broadcast
           </Button>
         </div>
+        <div className="h-[calc(100vh-240px)] overflow-y-auto">
         <Table>
           <Table.Head>
             <Table.HeadCell>ID</Table.HeadCell>
@@ -181,6 +182,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
             ))}
           </Table.Body>
         </Table>
+        </div>
         <Pagination
           className="mt-4"
           currentPage={page}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/go-redis/redis/v8"
 	"gopkg.in/olahol/melody.v1"
 )
@@ -165,9 +166,16 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 
 	a.ctx.DB.Where("name in (?)", permissionNames).Find(&permissions)
 	roles = append(roles, models.RoleModel{Name: "MEMBER", Permissions: permissions, CompanyID: &companyID})
+	utils.LogJson(roles)
 
 	for i, v := range roles {
-		a.ctx.DB.Create(&v)
+		var role models.RoleModel
+		a.ctx.DB.Where("name = ? and company_id = ?", v.Name, companyID).Find(&role)
+		if role.ID == "" {
+			a.ctx.DB.Create(&v)
+		} else {
+			a.ctx.DB.Model(&role).Association("Permissions").Replace(v.Permissions)
+		}
 		roles[i] = v
 	}
 
