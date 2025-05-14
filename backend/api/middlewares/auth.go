@@ -9,6 +9,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func AuthMiddleware(ctx *context.ERPContext, checkCompany bool) gin.HandlerFunc {
@@ -55,7 +56,9 @@ func AuthMiddleware(ctx *context.ERPContext, checkCompany bool) gin.HandlerFunc 
 		user := models.UserModel{}
 		ctx.DB.Find(&user, "id = ?", token.Claims.(*jwt.StandardClaims).Id)
 		var member models.MemberModel
-		ctx.DB.Preload("Role.Permissions", "company_id = ?", c.Request.Header.Get("ID-Company")).Preload("Company").Where("user_id = ? and company_id = ?", token.Claims.(*jwt.StandardClaims).Id, c.Request.Header.Get("ID-Company")).Find(&member)
+		ctx.DB.Preload("Role", func(tx *gorm.DB) *gorm.DB {
+			return tx.Where("company_id = ?", c.Request.Header.Get("ID-Company")).Preload("Permissions")
+		}).Preload("Company").Where("user_id = ? and company_id = ?", token.Claims.(*jwt.StandardClaims).Id, c.Request.Header.Get("ID-Company")).Find(&member)
 		c.Set("user", user)
 		member.User = user
 		c.Set("member", member)

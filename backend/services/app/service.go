@@ -101,6 +101,7 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 		"customer_relationship": {
 			{"whatsapp": cruds},
 			{"form_template": cruds},
+			{"whatsapp_template": cruds},
 			{"form": cruds},
 		},
 		"misc": {
@@ -139,11 +140,15 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 		"customer_relationship": {
 			{"whatsapp": []string{"read"}},
 			{"form_template": []string{"read"}},
+			{"whatsapp_template": cruds},
 			{"form": []string{"read"}},
 		},
 		"whatsapp": {
 			{"broadcast": append(cruds, "send")},
 			{"message": append(cruds, "send")},
+		},
+		"misc": {
+			{"tag": cruds},
 		},
 		"project_management": {
 			{"project": []string{"read"}},

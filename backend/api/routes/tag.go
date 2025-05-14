@@ -14,10 +14,10 @@ func SetupTagRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	tagGroup := r.Group("/tag")
 	tagGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
-		tagGroup.GET("/list", middlewares.RbacUserMiddleware(erpContext, []string{"tag:read"}), handler.GetTagsHandler)
-		tagGroup.GET("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"tag:read"}), handler.GetTagDetailHandler)
-		tagGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"tag:create"}), handler.CreateTagHandler)
-		tagGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"tag:update"}), handler.UpdateTagHandler)
-		tagGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"tag:delete"}), handler.DeleteTagHandler)
+		tagGroup.GET("/list", middlewares.RbacUserMiddleware(erpContext, []string{"misc:tag:read"}), handler.GetTagsHandler)
+		tagGroup.GET("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"misc:tag:read"}), handler.GetTagDetailHandler)
+		tagGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"misc:tag:create"}), handler.CreateTagHandler)
+		tagGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"misc:tag:update"}), handler.UpdateTagHandler)
+		tagGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"misc:tag:delete"}), handler.DeleteTagHandler)
 	}
 }
