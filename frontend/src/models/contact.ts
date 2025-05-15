@@ -26,6 +26,7 @@ export interface ContactModel {
   tags?: TagModel[];
   is_completed?: boolean;
   is_success?: boolean;
+  telegram_id?: string;
   data?: {
     logs?: MessageLog[];
     retry?: MessageRetry;

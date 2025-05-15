@@ -307,7 +307,7 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 
 		var tags []mdl.TagModel
 		tagStr := "IMPORT"
-		if rows[i][4] != "" {
+		if len(rows[i]) > 4 && rows[i][4] != "" {
 			tagStr = "IMPORT," + cleanString(rows[i][4])
 		}
 
@@ -337,7 +337,7 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 			}
 		}
 		var products []mdl.ProductModel
-		if cleanString(rows[i][5]) != "" {
+		if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" {
 			dataProducts := strings.Split(cleanString(rows[i][5]), ",")
 			for _, v := range dataProducts {
 				fmt.Println("PRODUCT", cleanString(v))

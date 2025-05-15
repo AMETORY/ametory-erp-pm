@@ -35,6 +35,7 @@ import { ContactModel } from "../models/contact";
 import { getProjects } from "../services/api/projectApi";
 import { ProjectModel } from "../models/project";
 import { ColumnModel } from "../models/column";
+import TelegramIntegrationGuide from "./TelegramGuide";
 
 interface ConnectionDrawerProps {
   connection: ConnectionModel;
@@ -111,6 +112,38 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           <Label className="font-bold">Phone Number</Label>
           <p>{connection?.session_name}</p>
         </div>
+      )}
+      {connection.type == "telegram" && (
+        <>
+          <div className="mt-4">
+            <Label className="font-bold">BOT Name</Label>
+            <p>{connection?.session_name}</p>
+          </div>
+          <div className="mt-4">
+            <Label className="font-bold">BOT TOKEN</Label>
+            <TextInput
+              value={connection?.access_token}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  access_token: e.target.value,
+                });
+              }}
+            />
+          </div>
+          {connection?.status != "ACTIVE" && (
+            <div>
+              <Button
+                className="mt-4"
+                onClick={async () => {
+                  onSave();
+                }}
+              >
+                SAVE
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
@@ -239,49 +272,50 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4"></div>
       )}
-
-      <div className="mt-4">
-        <div className=" block">
-          <Label className="font-bold" htmlFor="name">
-            Project
-          </Label>
+      {connection?.status == "ACTIVE" && (
+        <div className="mt-4">
+          <div className=" block">
+            <Label className="font-bold" htmlFor="name">
+              Project
+            </Label>
+          </div>
+          <Select
+            value={
+              connection?.project
+                ? {
+                    label: connection?.project?.name,
+                    value: connection?.project?.id,
+                  }
+                : null
+            }
+            options={[
+              { label: "Select Project", value: "" },
+              ...projects.map((e) => ({
+                label: e.name,
+                value: e.id,
+              })),
+            ]}
+            onChange={(val) => {
+              onUpdate({
+                ...connection!,
+                project_id: val?.value,
+                new_session_column: undefined,
+                new_session_column_id: undefined,
+                project: {
+                  ...connection!.project!,
+                  id: val!.value,
+                  name: val!.label,
+                  columns:
+                    projects.find((e) => e.id == val?.value)?.columns ?? [],
+                },
+              });
+            }}
+            onInputChange={(val) => {
+              getAllProjects(val);
+            }}
+          />
         </div>
-        <Select
-          value={
-            connection?.project
-              ? {
-                  label: connection?.project?.name,
-                  value: connection?.project?.id,
-                }
-              : null
-          }
-          options={[
-            { label: "Select Project", value: "" },
-            ...projects.map((e) => ({
-              label: e.name,
-              value: e.id,
-            })),
-          ]}
-          onChange={(val) => {
-            onUpdate({
-              ...connection!,
-              project_id: val?.value,
-              new_session_column: undefined,
-              new_session_column_id: undefined,
-              project: {
-                ...connection!.project!,
-                id: val!.value,
-                name: val!.label,
-                columns:
-                  projects.find((e) => e.id == val?.value)?.columns ?? [],
-              },
-            });
-          }}
-          onInputChange={(val) => {
-            getAllProjects(val);
-          }}
-        />
-      </div>
+      )}
       {connection?.project && (
         <div className="mt-4">
           <div className=" block">
@@ -528,6 +562,9 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             Connect Device
           </Button>
         </div>
+      )}
+      {connection?.status == "PENDING" && connection.type == "telegram" && (
+        <TelegramIntegrationGuide />
       )}
     </div>
   );

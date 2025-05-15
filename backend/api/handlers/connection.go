@@ -65,15 +65,17 @@ func (h *ConnectionHandler) GetConnectionsHandler(c *gin.Context) {
 	}
 
 	for i, v := range connections {
-		resp, err := h.whatsappWebService.CheckConnected(v.Session)
-		if err == nil {
-			respJson := struct {
-				IsConnected bool   `json:"is_connected"`
-				Message     string `json:"message"`
-			}{}
-			if err := json.Unmarshal(resp, &respJson); err == nil {
-				fmt.Println("respJson", respJson)
-				v.Connected = respJson.IsConnected
+		if v.Type == "whatsapp" {
+			resp, err := h.whatsappWebService.CheckConnected(v.Session)
+			if err == nil {
+				respJson := struct {
+					IsConnected bool   `json:"is_connected"`
+					Message     string `json:"message"`
+				}{}
+				if err := json.Unmarshal(resp, &respJson); err == nil {
+					fmt.Println("respJson", respJson)
+					v.Connected = respJson.IsConnected
+				}
 			}
 		}
 		connections[i] = v

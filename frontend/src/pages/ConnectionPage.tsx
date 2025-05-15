@@ -30,6 +30,7 @@ import { FaCircleXmark } from "react-icons/fa6";
 import { ProjectModel } from "../models/project";
 import { ColumnModel } from "../models/column";
 import { getProjects } from "../services/api/projectApi";
+import { setUpWebhook } from "../services/api/telegramApi";
 interface ConnectionPageProps {}
 
 const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
@@ -52,7 +53,10 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     value: string;
   }>({ label: "WHATSAPP", value: "whatsapp" });
   const nav = useNavigate();
-  var connectionType = [{ label: "WHATSAPP", value: "whatsapp" }];
+  var connectionType = [
+    { label: "WHATSAPP", value: "whatsapp" },
+    { label: "TELEGRAM", value: "telegram" },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -261,6 +265,17 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
                 />
               </div>
             )}
+            {selectedConnection.value === "telegram" && (
+              <div className="mb-2 block">
+                <Label htmlFor="session_name" value="BOT Name" />
+                <TextInput
+                  id="session_name"
+                  placeholder="BOT Name"
+                  value={sessionName}
+                  onChange={(e) => setSessionName(e.target.value)}
+                />
+              </div>
+            )}
 
             <div className="mb-2 block">
               <Label htmlFor="description" value="Description" />
@@ -304,13 +319,22 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
               getAllConnections();
               setActiveConnection(undefined);
             }}
-            onSave={() => {
-              updateConnection(activeConnection.id!, activeConnection).then(
-                () => {
-                  getAllConnections();
-                  alert("Connection updated successfully");
+            onSave={async () => {
+              try {
+                await updateConnection(activeConnection.id!, activeConnection);
+                if (activeConnection.type == "telegram" && activeConnection.status == "PENDING") {
+                  await setUpWebhook(activeConnection.id!);
+                  await updateConnection(activeConnection.id!, {
+                    ...activeConnection,
+                    status: "ACTIVE",
+                  });
                 }
-              );
+                await getAllConnections();
+                alert("Connection updated successfully");
+              } catch (error) {
+                console.error(error);
+                alert("Failed to update connection");
+              }
             }}
           />
         </Drawer>

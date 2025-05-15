@@ -27,6 +27,7 @@ import TagPage from "../pages/TagPage";
 import ProductPage from "../pages/ProductPage";
 import TemplatePage from "../pages/TemplatePage";
 import TemplateDetail from "../pages/TemplateDetail";
+import TelegramPage from "../pages/TelegramPage";
 
 interface PrivateRouteProps {}
 
@@ -58,6 +59,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/task-attribute" element={<TaskAttributePage />} />
       <Route path="/product" element={<ProductPage />} />
       <Route path="/whatsapp" element={<WhatsappPage />} />
+      <Route path="/telegram" element={<TelegramPage />} />
+      <Route path="/telegram/:sessionId" element={<TelegramPage />} />
       <Route path="/broadcast" element={<BroadcastPage />} />
       <Route path="/template" element={<TemplatePage />} />
       <Route path="/template/:templateId" element={<TemplateDetail />} />
