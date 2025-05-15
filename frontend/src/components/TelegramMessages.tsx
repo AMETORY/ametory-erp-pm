@@ -9,11 +9,11 @@ import { FileModel } from "../models/file";
 import { ConnectionModel } from "../models/connection";
 import { TemplateModel } from "../models/template";
 import {
-    createTelegramMessage,
+  createTelegramMessage,
   getTelegramMessages,
   getTelegramSessionDetail,
 } from "../services/api/telegramApi";
-import { Button, Popover } from "flowbite-react";
+import { Button, Modal, Popover } from "flowbite-react";
 import Markdown from "react-markdown";
 import { IoCheckmarkDone } from "react-icons/io5";
 import Moment from "react-moment";
@@ -56,6 +56,16 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
   }, []);
 
   useEffect(() => {
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
+      .then((response) => {
+        return response.json();
+      })
+      .then((jsonData) => {
+        setEmojis(jsonData.emojis);
+      });
+  }, []);
+
+  useEffect(() => {
     if (mounted) {
       getTelegramSessionDetail(sessionId)
         .then((res: any) => {
@@ -86,7 +96,6 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
         //   window.location.href = "/whatsapp";
       });
   }, [session, sessionId]);
-
 
   const sendMessage = async () => {
     try {
@@ -197,6 +206,17 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
     },
   };
 
+
+  const groupBy = (emojis: any[], category: string): { [s: string]: any[] } => {
+    return emojis.reduce((acc, curr) => {
+      const key = curr[category];
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(curr);
+      return acc;
+    }, {});
+  };
 
   const neverMatchingRegex = /($a)/;
   const queryEmojis = (query: any, callback: (emojis: any) => void) => {
@@ -367,90 +387,118 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
         </div>
       </div>
       {renderMessages()}
-       {files.length > 0 && (
-              <div className="absolute bottom-[100px] flex w-full bg-red-50 p-4 z-50">
-                {files.length} Attachments
-              </div>
-            )}
-            <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
-              <div className="relative w-full">
-                <MentionsInput
-                  disabled={!session?.is_human_agent && connection?.is_auto_pilot}
-                  value={content}
-                  onChange={(val: any) => {
-                    setContent(val.target.value);
-                  }}
-                  style={emojiStyle}
-                  placeholder={
-                    !session?.is_human_agent && connection?.is_auto_pilot
-                      ? "Input disabled for auto pilot mode"
-                      : "Press ':' for emojis, '/' for templates and shift+enter for new line"
-                  }
-                  className="w-full"
-                  autoFocus
-                  onKeyDown={async (val: any) => {
-                    if (val.key === "Enter" && val.shiftKey) {
-                      setContent((prev) => prev + "\n");
-                      return;
-                    }
-                    if (val.key === "Enter") {
-                      sendMessage();
-                      return;
-                    }
-                  }}
-                >
-                  <Mention
-                    trigger=":"
-                    markup="__id__"
-                    regex={neverMatchingRegex}
-                    data={queryEmojis}
-                  />
-                  <Mention
-                    trigger="@"
-                    data={[
-                      { id: "{{user}}", display: "Full Name" },
-                      { id: "{{phone}}", display: "Phone Number" },
-                      { id: "{{agent}}", display: "Agent Name" },
-                    ]}
-                    style={{
-                      backgroundColor: "#cee4e5",
-                    }}
-                    appendSpaceOnAdd
-                  />
-                  <Mention
-                    trigger="/"
-                    data={templates.map((t: any) => ({
-                      id: t.id,
-                      display: t.title,
-                    }))}
-                    appendSpaceOnAdd
-                    onAdd={(e: any) => {
-                      console.log(e);
-                    }}
-                    markup="@@[__display__](__id__)"
-                  />
-                </MentionsInput>
-                <div
-                  className="absolute top-2 right-2 cursor-pointer"
-                  onClick={() => setModalEmojis(true)}
-                >
-                  😀
+      {files.length > 0 && (
+        <div className="absolute bottom-[100px] flex w-full bg-red-50 p-4 z-50">
+          {files.length} Attachments
+        </div>
+      )}
+      <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
+        <div className="relative w-full">
+          <MentionsInput
+            disabled={!session?.is_human_agent && connection?.is_auto_pilot}
+            value={content}
+            onChange={(val: any) => {
+              setContent(val.target.value);
+            }}
+            style={emojiStyle}
+            placeholder={
+              !session?.is_human_agent && connection?.is_auto_pilot
+                ? "Input disabled for auto pilot mode"
+                : "Press ':' for emojis, '/' for templates and shift+enter for new line"
+            }
+            className="w-full"
+            autoFocus
+            onKeyDown={async (val: any) => {
+              if (val.key === "Enter" && val.shiftKey) {
+                setContent((prev) => prev + "\n");
+                return;
+              }
+              if (val.key === "Enter") {
+                sendMessage();
+                return;
+              }
+            }}
+          >
+            <Mention
+              trigger=":"
+              markup="__id__"
+              regex={neverMatchingRegex}
+              data={queryEmojis}
+            />
+            <Mention
+              trigger="@"
+              data={[
+                { id: "{{user}}", display: "Full Name" },
+                { id: "{{phone}}", display: "Phone Number" },
+                { id: "{{agent}}", display: "Agent Name" },
+              ]}
+              style={{
+                backgroundColor: "#cee4e5",
+              }}
+              appendSpaceOnAdd
+            />
+            <Mention
+              trigger="/"
+              data={templates.map((t: any) => ({
+                id: t.id,
+                display: t.title,
+              }))}
+              appendSpaceOnAdd
+              onAdd={(e: any) => {
+                console.log(e);
+              }}
+              markup="@@[__display__](__id__)"
+            />
+          </MentionsInput>
+          <div
+            className="absolute top-2 right-2 cursor-pointer"
+            onClick={() => setModalEmojis(true)}
+          >
+            😀
+          </div>
+        </div>
+        <Button
+          color="gray"
+          onClick={() => {
+            setModalTemplates(true);
+          }}
+        >
+          <TbTemplate />
+        </Button>
+        <Button color="gray" onClick={sendMessage}>
+          <BsSend />
+        </Button>
+      </div>
+      <Modal
+        dismissible
+        show={modalEmojis}
+        onClose={() => setModalEmojis(false)}
+      >
+        <Modal.Header>Emojis</Modal.Header>
+        <Modal.Body>
+          <div>
+            {Object.entries(groupBy(emojis, "category")).map(
+              ([category, emojis], i) => (
+                <div className="mb-4 hover:bg-gray-100 rounded-lg p-2" key={i}>
+                  <h3 className="font-bold">{category}</h3>
+                  <div className=" flex flex-wrap gap-1">
+                    {emojis.map((e: any, index: number) => (
+                      <div
+                        key={index}
+                        className="cursor-pointer text-lg"
+                        onClick={() => setContent((prev) => prev + e.emoji)}
+                      >
+                        {e.emoji}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <Button
-                color="gray"
-                onClick={() => {
-                  setModalTemplates(true);
-                }}
-              >
-                <TbTemplate />
-              </Button>
-              <Button color="gray" onClick={sendMessage}>
-                <BsSend />
-              </Button>
-            </div>
+              )
+            )}
+          </div>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };
 export default TelegramMessages;
-

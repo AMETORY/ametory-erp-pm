@@ -493,7 +493,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 {isEditable ? (
                   <Select
                     options={connections.filter(
-                      (item: any) => item.status === "ACTIVE"
+                      (item: any) => item.status === "ACTIVE" && item.type === "whatsapp"
                     )}
                     value={broadcast?.connections ?? []}
                     isMulti
