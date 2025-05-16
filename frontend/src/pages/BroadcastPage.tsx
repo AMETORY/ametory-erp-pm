@@ -1,8 +1,9 @@
-import { useContext, useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useRef, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import {
   Badge,
   Button,
+  Dropdown,
   Label,
   Modal,
   Pagination,
@@ -27,6 +28,11 @@ import { parseMentions } from "../utils/helper-ui";
 import { TemplateModel } from "../models/template";
 import { getTemplates } from "../services/api/templateApi";
 import Select from "react-select";
+import { BsPlusCircle, BsTag, BsFileEarmark } from "react-icons/bs";
+import { getProducts } from "../services/api/productApi";
+import { ProductModel } from "../models/product";
+import { FileModel } from "../models/file";
+import { uploadFile } from "../services/api/commonApi";
 
 interface BroadcastPageProps {}
 const neverMatchingRegex = /($a)/;
@@ -45,6 +51,11 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
   const [useTemplate, setUseTemplate] = useState(false);
   const [templates, setTemplates] = useState<TemplateModel[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateModel>();
+  const [modaProduct, setModalProduct] = useState(false);
+  const [products, setProducts] = useState<ProductModel[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<ProductModel[]>([]);
+  const [files, setFiles] = useState<FileModel[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const nav = useNavigate();
   useEffect(() => {
     setMounted(true);
@@ -124,64 +135,64 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
           </Button>
         </div>
         <div className="h-[calc(100vh-240px)] overflow-y-auto">
-        <Table>
-          <Table.Head>
-            <Table.HeadCell>ID</Table.HeadCell>
-            <Table.HeadCell>Description</Table.HeadCell>
-            <Table.HeadCell>Message</Table.HeadCell>
-            <Table.HeadCell>Actions</Table.HeadCell>
-          </Table.Head>
-          <Table.Body>
-            {broadcasts?.length === 0 && (
-              <Table.Row>
-                <Table.Cell colSpan={4} className="text-center">
-                  No broadcast found
-                </Table.Cell>
-              </Table.Row>
-            )}
-            {broadcasts?.map((broadcast: any, index) => (
-              <Table.Row key={broadcast.id}>
-                <Table.Cell>{index + 1}</Table.Cell>
-                <Table.Cell>{broadcast.description}</Table.Cell>
-                <Table.Cell>
-                  {parseMentions(broadcast.message, () => {})}
-                </Table.Cell>
-                <Table.Cell className="flex items-center justify-center gap-2">
-                  <a
-                    href="#"
-                    className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
-                    onClick={() => nav(`/broadcast/${broadcast.id}`)}
-                  >
-                    View
-                  </a>
-                  <a
-                    href="#"
-                    className="font-medium text-red-600 hover:underline dark:text-red-500"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          "Are you sure you want to delete this broadcast?"
-                        )
-                      ) {
-                        setLoading(true);
-                        deleteBroadcast(broadcast.id)
-                          .then(() => {
-                            getAllBroadcast();
-                          })
-                          .catch(() => {
-                            toast.error("Delete failed");
-                          })
-                          .finally(() => setLoading(false));
-                      }
-                    }}
-                  >
-                    Delete
-                  </a>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+          <Table>
+            <Table.Head>
+              <Table.HeadCell>ID</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Message</Table.HeadCell>
+              <Table.HeadCell>Actions</Table.HeadCell>
+            </Table.Head>
+            <Table.Body>
+              {broadcasts?.length === 0 && (
+                <Table.Row>
+                  <Table.Cell colSpan={4} className="text-center">
+                    No broadcast found
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {broadcasts?.map((broadcast: any, index) => (
+                <Table.Row key={broadcast.id}>
+                  <Table.Cell>{index + 1}</Table.Cell>
+                  <Table.Cell>{broadcast.description}</Table.Cell>
+                  <Table.Cell>
+                    {parseMentions(broadcast.message, () => {})}
+                  </Table.Cell>
+                  <Table.Cell className="flex items-center justify-center gap-2">
+                    <a
+                      href="#"
+                      className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
+                      onClick={() => nav(`/broadcast/${broadcast.id}`)}
+                    >
+                      View
+                    </a>
+                    <a
+                      href="#"
+                      className="font-medium text-red-600 hover:underline dark:text-red-500"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Are you sure you want to delete this broadcast?"
+                          )
+                        ) {
+                          setLoading(true);
+                          deleteBroadcast(broadcast.id)
+                            .then(() => {
+                              getAllBroadcast();
+                            })
+                            .catch(() => {
+                              toast.error("Delete failed");
+                            })
+                            .finally(() => setLoading(false));
+                        }
+                      }}
+                    >
+                      Delete
+                    </a>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
         </div>
         <Pagination
           className="mt-4"
@@ -209,7 +220,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                 />
               </div>
               {!useTemplate && (
-                <div className="mb-2 block">
+                <div className="mb-2 block position">
                   <Label htmlFor="message" value="Message" />
 
                   <MentionsInput
@@ -241,6 +252,38 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                       data={queryEmojis}
                     />
                   </MentionsInput>
+                  {/* <div className="absolute bottom-2 right-2 z-50">
+                    <Dropdown
+                      label={<BsPlusCircle />}
+                      inline
+                      placement="top"
+                      arrowIcon={false}
+                    >
+                      <Dropdown.Item
+                        className="flex gap-2"
+                        onClick={() => {
+                          fileRef.current?.click();
+                        }}
+                        icon={BsFileEarmark}
+                      >
+                        File
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        className="flex gap-2"
+                        onClick={() => {
+                          getProducts({ page: 1, size: 10 }).then(
+                            (res: any) => {
+                              setProducts(res.data.items);
+                            }
+                          );
+                          setModalProduct(true);
+                        }}
+                        icon={BsTag}
+                      >
+                        Product
+                      </Dropdown.Item>
+                    </Dropdown>
+                  </div> */}
                 </div>
               )}
 
@@ -287,6 +330,28 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
           </Modal.Footer>
         </Modal>
       )}
+      <input
+        multiple
+        accept=".png, .jpg, .jpeg, .doc, .docx, .xls, .xlsx, .pdf"
+        type="file"
+        name="file"
+        id=""
+        ref={fileRef}
+        className="hidden"
+        onChange={async (e) => {
+          if ((e.target.files ?? []).length > 0) {
+            for (
+              let index = 0;
+              index < (e.target.files ?? []).length;
+              index++
+            ) {
+              const element = (e.target.files ?? [])[index];
+              let resp: any = await uploadFile(element, {}, console.log);
+              setFiles((prev) => [...prev, resp.data]);
+            }
+          }
+        }}
+      />
     </AdminLayout>
   );
 };

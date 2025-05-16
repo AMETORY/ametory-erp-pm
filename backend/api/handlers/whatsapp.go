@@ -123,8 +123,9 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	var input struct {
-		Message string             `json:"message"`
-		Files   []models.FileModel `json:"files"`
+		Message  string                `json:"message"`
+		Files    []models.FileModel    `json:"files"`
+		Products []models.ProductModel `json:products`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -452,6 +453,133 @@ _%s_
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	for _, v := range input.Files {
+
+		now := time.Now()
+		waDataReply.ID = utils.Uuid()
+		waDataReply.Message = ""
+		waDataReply.CreatedAt = &now
+		waDataReply.MediaURL = v.URL
+		waDataReply.MimeType = v.MimeType
+		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		session.LastMessage = waDataReply.Message
+		session.LastOnlineAt = &now
+		err = h.erpContext.DB.Save(&session).Error
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		msgNotif := gin.H{
+			"message":    waDataReply.Message,
+			"command":    "WHATSAPP_RECEIVED",
+			"session_id": session.ID,
+			"data":       waDataReply,
+		}
+		msgNotifStr, _ := json.Marshal(msgNotif)
+		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
+
+		if strings.Contains(v.MimeType, "image") && v.URL != "" {
+			resp, _ := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+				JID:      waDataReply.JID,
+				Text:     "",
+				To:       to,
+				IsGroup:  waDataReply.IsGroup,
+				FileType: "image",
+				FileUrl:  v.URL,
+			})
+			fmt.Println("RESPONSE", resp)
+		} else {
+			resp, _ := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+				JID:      waDataReply.JID,
+				Text:     "",
+				To:       to,
+				IsGroup:  waDataReply.IsGroup,
+				FileType: "document",
+				FileUrl:  v.URL,
+			})
+			fmt.Println("RESPONSE", resp)
+		}
+
+		time.Sleep(time.Millisecond * 500)
+	}
+
+	for _, v := range input.Products {
+		desc := ""
+		var images []models.FileModel
+		h.erpContext.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+
+		if v.Description != nil {
+			desc = *v.Description
+		}
+		dataMsg := fmt.Sprintf(`*%s*
+_%s_
+
+%s
+		`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
+		productMsg := whatsmeow_client.WaMessage{
+			JID:      waDataReply.JID,
+			Text:     dataMsg,
+			To:       to,
+			IsGroup:  waDataReply.IsGroup,
+			FileType: "image",
+		}
+
+		now := time.Now()
+		waDataReply.ID = utils.Uuid()
+		waDataReply.Message = dataMsg
+		waDataReply.CreatedAt = &now
+		if len(images) > 0 {
+			waDataReply.MediaURL = images[0].URL
+			waDataReply.MimeType = images[0].MimeType
+		}
+
+		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		session.LastMessage = waDataReply.Message
+		session.LastOnlineAt = &now
+		err = h.erpContext.DB.Save(&session).Error
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		msgNotif := gin.H{
+			"message":    waDataReply.Message,
+			"command":    "WHATSAPP_RECEIVED",
+			"session_id": session.ID,
+			"data":       waDataReply,
+		}
+		msgNotifStr, _ := json.Marshal(msgNotif)
+		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
+
+		if len(images) > 0 {
+			productMsg.FileType = "image"
+			productMsg.FileUrl = images[0].URL
+			waDataReply.MediaURL = images[0].URL
+			waDataReply.MimeType = images[0].MimeType
+		}
+
+		h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": msg})
 }
 
@@ -1137,23 +1265,23 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	if !whatsappSession.IsHumanAgent {
 		autopilot = true
 	}
-	fmt.Println("AUTO RESPONSE TIME", conn.AutoResponseStartTime, conn.AutoResponseStartTime)
+	// fmt.Println("AUTO RESPONSE TIME", conn.AutoResponseStartTime, conn.AutoResponseEndTime)
 	if conn.AutoResponseStartTime != nil && conn.AutoResponseEndTime != nil {
-		fmt.Println("AUTO RESPONSE TIME", *conn.AutoResponseStartTime, *conn.AutoResponseStartTime)
+		fmt.Println("AUTO RESPONSE TIME", *conn.AutoResponseStartTime, *conn.AutoResponseEndTime)
 		autoResponseStartTime, err := time.ParseInLocation("2006-01-02 15:04", now.Format("2006-01-02")+" "+*conn.AutoResponseStartTime, time.Local)
 		if err != nil {
 			log.Println(err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		fmt.Println("START TIME", now, autoResponseStartTime)
+		// fmt.Println("START TIME", now, autoResponseStartTime.Format("2006-01-02 15:04"))
 		autoResponseEndTime, err := time.ParseInLocation("2006-01-02 15:04", now.Format("2006-01-02")+" "+*conn.AutoResponseEndTime, time.Local)
 		if err != nil {
 			log.Println(err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		fmt.Println("END TIME", now, autoResponseEndTime)
+		fmt.Println("BETWEEN", autoResponseStartTime.Format("2006-01-02 15:04"), "<", now.Format("2006-01-02 15:04"), ">", autoResponseEndTime.Format("2006-01-02 15:04"))
 		if now.After(autoResponseStartTime) && now.Before(autoResponseEndTime) {
 			autopilot = true
 		}

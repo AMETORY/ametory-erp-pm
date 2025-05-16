@@ -1,5 +1,6 @@
 import {
   Button,
+  Dropdown,
   Modal,
   Popover,
   Table,
@@ -31,10 +32,22 @@ import {
 } from "../services/api/whatsappApi";
 import { debounce } from "../utils/helper";
 import { IoCheckmarkDone } from "react-icons/io5";
-import { BsSend } from "react-icons/bs";
+import {
+  BsFileEarmark,
+  BsImage,
+  BsPlusCircle,
+  BsSend,
+  BsTag,
+} from "react-icons/bs";
 import { MessageTemplate, TemplateModel } from "../models/template";
 import { getTemplates } from "../services/api/templateApi";
 import { TbTemplate } from "react-icons/tb";
+import { uploadFile } from "../services/api/commonApi";
+import { FaXmark } from "react-icons/fa6";
+import { ProductModel } from "../models/product";
+import ModalProduct from "./ModalProduct";
+import { getProducts } from "../services/api/productApi";
+import { HiMagnifyingGlass } from "react-icons/hi2";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -58,12 +71,16 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
   const [files, setFiles] = useState<FileModel[]>([]);
+  const [products, setProducts] = useState<ProductModel[]>([]);
   const [openAttachment, setOpenAttachment] = useState(false);
   const [connection, setConnection] = useState<ConnectionModel>();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [modalEmojis, setModalEmojis] = useState(false);
   const [templates, setTemplates] = useState<TemplateModel[]>([]);
   const [modalTemplates, setModalTemplates] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [modalProduct, setModalProduct] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<ProductModel[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -243,7 +260,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     input: {
       fontSize: 16,
       lineHeight: 1.2,
-      padding: 9,
+      paddingLeft: 9,
+      paddingRight: 9,
+      paddingTop: 9,
+      paddingBottom: 9,
       border: "1px solid silver",
       borderRadius: 10,
       backgroundColor: !session?.is_human_agent ? "#f0f0f0" : "white",
@@ -320,12 +340,15 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     try {
       if (!content) return;
       setContent("");
+      setOpenAttachment(false);
+      setFiles([]);
+      setSelectedProducts([])
       await createWAMessage(sessionId!, {
         message: content,
         files: files,
+        products: selectedProducts
       });
-      setOpenAttachment(false);
-      setFiles([]);
+      
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -451,6 +474,20 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   {msg.message_info?.PushName}
                 </small>
               )}
+              {msg.media_url &&
+                !msg.mime_type?.includes("image") &&
+                !msg.mime_type?.includes("video") &&
+                !msg.mime_type?.includes("audio") && (
+                  <div
+                    className="flex items-center cursor-pointer"
+                    onClick={() => {
+                      const url = msg.media_url;
+                      window.open(url, "_blank");
+                    }}
+                  >
+                    <RiAttachment2 /> File Attachment
+                  </div>
+                )}
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
@@ -467,12 +504,55 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           </div>
         ))}
       </div>
-      {files.length > 0 && (
-        <div className="absolute bottom-[100px] flex w-full bg-red-50 p-4 z-50">
-          {files.length} Attachments
+      {(files.length > 0 || selectedProducts.length > 0) && (
+        <div className="absolute bottom-[50px] flex w-full bg-red-50 p-4 justify-between z-0">
+          <div className="flex flex-col">
+            {files.length > 0 && <span>{files.length} Attachments</span>}
+            {selectedProducts.length > 0 && (
+              <span>{selectedProducts.length} Products</span>
+            )}
+          </div>
+          <button
+            className="text-gray-400 hover:text-gray-600 cursor-pointer"
+            onClick={() => {
+              setFiles([]);
+              setSelectedProducts([]);
+            }}
+          >
+            <FaXmark />
+          </button>
         </div>
       )}
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
+        <Dropdown
+          label={<BsPlusCircle />}
+          inline
+          placement="top"
+          arrowIcon={false}
+        >
+          <Dropdown.Item
+            className="flex gap-2"
+            onClick={() => {
+              fileRef.current?.click();
+            }}
+            icon={BsFileEarmark}
+          >
+            File
+          </Dropdown.Item>
+          <Dropdown.Item
+            className="flex gap-2"
+            onClick={() => {
+              getProducts({ page: 1, size: 10 }).then((res: any) => {
+                setProducts(res.data.items);
+              });
+              setModalProduct(true);
+            }}
+            icon={BsTag}
+          >
+            Product
+          </Dropdown.Item>
+        </Dropdown>
+
         <div className="relative w-full">
           <MentionsInput
             disabled={!session?.is_human_agent && connection?.is_auto_pilot}
@@ -486,7 +566,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 ? "Input disabled for auto pilot mode"
                 : "Press ':' for emojis, '/' for templates and shift+enter for new line"
             }
-            className="w-full"
+            className="w-full pl-8"
             autoFocus
             onKeyDown={async (val: any) => {
               if (val.key === "Enter" && val.shiftKey) {
@@ -530,6 +610,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               markup="@@[__display__](__id__)"
             />
           </MentionsInput>
+
           <div
             className="absolute top-2 right-2 cursor-pointer"
             onClick={() => setModalEmojis(true)}
@@ -632,6 +713,83 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               ))}
             </Table.Body>
           </Table>
+        </Modal.Body>
+      </Modal>
+      <input
+        multiple
+        accept=".png, .jpg, .jpeg, .doc, .docx, .xls, .xlsx, .pdf"
+        type="file"
+        name="file"
+        id=""
+        ref={fileRef}
+        className="hidden"
+        onChange={async (e) => {
+          if ((e.target.files ?? []).length > 0) {
+            for (
+              let index = 0;
+              index < (e.target.files ?? []).length;
+              index++
+            ) {
+              const element = (e.target.files ?? [])[index];
+              let resp: any = await uploadFile(element, {}, console.log);
+              setFiles((prev) => [...prev, resp.data]);
+            }
+          }
+        }}
+      />
+      <Modal show={modalProduct} onClose={() => setModalProduct(false)}>
+        <Modal.Header>Product</Modal.Header>
+        <Modal.Body>
+          <div className="relative w-full mb-8 mr-6 focus-within:text-purple-500">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <HiMagnifyingGlass />
+            </div>
+            <input
+              type="text"
+              className="w-full py-2 pl-10 text-sm text-gray-700 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500"
+              placeholder="Search"
+              onChange={(e) => {
+                getProducts({
+                  page: 1,
+                  search: e.target.value,
+                  size: 10,
+                }).then((res: any) => {
+                  setProducts(res.data.items);
+                });
+              }}
+            />
+          </div>
+          {products.length === 0 && (
+            <div className="text-center">No product found.</div>
+          )}
+          <div className="flex flex-col gap-2">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-100 p-2"
+                onClick={() => {
+                  setSelectedProducts((prev) => [...prev, product]);
+                  setModalProduct(false);
+                }}
+              >
+                {" "}
+                {product.product_images?.length !== 0 ? (
+                  <img
+                    src={product.product_images![0].url}
+                    className="w-10 h-10 rounded-full"
+                  />
+                ) : (
+                  <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
+                    <BsImage className="w-4 h-4 " />
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="font-semibold">{product.name}</span>
+                  <small>{product.description}</small>
+                </div>
+              </div>
+            ))}
+          </div>
         </Modal.Body>
       </Modal>
     </div>

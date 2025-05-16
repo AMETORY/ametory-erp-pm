@@ -149,6 +149,18 @@ func (h *BroadcastHandler) UpdateBroadcastHandler(c *gin.Context) {
 			return
 		}
 	}
+	for _, v := range input.Files {
+		v.RefType = "broadcast"
+		v.RefID = id
+		h.ctx.DB.Save(&v)
+	}
+
+	err = h.ctx.DB.Model(&input).Association("Products").Replace(input.Products)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(200, gin.H{"message": "Broadcast updated successfully"})
 }
 

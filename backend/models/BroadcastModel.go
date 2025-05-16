@@ -32,6 +32,8 @@ type BroadcastModel struct {
 	MemberID            *string                      `json:"member_id,omitempty" gorm:"column:member_id;constraint:OnDelete:CASCADE;"`
 	Member              *models.MemberModel          `gorm:"foreignKey:MemberID" json:"member,omitempty"`
 	DelayTime           int                          `json:"delay_time" gorm:"default:1000"`
+	Files               []models.FileModel           `json:"files,omitempty" gorm:"-"`
+	Products            []models.ProductModel        `gorm:"many2many:broadcast_products;" json:"products,omitempty"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
@@ -67,6 +69,10 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 		tx.Model(&models.WhatsappMessageTemplate{}).Where("id = ?", *b.TemplateID).First(&template)
 		b.Template = template
 	}
+
+	var files []models.FileModel
+	tx.Model(&models.FileModel{}).Where("ref_id = ? and ref_type = 'broadcast'", b.ID).Find(&files)
+	b.Files = files
 
 	return nil
 }

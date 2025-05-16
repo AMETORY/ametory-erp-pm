@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useRef, useState, type FC } from "react";
 import { useParams } from "react-router-dom";
 import AdminLayout from "../components/layouts/admin";
 import {
@@ -17,6 +17,7 @@ import {
   Button,
   Checkbox,
   Datepicker,
+  Dropdown,
   FileInput,
   Label,
   Modal,
@@ -42,11 +43,21 @@ import { ContactModel } from "../models/contact";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { SearchContext } from "../contexts/SearchContext";
 import { PaginationResponse } from "../objects/pagination";
-import { BsCheck2Circle, BsInfoCircle } from "react-icons/bs";
+import {
+  BsCheck2Circle,
+  BsFileEarmark,
+  BsImage,
+  BsInfoCircle,
+  BsPlusCircle,
+  BsTag,
+} from "react-icons/bs";
 import { FaXmark } from "react-icons/fa6";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import Chart from "react-google-charts";
 import { uploadFile } from "../services/api/commonApi";
+import { getProducts } from "../services/api/productApi";
+import { ProductModel } from "../models/product";
+import { FileModel } from "../models/file";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -69,6 +80,11 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const [size, setsize] = useState(20);
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationResponse>();
+  const [modalProduct, setModalProduct] = useState(false);
+  const [products, setProducts] = useState<ProductModel[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<ProductModel[]>([]);
+  const [files, setFiles] = useState<FileModel[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<
     ContactModel[]
   >([]);
@@ -126,6 +142,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     updateBroadcast(broadcast?.id!, {
       ...broadcast!,
       connections: connections || broadcast?.connections,
+      files: files,
+      products: selectedProducts,
     })
       .then(() => {
         getDetail();
@@ -201,48 +219,162 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 )}
               </div>
             ) : (
-              <div>
-                <Label>Message</Label>
-                <p className="">
-                  {isEditable ? (
-                    <MentionsInput
-                      value={broadcast?.message ?? ""}
-                      onChange={(val) => {
-                        setBroadcast({
-                          ...broadcast!,
-                          message: val.target.value,
-                        });
-                      }}
-                      style={emojiStyle}
-                      placeholder={
-                        "Press ':' for emojis, and template using '@' and shift+enter to send"
-                      }
-                      autoFocus
-                    >
-                      <Mention
-                        trigger="@"
-                        data={[
-                          { id: "{{user}}", display: "Full Name" },
-                          { id: "{{phone}}", display: "Phone Number" },
-                          { id: "{{agent}}", display: "Agent Name" },
-                        ]}
-                        style={{
-                          backgroundColor: "#cee4e5",
+              <>
+                <div className="relative">
+                  <Label>Message</Label>
+                  <p className="">
+                    {isEditable ? (
+                      <MentionsInput
+                        value={broadcast?.message ?? ""}
+                        onChange={(val) => {
+                          setBroadcast({
+                            ...broadcast!,
+                            message: val.target.value,
+                          });
                         }}
-                        appendSpaceOnAdd
-                      />
-                      <Mention
-                        trigger=":"
-                        markup="__id__"
-                        regex={neverMatchingRegex}
-                        data={queryEmojis}
-                      />
-                    </MentionsInput>
-                  ) : (
-                    parseMentions(broadcast?.message ?? "", (type, id) => {})
+                        style={emojiStyle}
+                        placeholder={
+                          "Press ':' for emojis, and template using '@' and shift+enter to send"
+                        }
+                        autoFocus
+                      >
+                        <Mention
+                          trigger="@"
+                          data={[
+                            { id: "{{user}}", display: "Full Name" },
+                            { id: "{{phone}}", display: "Phone Number" },
+                            { id: "{{agent}}", display: "Agent Name" },
+                          ]}
+                          style={{
+                            backgroundColor: "#cee4e5",
+                          }}
+                          appendSpaceOnAdd
+                        />
+                        <Mention
+                          trigger=":"
+                          markup="__id__"
+                          regex={neverMatchingRegex}
+                          data={queryEmojis}
+                        />
+                      </MentionsInput>
+                    ) : (
+                      parseMentions(broadcast?.message ?? "", (type, id) => {})
+                    )}
+                  </p>
+                  {isEditable && (
+                    <div className="absolute bottom-2 right-2 z-50">
+                      <Dropdown
+                        label={<BsPlusCircle />}
+                        inline
+                        placement="top"
+                        arrowIcon={false}
+                      >
+                        <Dropdown.Item
+                          className="flex gap-2"
+                          onClick={() => {
+                            fileRef.current?.click();
+                          }}
+                          icon={BsFileEarmark}
+                        >
+                          File
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          className="flex gap-2"
+                          onClick={() => {
+                            getProducts({ page: 1, size: 10 }).then(
+                              (res: any) => {
+                                setProducts(res.data.items);
+                              }
+                            );
+                            setModalProduct(true);
+                          }}
+                          icon={BsTag}
+                        >
+                          Product
+                        </Dropdown.Item>
+                      </Dropdown>
+                    </div>
                   )}
-                </p>
-              </div>
+                
+                </div>
+                {((broadcast?.products ?? []).length > 0 ||
+                    (broadcast?.files ?? []).length > 0) && (
+                    <div className="flex flex-col gap-2 bg-gray-100 rounded-lg p-2">
+                      {(broadcast?.files ?? []).length > 0 && (
+                        <div className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2">
+                          {" "}
+                          <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
+                                <BsFileEarmark className="w-4 h-4 " />
+                              </div>
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{(broadcast?.files ?? []).length} Files</span>
+                            <small>
+                              {(broadcast?.files ?? [])
+                                .slice(0, 3)
+                                .map((e) => e.path.split('/').pop())
+                                .join(', ')}
+                              {(broadcast?.files ?? []).length > 3 ? '...' : ''}
+                            </small>
+                          </div>
+                        </div>
+                      )}
+                      {(broadcast?.products ?? []).map(
+                        (product: any, index: number) => (
+                          <div
+                            key={product.id}
+                            className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2"
+                            onClick={() => {
+                              setSelectedProducts((prev) => [...prev, product]);
+                              setModalProduct(false);
+                            }}
+                          >
+                            {" "}
+                            {(product.product_images ?? []).length !== 0 ? (
+                              <img
+                                src={product.product_images![0].url}
+                                className="w-10 h-10 rounded-full"
+                              />
+                            ) : (
+                              <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
+                                <BsImage className="w-4 h-4 " />
+                              </div>
+                            )}
+                            <div className="flex flex-col">
+                              <span className="font-semibold">
+                                {product.name}
+                              </span>
+                              <small>{product.description}</small>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                {(files.length > 0 || selectedProducts.length > 0) && (
+                  <div className=" flex w-full bg-red-50 p-4 justify-between z-0">
+                    <div className="flex flex-col">
+                      {files.length > 0 && (
+                        <span>{files.length} Attachments</span>
+                      )}
+                      {selectedProducts.length > 0 && (
+                        <>
+                        <span>{selectedProducts.length} Products</span>
+                        <small>{selectedProducts.map((e) => e.name).join(', ')} </small>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => {
+                        setFiles([]);
+                        setSelectedProducts([]);
+                      }}
+                    >
+                      <FaXmark />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             <div>
@@ -304,9 +436,13 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     updateBroadcast(broadcast?.id!, {
                       ...broadcast,
                       status: "READY",
+                      files: files,
+                      products: selectedProducts,
                     })
                       .then(() => {
                         getDetail();
+                        setFiles([]);
+                        setSelectedProducts([]);
                       })
                       .catch((error) => {
                         toast.error(`${error}`);
@@ -493,7 +629,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 {isEditable ? (
                   <Select
                     options={connections.filter(
-                      (item: any) => item.status === "ACTIVE" && item.type === "whatsapp"
+                      (item: any) =>
+                        item.status === "ACTIVE" && item.type === "whatsapp"
                     )}
                     value={broadcast?.connections ?? []}
                     isMulti
@@ -901,20 +1038,27 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <FileInput
                   id="file"
                   name="file"
-                  onChange={async(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files![0];
                     if (file) {
                       try {
                         setLoading(true);
-                        const resp: any = await uploadFile(file, {}, (v: any) => {
-                          console.log(v);
-                        });
-                        let res2 : any = await addContactFromFileBroadcast(broadcast!.id!, {
-                          file_url: resp.data.url
-                        })
+                        const resp: any = await uploadFile(
+                          file,
+                          {},
+                          (v: any) => {
+                            console.log(v);
+                          }
+                        );
+                        let res2: any = await addContactFromFileBroadcast(
+                          broadcast!.id!,
+                          {
+                            file_url: resp.data.url,
+                          }
+                        );
 
                         console.log(res2);
-                        setShowModal(false)
+                        setShowModal(false);
                         getDetail();
                       } catch (error) {
                         console.error(error);
@@ -954,6 +1098,83 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             </Button>
           </div>
         </Modal.Footer>
+      </Modal>
+      <input
+        multiple
+        accept=".png, .jpg, .jpeg, .doc, .docx, .xls, .xlsx, .pdf"
+        type="file"
+        name="file"
+        id=""
+        ref={fileRef}
+        className="hidden"
+        onChange={async (e) => {
+          if ((e.target.files ?? []).length > 0) {
+            for (
+              let index = 0;
+              index < (e.target.files ?? []).length;
+              index++
+            ) {
+              const element = (e.target.files ?? [])[index];
+              let resp: any = await uploadFile(element, {}, console.log);
+              setFiles((prev) => [...prev, resp.data]);
+            }
+          }
+        }}
+      />
+      <Modal show={modalProduct} onClose={() => setModalProduct(false)}>
+        <Modal.Header>Product</Modal.Header>
+        <Modal.Body>
+          <div className="relative w-full mb-8 mr-6 focus-within:text-purple-500">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <HiMagnifyingGlass />
+            </div>
+            <input
+              type="text"
+              className="w-full py-2 pl-10 text-sm text-gray-700 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500"
+              placeholder="Search"
+              onChange={(e) => {
+                getProducts({
+                  page: 1,
+                  search: e.target.value,
+                  size: 10,
+                }).then((res: any) => {
+                  setProducts(res.data.items);
+                });
+              }}
+            />
+          </div>
+          {products.length === 0 && (
+            <div className="text-center">No product found.</div>
+          )}
+          <div className="flex flex-col gap-2">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-100 p-2"
+                onClick={() => {
+                  setSelectedProducts((prev) => [...prev, product]);
+                  setModalProduct(false);
+                }}
+              >
+                {" "}
+                {product.product_images?.length !== 0 ? (
+                  <img
+                    src={product.product_images![0].url}
+                    className="w-10 h-10 rounded-full"
+                  />
+                ) : (
+                  <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
+                    <BsImage className="w-4 h-4 " />
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="font-semibold">{product.name}</span>
+                  <small>{product.description}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal.Body>
       </Modal>
     </AdminLayout>
   );

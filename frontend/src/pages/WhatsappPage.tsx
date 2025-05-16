@@ -445,7 +445,9 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     <span>{option.name}</span>
                   </div>
                 )}
-                options={connections}
+                options={connections.filter(
+                  (e) => e.type === "whatsapp" && e.status === "ACTIVE" 
+                )}
                 value={selectedConnection}
                 onChange={(e) => setSelectedConnection(e!)}
               />
@@ -583,7 +585,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
               <Label>Connections</Label>
               <Select
                 options={connections.filter(
-                  (item: any) => item.status === "ACTIVE"
+                  (item: any) => item.status === "ACTIVE" && item.type == "whatsapp"
                 )}
                 value={selectedDownloadConnections}
                 isMulti

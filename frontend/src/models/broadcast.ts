@@ -1,5 +1,7 @@
 import { ConnectionModel } from "./connection";
 import { ContactModel } from "./contact";
+import { FileModel } from "./file";
+import { ProductModel } from "./product";
 import { TemplateModel } from "./template";
 
 export interface BroadcastModel {
@@ -21,6 +23,8 @@ export interface BroadcastModel {
   template_id?: string;
   template?: TemplateModel;
   delay_time?: number;
+  products: ProductModel[];
+  files: FileModel[];
 }
 
 export interface MessageLog {
@@ -36,7 +40,6 @@ export interface MessageLog {
   error_message?: string;
   sent_at?: Date | null;
 }
-
 
 export interface MessageRetry {
   id?: string;

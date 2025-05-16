@@ -119,11 +119,22 @@ func (s *BroadcastService) AddConnection(broadcastID string, connections []conne
 
 func (s *BroadcastService) GetBroadcastByID(id string) (*models.BroadcastModel, error) {
 	var broadcast models.BroadcastModel
-	if err := s.ctx.DB.Preload("Connections").Where("id = ?", id).First(&broadcast).Error; err != nil {
+	if err := s.ctx.DB.Preload("Products").Preload("Connections").Where("id = ?", id).First(&broadcast).Error; err != nil {
 		return nil, err
 	}
 
+	for i, v := range broadcast.Products {
+		v.ProductImages, _ = s.ListImagesOfProduct(v.ID)
+		broadcast.Products[i] = v
+	}
+
 	return &broadcast, nil
+}
+
+func (s *BroadcastService) ListImagesOfProduct(productID string) ([]mdl.FileModel, error) {
+	var images []mdl.FileModel
+	err := s.ctx.DB.Where("ref_id = ? and ref_type = ?", productID, "product").Find(&images).Error
+	return images, err
 }
 
 func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search string) ([]mdl.ContactModel, error) {
@@ -351,6 +362,61 @@ func (b *BroadcastService) sendWithRetryHandling(
 				} else {
 					success = true
 				}
+
+				for _, v := range broadcast.Files {
+					if strings.Contains(v.MimeType, "image") && v.URL != "" {
+						resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+							JID:      sender.Session,
+							Text:     "",
+							To:       *contact.Phone,
+							IsGroup:  false,
+							FileType: "image",
+							FileUrl:  v.URL,
+						})
+						fmt.Println("RESPONSE", resp)
+					} else {
+						resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+							JID:      sender.Session,
+							Text:     "",
+							To:       *contact.Phone,
+							IsGroup:  false,
+							FileType: "document",
+							FileUrl:  v.URL,
+						})
+						fmt.Println("RESPONSE", resp)
+					}
+
+				}
+
+				b.ctx.DB.Preload("Products").Find(&broadcast)
+				for _, v := range broadcast.Products {
+					desc := ""
+					var images []mdl.FileModel
+					b.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+
+					if v.Description != nil {
+						desc = *v.Description
+					}
+					dataMsg := fmt.Sprintf(`*%s*
+_%s_
+
+%s
+		`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
+					productMsg := whatsmeow_client.WaMessage{
+						JID:     sender.Session,
+						Text:    dataMsg,
+						To:      *contact.Phone,
+						IsGroup: false,
+					}
+
+					if len(images) > 0 {
+						productMsg.FileType = "image"
+						productMsg.FileUrl = images[0].URL
+					}
+					resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
+					fmt.Println("RESPONSE", resp)
+
+				}
 			} else {
 				// USE TEMPLATE
 
@@ -409,11 +475,14 @@ _%s_
 %s
 				`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
 							productMsg := whatsmeow_client.WaMessage{
-								JID:      sender.Session,
-								Text:     dataMsg,
-								To:       *contact.Phone,
-								IsGroup:  false,
-								FileType: "image",
+								JID:     sender.Session,
+								Text:    dataMsg,
+								To:      *contact.Phone,
+								IsGroup: false,
+							}
+							if len(images) > 0 {
+								productMsg.FileType = "image"
+								productMsg.FileUrl = images[0].URL
 							}
 							resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
 							fmt.Println("RESPONSE", resp)
