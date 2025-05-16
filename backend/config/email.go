@@ -7,4 +7,11 @@ type EmailConfig struct {
 	Password string `mapstructure:"password"`
 	From     string `mapstructure:"from"`
 	Tls      bool   `mapstructure:"tls"`
+	UseAPI   bool   `mapstructure:"use_api"`
+}
+
+type EmailApiConfig struct {
+	ApiKey string `mapstructure:"api_key"`
+	Domain string `mapstructure:"domain"`
+	From   string `mapstructure:"from"`
 }

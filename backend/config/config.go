@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Email    EmailConfig
-	Google   GoogleConfig
-	Whatsapp WhatsappConfig
+	Server   ServerConfig   `mapstructure:"server"`
+	Database DatabaseConfig `mapstructure:"database"`
+	Email    EmailConfig    `mapstructure:"email"`
+	EmailApi EmailApiConfig `mapstructure:"email_api"`
+	Google   GoogleConfig   `mapstructure:"google"`
+	Whatsapp WhatsappConfig `mapstructure:"whatsapp"`
 }
 
 var App = &Config{}
