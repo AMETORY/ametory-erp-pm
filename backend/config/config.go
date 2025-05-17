@@ -13,6 +13,7 @@ type Config struct {
 	EmailApi EmailApiConfig `mapstructure:"email_api"`
 	Google   GoogleConfig   `mapstructure:"google"`
 	Whatsapp WhatsappConfig `mapstructure:"whatsapp"`
+	Facebook FacebookConfig `mapstructure:"facebook"`
 }
 
 var App = &Config{}

@@ -73,8 +73,8 @@ export const updateTask = async (projectId: string, id: string, task: any) => {
   });
 };
 
-export const deleteTask = async (id: string) => {
-  return await customFetch(`api/v1/task/${id}`, {
+export const deleteTask = async (projectId: string, taskId: string) => {
+  return await customFetch(`api/v1/project/${projectId}/task/${taskId}`, {
     method: "DELETE",
   });
 };
@@ -108,4 +108,3 @@ export const getTaskPluginData = async (
     {}
   );
 };
-

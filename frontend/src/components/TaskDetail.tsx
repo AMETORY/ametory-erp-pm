@@ -95,12 +95,14 @@ interface TaskDetailProps {
   task: TaskModel;
   project: ProjectModel;
   onSwitchFullscreen: () => void;
+  onClose: () => void;
 }
 
 const TaskDetail: FC<TaskDetailProps> = ({
   task,
   project,
   onSwitchFullscreen,
+  onClose
 }) => {
   const { activeCompany, setActiveCompany } = useContext(ActiveCompanyContext);
   const [preference, setPreference] = useState<ProjectPreference>();
@@ -1060,12 +1062,13 @@ const TaskDetail: FC<TaskDetailProps> = ({
                       "Are you sure you want to delete this task? This action is irreversible."
                     )
                   ) {
-                    deleteTask(task.id!)
+                    onClose()
+                    deleteTask(project!.id!, task.id!)
                       .catch(toast.error)
                       .then(() => {
                         toast.success("Task deleted successfully");
                         setIsEditted(false);
-                        setActiveTask(undefined);
+                        
                       });
                   }
                 }}

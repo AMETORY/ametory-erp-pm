@@ -44,6 +44,7 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		projectTaskGroup := projectGroup.Group("/:id/task")
 		{
 			projectTaskGroup.GET("/:taskId/detail", taskHandler.GetTaskDetailHandler)
+			projectTaskGroup.DELETE("/:taskId", taskHandler.DeleteTaskHandler)
 			projectTaskGroup.PUT("/rearrange", taskHandler.RearrangeTaskHandler)
 			projectTaskGroup.GET("/list", taskHandler.GetTasksHandler)
 			projectTaskGroup.POST("/create", taskHandler.CreateTaskHandler)
@@ -53,6 +54,7 @@ func SetupProjectRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 			projectTaskGroup.PUT("/:taskId/add-plugin", taskHandler.AddPluginHandler)
 			projectTaskGroup.GET("/:taskId/get-plugins", taskHandler.GetTaskPluginsHandler)
 			projectTaskGroup.GET("/:taskId/plugin/:pluginId", taskHandler.GetDataPluginHandler)
+
 			// taskGroup.GET("/:id", taskHandler.GetTaskHandler)
 			// taskGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:task:update"}), taskHandler.UpdateTaskHandler)
 			// taskGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"project_management:task:delete"}), taskHandler.DeleteTaskHandler)

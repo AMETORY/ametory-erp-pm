@@ -9,12 +9,15 @@ import AcceptInvitation from "../pages/AcceptInvitation";
 import FormPublicPage from "../pages/FormPublicPage";
 import MemberRegisterPage from "../pages/MemberRegisterPage";
 import Forgot from "../pages/ForgotPage";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
+import FacebookCallback from "../pages/FacebookCallback";
 
 interface PublicRouteProps {}
 
 const PublicRoute: FC<PublicRouteProps> = ({}) => {
   return (
     <Routes>
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/public/form/:formCode" element={<FormPublicPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot" element={<Forgot />} />
@@ -22,6 +25,7 @@ const PublicRoute: FC<PublicRouteProps> = ({}) => {
       <Route path="/invitation/verify/:token" element={<AcceptInvitation />} />
       <Route path="/verify/:token" element={<Verify />} />
       <Route path="/member/register/:code" element={<MemberRegisterPage />} />
+      <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );

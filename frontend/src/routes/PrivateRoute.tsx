@@ -28,6 +28,8 @@ import ProductPage from "../pages/ProductPage";
 import TemplatePage from "../pages/TemplatePage";
 import TemplateDetail from "../pages/TemplateDetail";
 import TelegramPage from "../pages/TelegramPage";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
+import FacebookCallback from "../pages/FacebookCallback";
 
 interface PrivateRouteProps {}
 
@@ -48,6 +50,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
         path="/form-template/:templateId"
         element={<FormTempateDetail />}
       />
+      <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/form/:formId" element={<FormDetail />} />
       <Route path="/chat/:channelId" element={<ChatPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />

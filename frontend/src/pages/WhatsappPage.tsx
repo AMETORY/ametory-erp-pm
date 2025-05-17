@@ -54,6 +54,7 @@ import { getMembers } from "../services/api/commonApi";
 import { MemberModel } from "../models/member";
 import moment from "moment";
 import { PiExport } from "react-icons/pi";
+import { SearchContext } from "../contexts/SearchContext";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -69,7 +70,6 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [sessions, setSessions] = useState<WhatsappMessageSessionModel[]>([]);
   const [page, setPage] = useState(1);
   const [size, setsize] = useState(20);
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [mounted, setMounted] = useState(false);
   const { sessionId } = useParams();
@@ -87,7 +87,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [modalInfo, setModalInfo] = useState(false);
   const [downloadModal, setDownloadModal] = useState(false);
   const [modalDateOpen, setModalDateOpen] = useState(false);
-
+  const { search, setSearch } = useContext(SearchContext);
   const [filters, setFilters] = useState([
     {
       label: "All Chat",
@@ -262,10 +262,13 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </div>
         <div className="flex flex-row w-full h-full flex-1 gap-2">
-          <div className="w-[300px]" style={{
-            height: "calc(100vh - 160px)",
-            overflowY: "auto"
-          }}>
+          <div
+            className="w-[300px]"
+            style={{
+              height: "calc(100vh - 160px)",
+              overflowY: "auto",
+            }}
+          >
             <ul className="space-y-2">
               {sessions.map((e) => (
                 <li
@@ -446,7 +449,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   </div>
                 )}
                 options={connections.filter(
-                  (e) => e.type === "whatsapp" && e.status === "ACTIVE" 
+                  (e) => e.type === "whatsapp" && e.status === "ACTIVE"
                 )}
                 value={selectedConnection}
                 onChange={(e) => setSelectedConnection(e!)}
@@ -585,7 +588,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
               <Label>Connections</Label>
               <Select
                 options={connections.filter(
-                  (item: any) => item.status === "ACTIVE" && item.type == "whatsapp"
+                  (item: any) =>
+                    item.status === "ACTIVE" && item.type == "whatsapp"
                 )}
                 value={selectedDownloadConnections}
                 isMulti
@@ -688,18 +692,18 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     end_date: dateRange[1],
                     member_ids: selectedMembers.map((e) => e.value),
                     tag_ids: selectedDownloadTags.map((e) => e.id),
-                    sessions: selectedDownloadConnections.map(
-                      (e) => e.session
-                    ),
+                    sessions: selectedDownloadConnections.map((e) => e.session),
                   };
 
-                  const response:any = await exportXls(data);
-                  const blob = new Blob([response], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                  const response: any = await exportXls(data);
+                  const blob = new Blob([response], {
+                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  });
                   const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
+                  const link = document.createElement("a");
                   link.href = url;
                   link.download = `whatsapp_${new Date().toISOString()}.xlsx`;
-                  link.style.display = 'none';
+                  link.style.display = "none";
                   document.body.appendChild(link);
                   link.click();
                   setTimeout(() => {

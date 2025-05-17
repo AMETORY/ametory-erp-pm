@@ -48,6 +48,7 @@ import { ProductModel } from "../models/product";
 import ModalProduct from "./ModalProduct";
 import { getProducts } from "../services/api/productApi";
 import { HiMagnifyingGlass } from "react-icons/hi2";
+import { SearchContext } from "../contexts/SearchContext";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -61,7 +62,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const { profile, setProfile } = useContext(ProfileContext);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(100);
-  const [search, setSearch] = useState("");
+  const {search, setSearch} = useContext(SearchContext)
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<WhatsappMessageModel[]>([]);
   const [session, setSession] = useState<WhatsappMessageSessionModel>();

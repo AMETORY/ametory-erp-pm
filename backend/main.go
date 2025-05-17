@@ -218,6 +218,7 @@ func main() {
 	routes.SetupTemplateRoutes(v1, erpContext)
 	routes.SetupAnalyticRoutes(v1, erpContext)
 	routes.NewTelegramRoutes(v1, erpContext)
+	routes.SetupFacebookRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

@@ -222,7 +222,8 @@ const TaskPage: FC<TaskPageProps> = ({}) => {
                         `Are you sure you want to delete taks ${task.name}?`
                       )
                     ) {
-                      deleteTask(task?.id!).then(() => {});
+                      
+                      deleteTask(task.project_id!, task.id!).then(() => {});
                     }
                   }}
                 >
@@ -281,6 +282,7 @@ const TaskPage: FC<TaskPageProps> = ({}) => {
               task={activeTask}
               project={project}
               onSwitchFullscreen={() => setIsTaskFullScreen((val) => !val)}
+              onClose={() => setActiveTask(undefined)}
             />
           </Drawer.Items>
         </Drawer>

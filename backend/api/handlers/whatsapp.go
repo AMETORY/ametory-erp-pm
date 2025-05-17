@@ -1193,7 +1193,9 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 
 		waData.IsNew = true
-		h.erpContext.DB.Create(&waData)
+		// h.erpContext.DB.Create(&waData)
+		whatsappSession.ID = sessionData.ID
+		fmt.Println("SESSION ID", whatsappSession.ID)
 	} else {
 		// var lastOnlineAt time.Time
 		// if whatsappSession.LastOnlineAt != nil {
@@ -1262,9 +1264,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	})
 
 	autopilot := false
-	if !whatsappSession.IsHumanAgent {
-		autopilot = true
-	}
+
 	// fmt.Println("AUTO RESPONSE TIME", conn.AutoResponseStartTime, conn.AutoResponseEndTime)
 	if conn.AutoResponseStartTime != nil && conn.AutoResponseEndTime != nil {
 		fmt.Println("AUTO RESPONSE TIME", *conn.AutoResponseStartTime, *conn.AutoResponseEndTime)
@@ -1289,6 +1289,9 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	}
 
 	fmt.Println("AUTO PILOT", autopilot)
+	if whatsappSession.IsHumanAgent {
+		autopilot = false
+	}
 
 	var replyResponse *models.WhatsappMessageModel
 
@@ -1401,11 +1404,16 @@ params: jika tipe command dibutuhkan parameter
 		}
 	}
 
+	fmt.Println("SESSION ID #2", whatsappSession.ID)
 	if replyResponse != nil {
 		if sessionAuth != nil {
 			replyResponse.ContactID = &sessionAuth.ID
 			replyResponse.CompanyID = sessionAuth.CompanyID
 		}
+
+		fmt.Println("SESSION ID #3", whatsappSession.ID)
+		fmt.Println("SESSION ID #3 response", replyResponse)
+
 		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
 		if err != nil {
 			// log.Println(err)

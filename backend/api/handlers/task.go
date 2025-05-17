@@ -73,6 +73,42 @@ func (h *TaskHandler) GetTaskDetailHandler(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"data": task, "message": "Task retrieved successfully", "preference": preference})
 }
+
+func (h *TaskHandler) DeleteTaskHandler(c *gin.Context) {
+	projectId := c.Param("id")
+	taskId := c.Param("taskId")
+
+	task, err := h.pmService.TaskService.GetTaskByID(taskId)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	if task.ProjectID != projectId {
+		c.JSON(404, gin.H{"error": "Task not found in project"})
+		return
+	}
+	err = h.pmService.TaskService.DeleteTask(taskId)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"message":   "Task deleted successfully",
+		"column_id": task.ColumnID,
+		"task_id":   task.ID,
+		"command":   "DELETE_TASK",
+		"sender_id": c.MustGet("userID").(string),
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, c.MustGet("companyID").(string))
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
+	h.pmService.ProjectService.AddActivity(projectId, c.MustGet("memberID").(string), task.ColumnID, nil, "DELETE_TASK", nil)
+	c.JSON(200, gin.H{"message": "Task deleted successfully"})
+}
 func (h *TaskHandler) GetTasksHandler(c *gin.Context) {
 	projectId := c.Param("id")
 

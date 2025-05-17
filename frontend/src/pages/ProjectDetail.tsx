@@ -106,6 +106,19 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
           );
         });
       }
+      if (wsMsg.command == "DELETE_TASK") {
+        setColumns(prev =>{
+          return prev.map(column => {
+            if (column.id == wsMsg.column_id) {
+              return {
+                ...column,
+                tasks: (column?.tasks??[]).filter(task => task.id != wsMsg.task_id)
+              }
+            }
+            return column
+          })
+        })
+      }
     }
   }, [wsMsg, profile, projectId]);
 
@@ -414,6 +427,7 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
               task={activeTask}
               project={project}
               onSwitchFullscreen={() => setIsTaskFullScreen((val) => !val)}
+              onClose={() => setActiveTask(undefined)}
             />
           </Drawer.Items>
         </Drawer>

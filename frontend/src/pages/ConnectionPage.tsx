@@ -56,6 +56,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   var connectionType = [
     { label: "WHATSAPP", value: "whatsapp" },
     { label: "TELEGRAM", value: "telegram" },
+    // { label: "INSTAGRAM", value: "instagram" },
   ];
 
   useEffect(() => {

@@ -27,6 +27,7 @@ import Select, { InputActionMeta } from "react-select";
 import {
   BsCheck2,
   BsCheck2Circle,
+  BsInstagram,
   BsTelegram,
   BsWhatsapp,
 } from "react-icons/bs";
@@ -87,6 +88,8 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
         return <BsWhatsapp className="mr-2 w-4" />;
       case "telegram":
         return <BsTelegram className="mr-2 w-4" />;
+      case "instagram":
+        return <BsInstagram className="mr-2 w-4" />;
       case "gemini":
         return "📲";
     }
@@ -144,6 +147,26 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             </div>
           )}
         </>
+      )}
+     
+
+      { connection.type == "instagram" && (
+        <div className="mt-4">
+          <Button
+            className="mt-4"
+            color="primary"
+            style={{ width: "100%", backgroundColor: "#3b5998", color: "white" }}
+            onClick={() => {
+              // Add your logic to connect to Facebook here
+              window.open(
+                `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.REACT_APP_FACEBOOK_APP_ID}&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/callback/${connection.id}&scope=instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_manage_engagement,pages_messaging,business_management&response_type=code`
+              )
+
+            }}
+          >
+            Connect to Facebook
+          </Button>
+        </div>
       )}
 
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
