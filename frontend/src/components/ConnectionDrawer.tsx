@@ -37,6 +37,7 @@ import { getProjects } from "../services/api/projectApi";
 import { ProjectModel } from "../models/project";
 import { ColumnModel } from "../models/column";
 import TelegramIntegrationGuide from "./TelegramGuide";
+import { LuInstagram } from "react-icons/lu";
 
 interface ConnectionDrawerProps {
   connection: ConnectionModel;
@@ -155,16 +156,16 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           <Button
             className="mt-4"
             color="primary"
-            style={{ width: "100%", backgroundColor: "#3b5998", color: "white" }}
+            style={{ width: "100%", backgroundColor: "#e1306c", color: "white" }}
             onClick={() => {
               // Add your logic to connect to Facebook here
               window.open(
-                `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.REACT_APP_FACEBOOK_APP_ID}&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/callback/${connection.id}&scope=instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_manage_engagement,pages_messaging,business_management&response_type=code`
+                `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=https://app.senandika.web.id/api/v1/facebook/callback&state=connection_id-${connection.id}&client_id=1033935721571526&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`,
               )
 
             }}
           >
-            Connect to Facebook
+          <LuInstagram className="mr-2 w-4" />  Connect to Instagram
           </Button>
         </div>
       )}

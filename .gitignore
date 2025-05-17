@@ -11,6 +11,7 @@ node_modules
 # production
 /build
 /build-respiro
+/build-senandika
 
 backend/assets/files/*
 backend/ametory-pm

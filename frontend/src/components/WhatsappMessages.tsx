@@ -62,7 +62,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const { profile, setProfile } = useContext(ProfileContext);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(100);
-  const {search, setSearch} = useContext(SearchContext)
+  const { search, setSearch } = useContext(SearchContext);
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<WhatsappMessageModel[]>([]);
   const [session, setSession] = useState<WhatsappMessageSessionModel>();
@@ -82,6 +82,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [modalProduct, setModalProduct] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<ProductModel[]>([]);
+  const [isCaption, setIsCaption] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -101,6 +102,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         .finally(() => {});
 
       getAllTemplates();
+      getProducts({ page: 1, size: 100 }).then((res: any) => {
+        setProducts(res.data.items);
+      });
     }
   }, [mounted, sessionId]);
 
@@ -343,13 +347,14 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       setContent("");
       setOpenAttachment(false);
       setFiles([]);
-      setSelectedProducts([])
+      setSelectedProducts([]);
       await createWAMessage(sessionId!, {
         message: content,
         files: files,
-        products: selectedProducts
+        products: selectedProducts,
+        is_caption: isCaption,
       });
-      
+      setIsCaption(false);
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -599,6 +604,29 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               appendSpaceOnAdd
             />
             <Mention
+              trigger="#"
+              data={products.map((p: any) => ({
+                id: p.id,
+                display: p.display_name,
+              }))}
+              onAdd={(e: any) => {
+                // console.log(products.find((p: any) => p.id === e));
+                // let selected = products.find((p: any) => p.id === e);
+                // if (selected && (selected?.product_images ?? []).length) {
+                //   let file: FileModel = {
+                //     file_name: selected.display_name!,
+                //     url: selected.product_images![0].url,
+                //     mime_type: selected.product_images![0].mime_type,
+                //     path: selected.product_images![0].path,
+                //   };
+                //   setFiles([file]);
+                //   setIsCaption(true);
+                // }
+              }}
+              markup="*__display__*"
+              regex={neverMatchingRegex}
+            />
+            <Mention
               trigger="/"
               data={templates.map((t: any) => ({
                 id: t.id,
@@ -774,7 +802,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 }}
               >
                 {" "}
-                {product.product_images?.length !== 0 ? (
+                {(product.product_images??[]).length !== 0 ? (
                   <img
                     src={product.product_images![0].url}
                     className="w-10 h-10 rounded-full"

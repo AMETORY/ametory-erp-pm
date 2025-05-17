@@ -123,9 +123,10 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	var input struct {
-		Message  string                `json:"message"`
-		Files    []models.FileModel    `json:"files"`
-		Products []models.ProductModel `json:products`
+		Message   string                `json:"message"`
+		Files     []models.FileModel    `json:"files"`
+		Products  []models.ProductModel `json:products`
+		IsCaption bool                  `json:"is_caption"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
