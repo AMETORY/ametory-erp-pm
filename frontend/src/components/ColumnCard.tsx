@@ -17,6 +17,7 @@ import { updateColumn } from "../services/api/projectApi";
 import { createTask, getTasks } from "../services/api/taskApi";
 import { Droppable } from "./droppable";
 import ModalColumn from "./ModalColumn";
+import { SearchContext } from "../contexts/SearchContext";
 
 interface ColumnCardProps {
   projectId: string;
@@ -42,6 +43,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
   const { profile, setProfile } = useContext(ProfileContext);
   const [tasks, setTasks] = useState<TaskModel[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const {search, setSearch} = useContext(SearchContext);
   const [selectedColumn, setSelectedColumn] = useState<ColumnModel>();
   const {
     isOver,
@@ -56,7 +58,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
   });
 
   const getAllTasks = () => {
-    getTasks(projectId, column.id as string).then((resp: any) => {
+    getTasks(projectId, column.id as string, search).then((resp: any) => {
       setTasks(resp.data.items);
       column.tasks = resp.data.items;
       onChangeColumn(column);
@@ -64,7 +66,7 @@ const ColumnCard: FC<ColumnCardProps> = ({
   };
   useEffect(() => {
     getAllTasks();
-  }, []);
+  }, [projectId,search]);
 
   useEffect(() => {
     if (!wsMsg) return;

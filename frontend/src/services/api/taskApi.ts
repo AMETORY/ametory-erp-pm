@@ -11,9 +11,9 @@ export const createTask = async (projectId: string, task: any) => {
   });
 };
 
-export const getTasks = async (projectId: string, columnId: string) => {
+export const getTasks = async (projectId: string, columnId: string,search:string) => {
   return await customFetch(
-    `api/v1/project/${projectId}/task/list?column_id=${columnId}`,
+    `api/v1/project/${projectId}/task/list?column_id=${columnId}&search=${search}`,
     {
       method: "GET",
     }

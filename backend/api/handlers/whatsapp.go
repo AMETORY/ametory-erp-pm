@@ -1166,7 +1166,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			}
 			refType := "whatsapp_session"
 			task := models.TaskModel{
-				Name:      fmt.Sprintf("From Message - %s", senderName),
+				Name:      fmt.Sprintf("%s - %s", senderName, *sessionAuth.Phone),
 				ProjectID: *conn.ProjectID,
 				ColumnID:  conn.NewSessionColumnID,
 				// StartDate:      &formResponse.CreatedAt,
@@ -1215,7 +1215,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 				}
 				refType := "whatsapp_session"
 				task := models.TaskModel{
-					Name:      fmt.Sprintf("From Message - %s", senderName),
+					Name:      fmt.Sprintf("%s - %s", senderName, *sessionAuth.Phone),
 					ProjectID: *conn.ProjectID,
 					ColumnID:  conn.IdleColumnID,
 					// StartDate:      &formResponse.CreatedAt,

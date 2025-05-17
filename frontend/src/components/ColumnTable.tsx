@@ -16,6 +16,7 @@ import ModalColumn from "./ModalColumn";
 import { createTask, getTasks } from "../services/api/taskApi";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
+import { SearchContext } from "../contexts/SearchContext";
 
 interface ColumnTableProps {
   projectId: string;
@@ -36,6 +37,7 @@ const ColumnTable: FC<ColumnTableProps> = ({
   onSelectTask,
   onAddItem,
 }) => {
+  const {search, setSearch} = useContext(SearchContext);
   const {
     isOver,
     setNodeRef,
@@ -53,7 +55,7 @@ const ColumnTable: FC<ColumnTableProps> = ({
   const [tasks, setTasks] = useState<TaskModel[]>([]);
 
   const getAllTasks = () => {
-    getTasks(projectId, column.id as string).then((resp: any) => {
+    getTasks(projectId, column.id as string, search).then((resp: any) => {
       setTasks(resp.data.items);
       column.tasks = resp.data.items;
       onChangeColumn(column);
@@ -67,7 +69,7 @@ const ColumnTable: FC<ColumnTableProps> = ({
       getAllTasks();
     }
     // }
-  }, [wsMsg, profile]);
+  }, [wsMsg, profile,search]);
 
   const [showModal, setShowModal] = useState(false);
   return (
