@@ -30,6 +30,7 @@ yarn-error.log*
 build
 build-respiro
 build-senandika
+crm-senandika
 crm-respiro
 respiro.sh
 senandika.sh

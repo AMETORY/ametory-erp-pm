@@ -3,19 +3,27 @@ package handlers
 import (
 	"ametory-pm/config"
 	"ametory-pm/models/connection"
+	"ametory-pm/objects"
 	"ametory-pm/services/app"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/shared"
+	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/utils"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type FacebookHandler struct {
@@ -44,7 +52,7 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 	}
 	log.Printf("[%s] %s\n", time.Now().Format(time.RFC3339), string(body))
 
-	var req FacebookWebhookResponse
+	var req objects.FacebookWebhookResponse
 	if err := json.Unmarshal(body, &req); err != nil {
 		log.Printf("[%s] error unmarshal req body: %s\n", time.Now().Format(time.RFC3339), err.Error())
 		return
@@ -55,11 +63,138 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 		if len(req.Entry) > 0 {
 			if len(req.Entry[0].Messaging) > 0 {
 
+				now := time.Now()
 				var senderID = req.Entry[0].Messaging[0].Sender.ID
 				var recipientID = req.Entry[0].Messaging[0].Recipient.ID
-				var msg = req.Entry[0].Messaging[0].Message.Text
+				var instagramMsg = req.Entry[0].Messaging[0].Message.Text
+				var attachments = req.Entry[0].Messaging[0].Message.Attachments
 
-				log.Printf("[%s] senderID: %s, recipientID: %s, msg: %s\n", time.Now().Format(time.RFC3339), senderID, recipientID, msg)
+				// GET CONNECTION FROM RECIPIENT ID
+
+				var connection connection.ConnectionModel
+				if err := h.ctx.DB.Model(&connection).Where("session_name = ?", recipientID).First(&connection).Error; err != nil {
+					log.Printf("[%s] error get connection: %s\n", time.Now().Format(time.RFC3339), err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+
+				// GET PROFILE OF SENDER
+				senderData := getContact(senderID, connection.AccessToken)
+				if senderData == nil {
+					log.Printf("[%s] error get sender profile: %s\n", time.Now().Format(time.RFC3339), errors.New("error get sender profile"))
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "error get sender profile"})
+					return
+				}
+
+				profilePic := ""
+				profilePicData := getProfilePicture(senderID, connection.AccessToken)
+				if profilePicData != nil {
+					profilePic = profilePicData.ProfilePictureURL
+				}
+
+				log.Printf("[%s] sender: %s, recipientID: %s, msg: %s\n", time.Now().Format(time.RFC3339), senderData.Name, recipientID, instagramMsg)
+
+				// GET CONTACT By senderID
+				var contact models.ContactModel
+				err := h.ctx.DB.Model(&contact).Where("instagram_id = ?", senderID).First(&contact).Error
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					connType := "instagram"
+					contact.ID = utils.Uuid()
+					contact.Name = senderData.Name
+					contact.InstagramID = &senderID
+					contact.ConnectionType = &connType
+					contact.CompanyID = connection.CompanyID
+					err := h.ctx.DB.Create(&contact).Error
+					if err != nil {
+						log.Printf("[%s] error create contact: %s\n", time.Now().Format(time.RFC3339), err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+						return
+					}
+				} else if err != nil {
+					log.Printf("[%s] error get contact: %s\n", time.Now().Format(time.RFC1123), err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+
+				if profilePic != "" {
+					path, err := saveFileContenFromUrl(profilePic)
+					if err == nil {
+						mediaURLSaved := config.App.Server.FrontendURL + "/" + path
+						var file models.FileModel
+						file.ID = utils.Uuid()
+						file.FileName = profilePic
+						file.Path = path
+						file.URL = mediaURLSaved
+						file.RefType = "contact"
+						file.RefID = contact.ID
+						err = h.ctx.DB.Create(&file).Error
+						if err != nil {
+							log.Printf("[%s] error create file: %s\n", time.Now().Format(time.RFC3339), err.Error())
+							c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+							return
+						}
+
+					}
+
+				}
+
+				var session models.InstagramMessageSession
+				err = h.ctx.DB.First(&session, "contact_id = ?", contact.ID).Error
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					session.ID = utils.Uuid()
+					session.ContactID = &contact.ID
+					session.Session = connection.ID
+					session.SessionName = contact.Name
+					session.LastMessage = instagramMsg
+					session.LastOnlineAt = &now
+					session.CompanyID = connection.CompanyID
+					err = h.ctx.DB.Create(&session).Error
+					if err != nil {
+						log.Printf("[%s] error create session: %s\n", time.Now().Format(time.RFC3339), err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+						return
+					}
+				}
+				instagramMsgData := models.InstagramMessage{
+					BaseModel:                 shared.BaseModel{ID: utils.Uuid()},
+					ContactID:                 &contact.ID,
+					Message:                   instagramMsg,
+					Session:                   connection.ID,
+					CompanyID:                 connection.CompanyID,
+					MessageID:                 &req.Entry[0].ID,
+					InstagramMessageSessionID: &session.ID,
+				}
+				err = h.ctx.DB.Create(instagramMsgData).Error
+				if err != nil {
+					log.Printf("[%s] error create message: %s\n", time.Now().Format(time.RFC3339), err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+
+				if len(attachments) > 0 {
+					for _, v := range attachments {
+						log.Printf("[%s] sender: %s, recipientID: %s, msg: %s\n", time.Now().Format(time.RFC3339), senderData.Name, recipientID, v.Payload.URL)
+						path, _ := saveFileContenFromUrl(v.Payload.URL)
+						if path != "" {
+							mediaURLSaved := config.App.Server.FrontendURL + "/" + path
+							var file models.FileModel
+							file.ID = utils.Uuid()
+							file.FileName = v.Payload.URL
+							file.Path = path
+							file.URL = mediaURLSaved
+							file.RefType = "instagram_message"
+							file.RefID = instagramMsgData.ID
+							err = h.ctx.DB.Create(&file).Error
+							if err != nil {
+								log.Printf("[%s] error create file: %s\n", time.Now().Format(time.RFC3339), err.Error())
+								c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+								return
+							}
+						}
+
+					}
+				}
+
 			}
 		}
 	}
@@ -147,7 +282,8 @@ func (h *FacebookHandler) InstagramCallbackHandler(c *gin.Context) {
 		}
 		conn.AccessToken = instagramToken
 		conn.Status = "ACTIVE"
-		conn.SessionName = fmt.Sprintf("%v", response.UserID)
+		sessionName := fetchProfile(instagramToken)
+		conn.SessionName = sessionName
 		err = h.ctx.DB.Save(&conn).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -205,7 +341,7 @@ func (h *FacebookHandler) FacebookCallbackHandler(c *gin.Context) {
 		}
 
 		log.Println("resp", string(bodyBytes))
-		var result facebookAccessTokenResponse
+		var result objects.FacebookAccessTokenResponse
 		if err := json.Unmarshal(bodyBytes, &result); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to parse response body",
@@ -248,12 +384,6 @@ func (h *FacebookHandler) FacebookCallbackHandler(c *gin.Context) {
 
 }
 
-type facebookAccessTokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
-}
-
 func exchangeInstagramToken(shortLivedToken string) (string, error) {
 	clientSecret := config.App.Facebook.AppIGSecret
 	url := fmt.Sprintf("https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=%s&access_token=%s", clientSecret, shortLivedToken)
@@ -283,23 +413,93 @@ func exchangeInstagramToken(shortLivedToken string) (string, error) {
 	return response.AccessToken, nil
 }
 
-type FacebookWebhookResponse struct {
-	Object string `json:"object"`
-	Entry  []struct {
-		Time      int64  `json:"time"`
-		ID        string `json:"id"`
-		Messaging []struct {
-			Sender struct {
-				ID string `json:"id"`
-			} `json:"sender"`
-			Recipient struct {
-				ID string `json:"id"`
-			} `json:"recipient"`
-			Timestamp int64 `json:"timestamp"`
-			Message   struct {
-				MID  string `json:"mid"`
-				Text string `json:"text"`
-			} `json:"message"`
-		} `json:"messaging"`
-	} `json:"entry"`
+func fetchProfile(instagramToken string) string {
+	profileURL := fmt.Sprintf("https://graph.instagram.com/v21.0/me?fields=user_id,name,profile_picture_url&access_token=%s", instagramToken)
+	resp, err := http.Get(profileURL)
+	if err != nil {
+		fmt.Println("ERROR", err.Error())
+
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("ERROR", fmt.Errorf("failed to fetch instagram profile, status code: %d", resp.StatusCode))
+
+		return ""
+	}
+
+	var profileResponse struct {
+		UserID            string `json:"user_id"`
+		Name              string `json:"name"`
+		ProfilePictureURL string `json:"profile_picture_url"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&profileResponse)
+	if err != nil {
+		fmt.Println("ERROR", err.Error())
+
+		return ""
+	}
+	return profileResponse.UserID
+}
+
+func getContact(id string, accessToken string) *objects.FacebookUser {
+	url := fmt.Sprintf("https://graph.instagram.com/v21.0/%s?fields=name&access_token=%s", id, accessToken)
+	fmt.Println("FETCH USER PROFILE", url)
+	resp, err := http.Get(url)
+	if err == nil {
+
+		var data objects.FacebookUser
+		if err := json.NewDecoder(resp.Body).Decode(&data); err == nil {
+			return &data
+		}
+	}
+	defer resp.Body.Close()
+	return nil
+}
+func getProfilePicture(id string, accessToken string) *objects.FacebookUser {
+	url := fmt.Sprintf("https://graph.instagram.com/v21.0/%s?fields=name,profile_picture_url&access_token=%s", id, accessToken)
+	fmt.Println("FETCH USER PROFILE", url)
+	resp, err := http.Get(url)
+	if err == nil {
+
+		var data objects.FacebookUser
+		if err := json.NewDecoder(resp.Body).Decode(&data); err == nil {
+			return &data
+		}
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+func saveFileContenFromUrl(url string) (string, error) {
+	filename := utils.GenerateRandomString(10)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	byteValue, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	mtype := mimetype.Detect(byteValue)
+
+	mimeType := mtype.String()
+	switch mimeType {
+	case "image/jpeg":
+		filename = filename + ".jpg"
+	case "image/png":
+		filename = filename + ".png"
+	}
+	path := filepath.Join("assets", filename)
+	os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if err := os.WriteFile(path, byteValue, 0644); err != nil {
+		log.Println(err)
+		return "", err
+	}
+	return path, nil
 }
