@@ -158,14 +158,15 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             color="primary"
             style={{ width: "100%", backgroundColor: "#e1306c", color: "white" }}
             onClick={() => {
+              
               // Add your logic to connect to Facebook here
               window.open(
-                `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=https://app.senandika.web.id/api/v1/facebook/callback&state=connection_id-${connection.id}&client_id=1033935721571526&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`,
+                `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=https://app.senandika.web.id/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&client_id=1033935721571526&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`,
               )
 
             }}
           >
-          <LuInstagram className="mr-2 w-4" />  Connect to Instagram
+          <LuInstagram className="mr-2 w-4" />  Hubungkan ke Instagram
           </Button>
         </div>
       )}

@@ -9,9 +9,9 @@ node_modules
 /coverage
 
 # production
-/build
-/build-respiro
-/build-senandika
+frontend/build
+frontend/build-respiro
+frontend/build-senandika
 
 backend/assets/files/*
 backend/ametory-pm
@@ -29,8 +29,10 @@ yarn-error.log*
 
 build
 build-respiro
+build-senandika
 crm-respiro
 respiro.sh
+senandika.sh
 config.yaml
 frontend/.env.staging
 frontend/.env.respiro

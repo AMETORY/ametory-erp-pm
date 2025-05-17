@@ -44,6 +44,25 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 	}
 	log.Printf("[%s] %s\n", time.Now().Format(time.RFC3339), string(body))
 
+	var req FacebookWebhookResponse
+	if err := json.Unmarshal(body, &req); err != nil {
+		log.Printf("[%s] error unmarshal req body: %s\n", time.Now().Format(time.RFC3339), err.Error())
+		return
+	}
+
+	utils.SaveJson(req)
+	if req.Object == "instagram" {
+		if len(req.Entry) > 0 {
+			if len(req.Entry[0].Messaging) > 0 {
+
+				var senderID = req.Entry[0].Messaging[0].Sender.ID
+				var recipientID = req.Entry[0].Messaging[0].Recipient.ID
+				var msg = req.Entry[0].Messaging[0].Message.Text
+
+				log.Printf("[%s] senderID: %s, recipientID: %s, msg: %s\n", time.Now().Format(time.RFC3339), senderID, recipientID, msg)
+			}
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }
 
@@ -110,7 +129,7 @@ func (h *FacebookHandler) InstagramCallbackHandler(c *gin.Context) {
 			return
 		}
 
-		utils.LogJson(response)
+		utils.SaveJson(response)
 		var instagramToken = ""
 		instagramToken = response.AccessToken
 		token, _ := exchangeInstagramToken(response.AccessToken)
@@ -128,6 +147,7 @@ func (h *FacebookHandler) InstagramCallbackHandler(c *gin.Context) {
 		}
 		conn.AccessToken = instagramToken
 		conn.Status = "ACTIVE"
+		conn.SessionName = fmt.Sprintf("%v", response.UserID)
 		err = h.ctx.DB.Save(&conn).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -261,4 +281,25 @@ func exchangeInstagramToken(shortLivedToken string) (string, error) {
 	}
 
 	return response.AccessToken, nil
+}
+
+type FacebookWebhookResponse struct {
+	Object string `json:"object"`
+	Entry  []struct {
+		Time      int64  `json:"time"`
+		ID        string `json:"id"`
+		Messaging []struct {
+			Sender struct {
+				ID string `json:"id"`
+			} `json:"sender"`
+			Recipient struct {
+				ID string `json:"id"`
+			} `json:"recipient"`
+			Timestamp int64 `json:"timestamp"`
+			Message   struct {
+				MID  string `json:"mid"`
+				Text string `json:"text"`
+			} `json:"message"`
+		} `json:"messaging"`
+	} `json:"entry"`
 }
