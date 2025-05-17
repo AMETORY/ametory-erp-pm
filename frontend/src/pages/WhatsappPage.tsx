@@ -320,6 +320,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                           {(e.contact?.tags ?? []).map((el) => (
                             <div
                               className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
+                              key={el.id}
                               style={{
                                 background: el.color,
                                 color: getContrastColor(el.color),

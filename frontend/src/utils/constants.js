@@ -7,6 +7,7 @@ export const LOCAL_STORAGE_COLLAPSED = "collapsed";
 export const LOCAL_STORAGE_DEFAULT_CHANNEL = "defaultChannel";
 export const LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION = "defaultWhatsappSession";
 export const LOCAL_STORAGE_DEFAULT_TELEGRAM_SESSION = "defaultTelegramSession";
+export const LOCAL_STORAGE_DEFAULT_INSTAGRAM_SESSION = "defaultInstagramSession";
 
 
 export const severityOptions = [

@@ -9,14 +9,14 @@ type FacebookWebhookRecipient struct {
 }
 
 type FacebookWebhookMessage struct {
-	MID         string `json:"mid"`
-	Text        string `json:"text"`
+	MID         string `json:"mid,omitempty"`
+	Text        string `json:"text,omitempty"`
 	Attachments []struct {
-		Type    string `json:"type"`
+		Type    string `json:"type,omitempty"`
 		Payload struct {
-			URL string `json:"url"`
-		} `json:"payload"`
-	} `json:"attachments"`
+			URL string `json:"url,omitempty"`
+		} `json:"payload,omitempty"`
+	} `json:"attachments,omitempty"`
 }
 
 type FacebookWebhookMessaging struct {

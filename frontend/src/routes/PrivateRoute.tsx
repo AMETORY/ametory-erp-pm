@@ -30,6 +30,7 @@ import TemplateDetail from "../pages/TemplateDetail";
 import TelegramPage from "../pages/TelegramPage";
 import PrivacyPolicy from "../pages/PrivacyPolicy";
 import FacebookCallback from "../pages/FacebookCallback";
+import InstagramPage from "../pages/InstagramPage";
 
 interface PrivateRouteProps {}
 
@@ -65,6 +66,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/whatsapp" element={<WhatsappPage />} />
       <Route path="/telegram" element={<TelegramPage />} />
       <Route path="/telegram/:sessionId" element={<TelegramPage />} />
+      <Route path="/instagram" element={<InstagramPage />} />
+      <Route path="/instagram/:sessionId" element={<InstagramPage />} />
       <Route path="/broadcast" element={<BroadcastPage />} />
       <Route path="/template" element={<TemplatePage />} />
       <Route path="/template/:templateId" element={<TemplateDetail />} />

@@ -166,7 +166,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
 
             }}
           >
-          <LuInstagram className="mr-2 w-4" />  Hubungkan ke Instagram
+          <BsInstagram className="mr-2 w-4" />  Hubungkan ke Instagram
           </Button>
         </div>
       )}

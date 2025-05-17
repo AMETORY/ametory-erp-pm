@@ -17,18 +17,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AMETORY/ametory-erp-modules/contact"
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
+	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
 )
 
 type FacebookHandler struct {
-	ctx        *context.ERPContext
-	appService *app.AppService
+	ctx                         *context.ERPContext
+	appService                  *app.AppService
+	customerRelationshipService *customer_relationship.CustomerRelationshipService
+	geminiService               *google.GeminiService
+	pmService                   *project_management.ProjectManagementService
+	contactSrv                  *contact.ContactService
 }
 
 func NewFacebookHandler(ctx *context.ERPContext) *FacebookHandler {
@@ -36,9 +45,167 @@ func NewFacebookHandler(ctx *context.ERPContext) *FacebookHandler {
 	if !ok {
 		panic("AppService is not instance of app.AppService")
 	}
-	return &FacebookHandler{ctx: ctx, appService: appService}
+	var customerRelationshipService *customer_relationship.CustomerRelationshipService
+	customerRelationshipSrv, ok := ctx.CustomerRelationshipService.(*customer_relationship.CustomerRelationshipService)
+	if ok {
+		customerRelationshipService = customerRelationshipSrv
+	}
+	geminiService, ok := ctx.ThirdPartyServices["GEMINI"].(*google.GeminiService)
+	if !ok {
+		panic("GeminiService is not found")
+	}
+
+	pmService, ok := ctx.ProjectManagementService.(*project_management.ProjectManagementService)
+	if !ok {
+		panic("ProjectManagementService is not instance of project_management.ProjectManagementService")
+	}
+	contactSrv, ok := ctx.ContactService.(*contact.ContactService)
+	if !ok {
+		panic("ContactService is not instance of contact.ContactService")
+	}
+	return &FacebookHandler{ctx: ctx,
+		appService:                  appService,
+		customerRelationshipService: customerRelationshipService,
+		geminiService:               geminiService,
+		pmService:                   pmService,
+		contactSrv:                  contactSrv}
 }
 
+func (h *FacebookHandler) GetInstagramSessionsHandler(c *gin.Context) {
+	sessions, err := h.customerRelationshipService.InstagramService.GetSessionMessageBySessionName("", *c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"data": sessions})
+}
+
+func (h *FacebookHandler) GetSessionMessagesHandler(c *gin.Context) {
+	sessionId := c.Query("session_id") // c.Params.ByName("sessionId")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	var session *models.InstagramMessageSession
+	err := h.ctx.DB.First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	messages, err := h.customerRelationshipService.InstagramService.GetMessageSessionChatBySessionName(session.ID, session.ContactID, *c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	messages.Items = reverseInstagram(*messages.Items.(*[]models.InstagramMessage))
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": messages})
+}
+func (h *FacebookHandler) GetInstagramSessionDetailHandler(c *gin.Context) {
+	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	var session models.InstagramMessageSession
+	err := h.ctx.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	var connection connection.ConnectionModel
+	err = h.ctx.DB.First(&connection, "id = ?", session.Session).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session, "connection": connection})
+}
+
+func (h *FacebookHandler) SendInstagramMessageHandler(c *gin.Context) {
+	sessionID := c.Params.ByName("sessionId")
+	var input struct {
+		Message string `json:"message" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	var session models.InstagramMessageSession
+	if err := h.ctx.DB.Preload("Contact").First(&session, "id = ?", sessionID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	var connection connection.ConnectionModel
+	if err := h.ctx.DB.First(&connection, "id = ?", session.Session).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	if err := h.customerRelationshipService.InstagramService.SendInstagramMessage(connection.SessionName, *session.Contact.InstagramID, input.Message, connection.AccessToken); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	userID := c.MustGet("userID").(string)
+	memberID := c.MustGet("memberID").(string)
+
+	instagramMsgData := models.InstagramMessage{
+		BaseModel:                 shared.BaseModel{ID: utils.Uuid()},
+		ContactID:                 session.ContactID,
+		Message:                   input.Message,
+		Session:                   connection.ID,
+		CompanyID:                 connection.CompanyID,
+		InstagramMessageSessionID: &session.ID,
+		IsFromMe:                  true,
+		UserID:                    &userID,
+		MemberID:                  &memberID,
+	}
+	err := h.ctx.DB.Create(&instagramMsgData).Error
+	if err != nil {
+		utils.LogPrintf(" error create message: %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	msgNotif := gin.H{
+		"message":    input.Message,
+		"command":    "INSTAGRAM_RECEIVED",
+		"session_id": session.ID,
+		"data":       instagramMsgData,
+	}
+	msgNotifStr, _ := json.Marshal(msgNotif)
+	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
+}
 func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 	if c.Request.Method == http.MethodGet {
 		VerifyFacebookWebhook(c)
@@ -73,7 +240,7 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 
 				var connection connection.ConnectionModel
 				if err := h.ctx.DB.Model(&connection).Where("session_name = ?", recipientID).First(&connection).Error; err != nil {
-					log.Printf("[%s] error get connection: %s\n", time.Now().Format(time.RFC3339), err.Error())
+					utils.LogPrintf(" error get connection: %s\n", err.Error())
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}
@@ -81,7 +248,7 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 				// GET PROFILE OF SENDER
 				senderData := getContact(senderID, connection.AccessToken)
 				if senderData == nil {
-					log.Printf("[%s] error get sender profile: %s\n", time.Now().Format(time.RFC3339), errors.New("error get sender profile"))
+					utils.LogPrintf("error get sender profile: %s\n", errors.New("error get sender profile"))
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "error get sender profile"})
 					return
 				}
@@ -92,7 +259,7 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 					profilePic = profilePicData.ProfilePictureURL
 				}
 
-				log.Printf("[%s] sender: %s, recipientID: %s, msg: %s\n", time.Now().Format(time.RFC3339), senderData.Name, recipientID, instagramMsg)
+				utils.LogPrintf(" sender: %s, recipientID: %s, msg: %s\n", senderData.Name, recipientID, instagramMsg)
 
 				// GET CONTACT By senderID
 				var contact models.ContactModel
@@ -106,7 +273,7 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 					contact.CompanyID = connection.CompanyID
 					err := h.ctx.DB.Create(&contact).Error
 					if err != nil {
-						log.Printf("[%s] error create contact: %s\n", time.Now().Format(time.RFC3339), err.Error())
+						utils.LogPrintf(" error create contact: %s\n", err.Error())
 						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 						return
 					}
@@ -117,7 +284,7 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 				}
 
 				if profilePic != "" {
-					path, err := saveFileContenFromUrl(profilePic)
+					path, mimeType, err := saveFileContenFromUrl(profilePic)
 					if err == nil {
 						mediaURLSaved := config.App.Server.FrontendURL + "/" + path
 						var file models.FileModel
@@ -127,9 +294,10 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 						file.URL = mediaURLSaved
 						file.RefType = "contact"
 						file.RefID = contact.ID
+						file.MimeType = mimeType
 						err = h.ctx.DB.Create(&file).Error
 						if err != nil {
-							log.Printf("[%s] error create file: %s\n", time.Now().Format(time.RFC3339), err.Error())
+							utils.LogPrintf(" error create file: %s\n", err.Error())
 							c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 							return
 						}
@@ -150,10 +318,13 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 					session.CompanyID = connection.CompanyID
 					err = h.ctx.DB.Create(&session).Error
 					if err != nil {
-						log.Printf("[%s] error create session: %s\n", time.Now().Format(time.RFC3339), err.Error())
+						utils.LogPrint(err.Error())
 						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 						return
 					}
+				}
+				if len(attachments) > 0 {
+					instagramMsg = ""
 				}
 				instagramMsgData := models.InstagramMessage{
 					BaseModel:                 shared.BaseModel{ID: utils.Uuid()},
@@ -164,29 +335,31 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 					MessageID:                 &req.Entry[0].ID,
 					InstagramMessageSessionID: &session.ID,
 				}
-				err = h.ctx.DB.Create(instagramMsgData).Error
+				err = h.ctx.DB.Create(&instagramMsgData).Error
 				if err != nil {
-					log.Printf("[%s] error create message: %s\n", time.Now().Format(time.RFC3339), err.Error())
+					utils.LogPrintf(" error create message: %s\n", err.Error())
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}
 
 				if len(attachments) > 0 {
 					for _, v := range attachments {
-						log.Printf("[%s] sender: %s, recipientID: %s, msg: %s\n", time.Now().Format(time.RFC3339), senderData.Name, recipientID, v.Payload.URL)
-						path, _ := saveFileContenFromUrl(v.Payload.URL)
+						// utils.LogPrintf(" sender: %s, recipientID: %s, msg: %s\n", senderData.Name, recipientID, v.Payload.URL)
+						path, mimeType, _ := saveFileContenFromUrl(v.Payload.URL)
 						if path != "" {
 							mediaURLSaved := config.App.Server.FrontendURL + "/" + path
 							var file models.FileModel
 							file.ID = utils.Uuid()
-							file.FileName = v.Payload.URL
+							file.FileName = filepath.Base(path)
 							file.Path = path
 							file.URL = mediaURLSaved
 							file.RefType = "instagram_message"
 							file.RefID = instagramMsgData.ID
+							file.MimeType = mimeType
 							err = h.ctx.DB.Create(&file).Error
+
 							if err != nil {
-								log.Printf("[%s] error create file: %s\n", time.Now().Format(time.RFC3339), err.Error())
+								utils.LogPrintf(" error create file: %s\n", err.Error())
 								c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 								return
 							}
@@ -194,6 +367,21 @@ func (h *FacebookHandler) FacebookWebhookHandler(c *gin.Context) {
 
 					}
 				}
+
+				msg := gin.H{
+					"message":    instagramMsg,
+					"command":    "INSTAGRAM_RECEIVED",
+					"session_id": session.ID,
+					"data":       instagramMsgData,
+				}
+
+				fmt.Println(msg)
+				b, _ := json.Marshal(msg)
+				h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+					fmt.Println("URL", url)
+					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+				})
 
 			}
 		}
@@ -472,19 +660,19 @@ func getProfilePicture(id string, accessToken string) *objects.FacebookUser {
 	return nil
 }
 
-func saveFileContenFromUrl(url string) (string, error) {
+func saveFileContenFromUrl(url string) (string, string, error) {
 	filename := utils.GenerateRandomString(10)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return "", "", err
 	}
 
 	defer resp.Body.Close()
 	byteValue, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return "", "", err
 	}
 	mtype := mimetype.Detect(byteValue)
 
@@ -495,11 +683,18 @@ func saveFileContenFromUrl(url string) (string, error) {
 	case "image/png":
 		filename = filename + ".png"
 	}
-	path := filepath.Join("assets", filename)
+	path := filepath.Join("assets/static", filename)
 	os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	if err := os.WriteFile(path, byteValue, 0644); err != nil {
 		log.Println(err)
-		return "", err
+		return "", "", err
 	}
-	return path, nil
+	return path, mimeType, nil
+}
+
+func reverseInstagram(messages []models.InstagramMessage) []models.InstagramMessage {
+	for i, j := 0, len(messages)-1; i < len(messages)/2; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+	return messages
 }
