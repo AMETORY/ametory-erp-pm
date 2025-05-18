@@ -147,6 +147,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	splitJID := strings.Split(session.JID, "@")
 	splitSep := strings.Split(splitJID[0], ":")
 	var isGroup bool
+	var ok bool
 
 	info := make(map[string]any)
 	var infoStr string = "{}"
@@ -162,18 +163,20 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		b, _ := json.Marshal(info)
 		infoStr = string(b)
 
-		isGroup = lastCustMsg.MessageInfo["IsGroup"].(bool)
-		if lastCustMsg.IsFromMe {
-			responseDuration = lastCustMsg.ResponseTime
-			refID = lastCustMsg.RefID
-		} else {
-			var dur time.Duration = time.Since(*lastCustMsg.CreatedAt)
-			duration := dur.Seconds()
-			responseDuration = &duration
-			lastCustMsg.IsReplied = true
-			h.erpContext.DB.Save(&lastCustMsg)
-			refID = &lastCustMsg.ID
+		isGroup, ok = lastCustMsg.MessageInfo["IsGroup"].(bool)
+		if ok {
+			if lastCustMsg.IsFromMe {
+				responseDuration = lastCustMsg.ResponseTime
+				refID = lastCustMsg.RefID
+			} else {
+				var dur time.Duration = time.Since(*lastCustMsg.CreatedAt)
+				duration := dur.Seconds()
+				responseDuration = &duration
+				lastCustMsg.IsReplied = true
+				h.erpContext.DB.Save(&lastCustMsg)
+				refID = &lastCustMsg.ID
 
+			}
 		}
 
 		// fmt.Println("ERROR 2", dur)
@@ -1046,6 +1049,9 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 				contact.Name = pushName
 				contact.CompanyID = conn.CompanyID
 				contact.IsCustomer = true
+			}
+			if body.Info["IsGroup"].(bool) {
+				contact.Name = body.GroupInfo.Name
 			}
 			err := h.erpContext.DB.Create(&contact).Error
 			if err != nil {

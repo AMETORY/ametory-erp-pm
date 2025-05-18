@@ -467,7 +467,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   />
                 </Popover>
               )}
-              {!msg.is_from_me && (
+              {!msg.is_from_me && !msg.is_group && (
                 <small className="font-semibold">{msg.contact?.name}</small>
               )}
               {msg.is_from_me && (

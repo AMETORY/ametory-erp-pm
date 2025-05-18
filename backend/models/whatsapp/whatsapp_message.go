@@ -1,5 +1,7 @@
 package whatsapp
 
+import "time"
+
 type WhatsAppMessage struct {
 	Conversation       *string          `json:"conversation"`
 	ImageMessage       *ImageMessage    `json:"imageMessage,omitempty"`
@@ -82,10 +84,47 @@ type DocumentMessage struct {
 type MsgObject struct {
 	Message     WhatsAppMessage `json:"message"`
 	Info        map[string]any  `json:"info"`
+	GroupInfo   GroupInfo       `json:"group_info"`
 	Sender      string          `json:"sender"`
 	JID         string          `json:"jid"`
 	SessionID   string          `json:"session_id"`
 	SessionName string          `json:"session_name"`
 	MediaPath   string          `json:"media_path"`
 	MimeType    string          `json:"mime_type"`
+}
+
+type GroupInfo struct {
+	JID                           string    `json:"JID"`
+	OwnerJID                      string    `json:"OwnerJID"`
+	Name                          string    `json:"Name"`
+	NameSetAt                     time.Time `json:"NameSetAt"`
+	NameSetBy                     string    `json:"NameSetBy"`
+	Topic                         string    `json:"Topic"`
+	TopicID                       string    `json:"TopicID"`
+	TopicSetAt                    time.Time `json:"TopicSetAt"`
+	TopicSetBy                    string    `json:"TopicSetBy"`
+	TopicDeleted                  bool      `json:"TopicDeleted"`
+	IsLocked                      bool      `json:"IsLocked"`
+	IsAnnounce                    bool      `json:"IsAnnounce"`
+	AnnounceVersionID             string    `json:"AnnounceVersionID"`
+	IsEphemeral                   bool      `json:"IsEphemeral"`
+	DisappearingTimer             int       `json:"DisappearingTimer"`
+	IsIncognito                   bool      `json:"IsIncognito"`
+	IsParent                      bool      `json:"IsParent"`
+	DefaultMembershipApprovalMode string    `json:"DefaultMembershipApprovalMode"`
+	LinkedParentJID               string    `json:"LinkedParentJID"`
+	IsDefaultSubGroup             bool      `json:"IsDefaultSubGroup"`
+	IsJoinApprovalRequired        bool      `json:"IsJoinApprovalRequired"`
+	GroupCreated                  time.Time `json:"GroupCreated"`
+	ParticipantVersionID          string    `json:"ParticipantVersionID"`
+	Participants                  []struct {
+		JID          string      `json:"JID"`
+		LID          string      `json:"LID"`
+		IsAdmin      bool        `json:"IsAdmin"`
+		IsSuperAdmin bool        `json:"IsSuperAdmin"`
+		DisplayName  string      `json:"DisplayName"`
+		Error        int         `json:"Error"`
+		AddRequest   interface{} `json:"AddRequest"`
+	} `json:"Participants"`
+	MemberAddMode string `json:"MemberAddMode"`
 }
