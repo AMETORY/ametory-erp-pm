@@ -31,6 +31,7 @@ import TelegramPage from "../pages/TelegramPage";
 import PrivacyPolicy from "../pages/PrivacyPolicy";
 import FacebookCallback from "../pages/FacebookCallback";
 import InstagramPage from "../pages/InstagramPage";
+import TermUsePage from "../pages/TermUsePage";
 
 interface PrivateRouteProps {}
 
@@ -53,6 +54,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       />
       <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/term-and-conditions" element={<TermUsePage />} />
       <Route path="/form/:formId" element={<FormDetail />} />
       <Route path="/chat/:channelId" element={<ChatPage />} />
       <Route path="/project/:projectId" element={<ProjectDetail />} />

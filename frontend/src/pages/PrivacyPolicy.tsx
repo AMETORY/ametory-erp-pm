@@ -100,11 +100,35 @@ const PrivacyPolicy: FC<PrivacyPolicyProps> = ({}) => {
                   regarding your data:
                 </p>
                 <ul className="list-disc list-inside ml-6">
-                  <li>Access, update, or delete your personal data.</li>
                   <li>
-                    Object to data processing or request data portability.
+                    <strong>Delete Account:</strong> You can delete your account
+                    and all associated data by contacting our support team at
+                    <a href="mailto:support@ametory.id" className="text-blue-600">
+                      support@ametory.id
+                    </a>
+                    . This will erase all personal data and account information.
                   </li>
-                  <li>Withdraw consent at any time.</li>
+                  <li>
+                    <strong>Delete Personal Data:</strong> You can request that
+                    we delete specific personal data by contacting our support
+                    team. Please note that this may affect your ability to use
+                    certain features of our platform.
+                  </li>
+                  <li>
+                    <strong>Object to Data Processing:</strong> You have the
+                    right to object to our processing of your data. Please
+                    contact our support team to discuss your concerns.
+                  </li>
+                  <li>
+                    <strong>Request Data Portability:</strong> You have the right
+                    to request that we transfer your data to another service.
+                    Please contact our support team to discuss this option.
+                  </li>
+                  <li>
+                    <strong>Withdraw Consent:</strong> You have the right to
+                    withdraw your consent to our processing of your data at any
+                    time. Please contact our support team to exercise this right.
+                  </li>
                 </ul>
               </section>
 
@@ -126,8 +150,8 @@ const PrivacyPolicy: FC<PrivacyPolicyProps> = ({}) => {
                 </p>
                 <p>
                   <strong>Email:</strong>{" "}
-                  <a href="mailto:support@jaraya.id" className="text-blue-600">
-                    support@jaraya.id
+                  <a href="mailto:support@ametory.id" className="text-blue-600">
+                    support@ametory.id
                   </a>
                 </p>
               </section>

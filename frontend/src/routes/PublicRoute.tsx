@@ -11,6 +11,7 @@ import MemberRegisterPage from "../pages/MemberRegisterPage";
 import Forgot from "../pages/ForgotPage";
 import PrivacyPolicy from "../pages/PrivacyPolicy";
 import FacebookCallback from "../pages/FacebookCallback";
+import TermUsePage from "../pages/TermUsePage";
 
 interface PublicRouteProps {}
 
@@ -18,6 +19,7 @@ const PublicRoute: FC<PublicRouteProps> = ({}) => {
   return (
     <Routes>
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/term-and-conditions" element={<TermUsePage />} />
       <Route path="/public/form/:formCode" element={<FormPublicPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot" element={<Forgot />} />
