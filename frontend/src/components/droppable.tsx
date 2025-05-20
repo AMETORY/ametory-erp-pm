@@ -33,6 +33,7 @@ export const Droppable: React.FC<DroppableProps> = ({
       className="p-4 my-2 rounded-lg shadow w-full min-h-32  "
       style={style}
     >
+      <div className="h-[calc(100vh-420px)] overflow-y-auto">
       {(column.tasks ?? []).length === 0 ? (
         <SortableItem
           onAddItem={onAddItem}
@@ -53,6 +54,7 @@ export const Droppable: React.FC<DroppableProps> = ({
           />
         ))
       )}
+      </div>
       {(column.tasks ?? []).length > 0 && (
         <div
           className="flex w-full border rounded-lg p-4 text-center flex-row justify-center text-gray-300 mt-4"

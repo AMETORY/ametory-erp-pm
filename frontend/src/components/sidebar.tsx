@@ -218,7 +218,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             </span>
           </li>
         )}
-        {process.env.REACT_APP_TELEGRAM_ENABLED && (
+        {process.env.REACT_APP_TELEGRAM_ENABLED  == "true" && (
           <li className="" style={{}}>
             <span
               className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
@@ -247,7 +247,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             </span>
           </li>
         )}
-        {process.env.REACT_APP_INSTAGRAM_ENABLED && (
+        {process.env.REACT_APP_INSTAGRAM_ENABLED == "true" && (
           <li className="" style={{}}>
             <span
               className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"

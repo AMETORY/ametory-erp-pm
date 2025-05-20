@@ -33,6 +33,7 @@ import {
 import { debounce } from "../utils/helper";
 import { IoCheckmarkDone } from "react-icons/io5";
 import {
+  BsChevronDown,
   BsFileEarmark,
   BsImage,
   BsPlusCircle,
@@ -49,6 +50,7 @@ import ModalProduct from "./ModalProduct";
 import { getProducts } from "../services/api/productApi";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { SearchContext } from "../contexts/SearchContext";
+import { ScrollContext } from "../contexts/ScrollContext";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -83,6 +85,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const [modalProduct, setModalProduct] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<ProductModel[]>([]);
   const [isCaption, setIsCaption] = useState(false);
+  const { scrollPositions, setScrollPositions } = useContext(ScrollContext);
+  const [showScrollBottom, setShowScrollButton] = useState(false);
+  // const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     setMounted(true);
@@ -114,7 +119,25 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     if (container && container.scrollHeight <= container.clientHeight) {
       markAllAsRead();
     }
-  }, [messages]); // atau [chatList], tergantung state kamu
+
+    const handleScrollPosition = () => {
+      if (sessionId) {
+        setScrollPositions({
+          ...scrollPositions,
+          [sessionId]: container?.scrollTop ?? 0,
+        });
+        // const scrollHeight = chatContainerRef.current?.scrollHeight ?? 0;
+        // setScrollHeight(scrollHeight);
+      }
+    };
+
+    container?.addEventListener("scroll", handleScrollPosition);
+
+    // Cleanup on unmount
+    return () => {
+      container?.removeEventListener("scroll", handleScrollPosition);
+    };
+  }, [messages, sessionId]); // atau [chatList], tergantung state kamu
 
   const markAllAsRead = () => {
     for (const msg of messages) {
@@ -306,7 +329,8 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
   const scrollToBottom = () => {
     const element = document.getElementById("channel-messages");
-    if (element) {
+
+    if (element && element.scrollTop === 0) {
       element.scrollTo({
         top: element.scrollHeight,
         behavior: "smooth",
@@ -316,7 +340,26 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+    if (sessionId) {
+      const container = chatContainerRef.current;
+      if (container) {
+        const savedPosition = scrollPositions[sessionId] || 0;
+        container.scrollTop = savedPosition;
+      }
+     
+    }
+  }, [messages, sessionId]);
+
+  useEffect(() => {
+
+      setShowScrollButton((chatContainerRef.current?.scrollHeight ?? 0) -
+          (chatContainerRef.current?.scrollTop ?? 0) -
+          (chatContainerRef.current?.clientHeight ?? 0) > 50);
+  
+    return () => {
+      
+    }
+  }, [scrollPositions]);
 
   useEffect(() => {
     if (connection?.id) {
@@ -408,7 +451,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       </div>
       <div
         id="channel-messages"
-        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-8"
+        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-8 relative"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
@@ -509,6 +552,19 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             </div>
           </div>
         ))}
+        {showScrollBottom  &&
+          <button
+            className="fixed bottom-[60px] right-6 p-2 rounded-full bg-gray-700 hover:bg-gray-300 z-50 text-white transition-colors"
+            onClick={() => {
+              chatContainerRef.current?.scrollTo({
+                top: chatContainerRef?.current?.scrollHeight ?? 0,
+                behavior: "smooth",
+              });
+            }}
+          >
+            <BsChevronDown />
+          </button>
+        }
       </div>
       {(files.length > 0 || selectedProducts.length > 0) && (
         <div className="absolute bottom-[50px] flex w-full bg-red-50 p-4 justify-between z-0">
@@ -802,7 +858,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 }}
               >
                 {" "}
-                {(product.product_images??[]).length !== 0 ? (
+                {(product.product_images ?? []).length !== 0 ? (
                   <img
                     src={product.product_images![0].url}
                     className="w-10 h-10 rounded-full"

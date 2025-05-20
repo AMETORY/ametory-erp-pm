@@ -289,7 +289,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 >
                   <div className="flex justify-between w-full items-center">
                     <div
-                      className="flex gap-2 items-center"
+                      className="flex gap-2 items-center  w-full"
                       onClick={() => {
                         nav(`/whatsapp/${e.id}`);
                         asyncStorage.setItem(

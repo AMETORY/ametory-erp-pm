@@ -25,6 +25,7 @@ import AcceptInvitation from "../pages/AcceptInvitation";
 import { MemberModel } from "../models/member";
 import FormPublicPage from "../pages/FormPublicPage";
 import { SearchContext } from "../contexts/SearchContext";
+import { ScrollContext } from "../contexts/ScrollContext";
 
 interface AppRoutesProps {
   token?: string | null;
@@ -41,6 +42,9 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
   const [member, setMember] = useState<MemberModel | null>(null);
   const [activeCompany, setActiveCompany] = useState<CompanyModel | null>(null);
   const [search, setSearch] = useState("");
+  const [scrollPositions, setScrollPositions] = useState<{
+    [key: string]: number;
+  }>({});
 
   useEffect(() => {
     // console.log("token", token);
@@ -103,10 +107,14 @@ const AppRoutes: FC<AppRoutesProps> = ({ token }) => {
                     value={{ isWsConnected, setWsConnected, wsMsg, setWsMsg }}
                   >
                     <SearchContext.Provider value={{ search, setSearch }}>
-                      <BrowserRouter>
-                        {token && <PrivateRoute />}
-                        {!token && <PublicRoute />}
-                      </BrowserRouter>
+                      <ScrollContext.Provider
+                        value={{ scrollPositions, setScrollPositions }}
+                      >
+                        <BrowserRouter>
+                          {token && <PrivateRoute />}
+                          {!token && <PublicRoute />}
+                        </BrowserRouter>
+                      </ScrollContext.Provider>
                     </SearchContext.Provider>
                   </WebsocketContext.Provider>
                 </CompanyIDContext.Provider>
