@@ -10,6 +10,7 @@ export const getWhatsappSessions = async (session_id: string, req: PaginationReq
   if (req.tag_ids) queryParams.set("tag_ids", req.tag_ids);
   if (req.is_unread) queryParams.set("is_unread", "1");
   if (req.is_unreplied) queryParams.set("is_unreplied", "1");
+  if (req.type) queryParams.set("type", req.type);
   return await customFetch(`api/v1/whatsapp/sessions?${queryParams}`, {
     method: "GET",
   });

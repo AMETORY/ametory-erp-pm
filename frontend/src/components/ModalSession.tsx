@@ -1,4 +1,4 @@
-import { Button, Label, Modal } from "flowbite-react";
+import { Button, Label, Modal, TextInput } from "flowbite-react";
 import { useEffect, useState, type FC } from "react";
 import { WhatsappMessageSessionModel } from "../models/whatsapp_message";
 import { ConnectionModel } from "../models/connection";
@@ -53,6 +53,20 @@ const ModalSession: FC<ModalSessionProps> = ({
       <Modal.Header>{session?.contact?.name}</Modal.Header>
       <Modal.Body>
         <div className="flex flex-col space-y-4 pb-32">
+          <div>
+            <Label>Contact Name</Label>
+            <TextInput
+              type="text"
+              value={selectedContact?.name}
+              onChange={(e) =>
+                setSelectedContact({
+                  ...selectedContact!,
+                  name: e.target.value,
+                })
+              }
+            />
+          </div>
+
           <div>
             <Label htmlFor="name" value="Connection" />
             <Select
@@ -141,7 +155,6 @@ const ModalSession: FC<ModalSessionProps> = ({
               if (session) {
                 session.contact = selectedContact;
                 onSave(session);
-                
               }
             }}
           >

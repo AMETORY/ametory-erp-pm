@@ -121,6 +121,19 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 	return result
 }
 
+func getThumbnail(files []models.FileModel) (*models.FileModel, []models.FileModel) {
+	restFiles := []models.FileModel{}
+	var thumbnail *models.FileModel
+	for _, v := range files {
+		if strings.HasPrefix(v.MimeType, "image/") && thumbnail == nil {
+			thumbnail = &v
+		} else {
+			restFiles = append(restFiles, v)
+		}
+	}
+	return thumbnail, restFiles
+}
+
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	var input struct {
 		Message   string                `json:"message"`
@@ -191,12 +204,18 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 
 	parsedMessage := parseMsgTemplate(*session.Contact, &member, input.Message)
 
+	thumbnail, attachments := getThumbnail(input.Files)
+	var mediaURL, mimeType string
+	if thumbnail != nil {
+		mediaURL = thumbnail.URL
+		mimeType = thumbnail.MimeType
+	}
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
-		Sender:   splitSep[0],
-		Receiver: *session.Contact.Phone,
-		Message:  parsedMessage,
-		// MediaURL: mediaURLSaved,
-		// MimeType: msg.MimeType,
+		Sender:       splitSep[0],
+		Receiver:     *session.Contact.Phone,
+		Message:      parsedMessage,
+		MediaURL:     mediaURL,
+		MimeType:     mimeType,
 		MessageInfo:  info,
 		Info:         infoStr,
 		Session:      session.Session,
@@ -428,11 +447,19 @@ _%s_
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
 	}
+
+	var fileType, fileUrl string
+	if thumbnail != nil {
+		fileType = "image"
+		fileUrl = thumbnail.URL
+	}
 	resp, err := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-		JID:     waDataReply.JID,
-		Text:    waDataReply.Message,
-		To:      to,
-		IsGroup: waDataReply.IsGroup,
+		JID:      waDataReply.JID,
+		Text:     waDataReply.Message,
+		To:       to,
+		IsGroup:  waDataReply.IsGroup,
+		FileType: fileType,
+		FileUrl:  fileUrl,
 	})
 
 	respData, ok := resp.(map[string]any)["data"].(map[string]any)
@@ -457,7 +484,7 @@ _%s_
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	for _, v := range input.Files {
+	for _, v := range attachments {
 
 		now := time.Now()
 		waDataReply.ID = utils.Uuid()
@@ -1150,6 +1177,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	err = h.erpContext.DB.First(&whatsappSession, "session = ?", body.SessionID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		refType := "connection"
+		// CREATE NEW SESSION
 		sessionData := models.WhatsappMessageSession{
 			JID:          body.JID,
 			Session:      body.SessionID,
@@ -1158,6 +1186,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			LastMessage:  convMsg,
 			RefID:        &conn.ID,
 			RefType:      &refType,
+			IsGroup:      body.Info["IsGroup"].(bool),
 		}
 		if sessionAuth != nil {
 			sessionData.CompanyID = sessionAuth.CompanyID
@@ -1167,6 +1196,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 
 		h.erpContext.DB.Create(&sessionData)
 		if conn.NewSessionColumnID != nil {
+			// CREATE NEW TASK
 			senderName := sessionAuth.Name
 			if senderName == "" {
 				senderName = body.Sender
@@ -1215,6 +1245,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		h.erpContext.DB.Save(&whatsappSession)
 
 		if conn.IdleColumnID != nil && !lastOnlineAt.IsZero() {
+			// CREATE NEW TASK
 			if (now.Sub(lastOnlineAt).Hours() / 24) > conn.IdleDuration {
 				senderName := sessionAuth.Name
 				if senderName == "" {

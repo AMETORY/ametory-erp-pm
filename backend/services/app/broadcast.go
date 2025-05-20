@@ -328,6 +328,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 	b.ctx.DB.Where("id = ?", broadcastID).Preload("Member.User").First(&broadcast)
 	time.Sleep(delay)
 	var success bool
+
+	// USE SIMULATION
 	if config.App.Server.SimulateBroadcast {
 		if broadcast.TemplateID == nil {
 			success = simulateSend(contact, parseMsgTemplate(contact, broadcast.Member, broadcast.Message))
@@ -346,13 +348,22 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 		}
 	} else {
+		// USE REAL API
 		if contact.Phone != nil {
 			if broadcast.TemplateID == nil {
+				thumbnail, restFiles := getThumbnail(broadcast.Files)
+				var fileType, fileUrl string
+				if thumbnail != nil {
+					fileType = "image"
+					fileUrl = thumbnail.URL
+				}
 				waData := whatsmeow_client.WaMessage{
-					JID:     sender.Session,
-					Text:    parseMsgTemplate(contact, broadcast.Member, broadcast.Message),
-					To:      *contact.Phone,
-					IsGroup: false,
+					JID:      sender.Session,
+					Text:     parseMsgTemplate(contact, broadcast.Member, broadcast.Message),
+					To:       *contact.Phone,
+					IsGroup:  false,
+					FileType: fileType,
+					FileUrl:  fileUrl,
 				}
 				fmt.Println("SEND MESSAGE", *contact.Phone)
 				utils.LogJson(waData)
@@ -363,7 +374,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 					success = true
 				}
 
-				for _, v := range broadcast.Files {
+				for _, v := range restFiles {
 					if strings.Contains(v.MimeType, "image") && v.URL != "" {
 						resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
 							JID:      sender.Session,
@@ -424,11 +435,19 @@ _%s_
 				template, err := b.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*broadcast.TemplateID)
 				if err == nil {
 					for _, msg := range template.Messages {
+						thumbnail, restFiles := getThumbnail(msg.Files)
+						var fileType, fileUrl string
+						if thumbnail != nil {
+							fileType = "image"
+							fileUrl = thumbnail.URL
+						}
 						waData := whatsmeow_client.WaMessage{
-							JID:     sender.Session,
-							Text:    parseMsgTemplate(contact, broadcast.Member, msg.Body),
-							To:      *contact.Phone,
-							IsGroup: false,
+							JID:      sender.Session,
+							Text:     parseMsgTemplate(contact, broadcast.Member, msg.Body),
+							To:       *contact.Phone,
+							IsGroup:  false,
+							FileType: fileType,
+							FileUrl:  fileUrl,
 						}
 						_, err := b.whatsmeowService.SendMessage(waData)
 						if err != nil {
@@ -437,7 +456,7 @@ _%s_
 							success = true
 						}
 
-						for _, v := range msg.Files {
+						for _, v := range restFiles {
 							if strings.Contains(v.MimeType, "image") && v.URL != "" {
 								resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
 									JID:      sender.Session,
@@ -612,4 +631,17 @@ func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg str
 	})
 
 	return result
+}
+
+func getThumbnail(files []mdl.FileModel) (*mdl.FileModel, []mdl.FileModel) {
+	restFiles := []mdl.FileModel{}
+	var thumbnail *mdl.FileModel
+	for _, v := range files {
+		if strings.HasPrefix(v.MimeType, "image/") && thumbnail == nil {
+			thumbnail = &v
+		} else {
+			restFiles = append(restFiles, v)
+		}
+	}
+	return thumbnail, restFiles
 }

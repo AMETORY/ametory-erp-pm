@@ -21,7 +21,7 @@ import {
 } from "../utils/constants";
 import { useNavigate, useParams } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
-import { PaginationResponse } from "../objects/pagination";
+import { PaginationRequest, PaginationResponse } from "../objects/pagination";
 import { getContrastColor, getPagination } from "../utils/helper";
 import {
   clearWhatsappSession,
@@ -88,6 +88,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [downloadModal, setDownloadModal] = useState(false);
   const [modalDateOpen, setModalDateOpen] = useState(false);
   const { search, setSearch } = useContext(SearchContext);
+  const [sessionTypeSelected, setSessionTypeSelected] = useState("");
   const [filters, setFilters] = useState([
     {
       label: "All Chat",
@@ -102,6 +103,12 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
       value: "unread",
     },
   ]);
+
+  const sessionType = [
+    { label: "All", value: "" },
+    { label: "Group", value: "group" },
+    { label: "Personal", value: "personal" },
+  ];
 
   const today = new Date();
   const start = new Date(
@@ -143,7 +150,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     if (mounted) {
       getAllSessions();
     }
-  }, [mounted, sessionId, page, size, search, selectedTags, selectedFilters]);
+  }, [mounted, sessionId, page, size, search, selectedTags, selectedFilters, sessionTypeSelected]);
 
   useEffect(() => {
     if (mounted) {
@@ -201,7 +208,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
       // console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
       // console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
       // setLoading(true);
-      const resp: any = await getWhatsappSessions(sessionId ?? "", {
+      let params: PaginationRequest = {
         page,
         size,
         search,
@@ -212,7 +219,11 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         is_unreplied: selectedFilters.some((f) => f.value == "unreplied")
           ? true
           : null,
-      });
+      };
+      if (sessionTypeSelected != "") {
+        params["type"] = sessionTypeSelected;
+      }
+      const resp: any = await getWhatsappSessions(sessionId ?? "", params);
       setSessions(resp.data.items);
       setPagination(getPagination(resp.data));
     } catch (error) {
@@ -527,6 +538,16 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
               />
             </div>
             <div>
+              <Label htmlFor="name" value="Session Type" />
+              <Select
+                value={sessionType.find((e) => e.value === sessionTypeSelected)}
+                options={sessionType}
+                onChange={(e) => {
+                  setSessionTypeSelected(e!.value);
+                }}
+              />
+            </div>
+            <div>
               <Label htmlFor="name" value="Tag" />
               <Select
                 isMulti
@@ -585,6 +606,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         </Modal.Header>
         <Modal.Body>
           <div className="flex flex-col pb-32 space-y-4">
+           
             <div>
               <Label>Connections</Label>
               <Select
