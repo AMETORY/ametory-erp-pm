@@ -5,6 +5,7 @@ import (
 	"ametory-pm/services/app"
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -301,8 +302,14 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 
 	var contacts []mdl.ContactModel
 
+	var customDataKey = ""
 	for i, row := range rows {
 		if i == 0 {
+			if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" {
+				fmt.Println("------------------------------------------------")
+				fmt.Println(rows[i])
+				customDataKey = strings.ToLower(cleanString(rows[i][5]))
+			}
 			continue
 		}
 		for j, r := range row {
@@ -348,28 +355,35 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 				}
 			}
 		}
-		var products []mdl.ProductModel
-		if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" {
-			dataProducts := strings.Split(cleanString(rows[i][5]), ",")
-			for _, v := range dataProducts {
-				fmt.Println("PRODUCT", cleanString(v))
-				var checkProduct mdl.ProductModel
-				err := h.ctx.DB.Where("name = ? or sku = ?", cleanString(v), cleanString(v)).Where("company_id = ?", companyID).First(&checkProduct).Error
-				if err == nil {
-					products = append(products, checkProduct)
-				}
-			}
+		// var products []mdl.ProductModel
+		// if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" {
+		// 	dataProducts := strings.Split(cleanString(rows[i][5]), ",")
+		// 	for _, v := range dataProducts {
+		// 		fmt.Println("PRODUCT", cleanString(v))
+		// 		var checkProduct mdl.ProductModel
+		// 		err := h.ctx.DB.Where("name = ? or sku = ?", cleanString(v), cleanString(v)).Where("company_id = ?", companyID).First(&checkProduct).Error
+		// 		if err == nil {
+		// 			products = append(products, checkProduct)
+		// 		}
+		// 	}
+		// }
+		var customData = make(map[string]string)
+		if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" && customDataKey != "" {
+			customData[customDataKey] = cleanString(rows[i][5])
 		}
 
+		b, _ := json.Marshal(customData)
+
 		newContact := mdl.ContactModel{
-			Name:       rows[i][0],
-			Email:      rows[i][1],
-			Phone:      phone,
-			UserID:     &userID,
-			CompanyID:  &companyID,
-			Tags:       tags,
-			Products:   products,
+			Name:      rows[i][0],
+			Email:     rows[i][1],
+			Phone:     phone,
+			UserID:    &userID,
+			CompanyID: &companyID,
+			Tags:      tags,
+			// Products:   products,
 			IsCustomer: true,
+			CustomData: b,
 		}
 
 		if newContact.Phone != nil {

@@ -33,6 +33,7 @@ import { getProducts } from "../services/api/productApi";
 import { ProductModel } from "../models/product";
 import { FileModel } from "../models/file";
 import { uploadFile } from "../services/api/commonApi";
+import MessageMention from "../components/MessageMention";
 
 interface BroadcastPageProps {}
 const neverMatchingRegex = /($a)/;
@@ -222,36 +223,19 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
               {!useTemplate && (
                 <div className="mb-2 block position">
                   <Label htmlFor="message" value="Message" />
-
-                  <MentionsInput
-                    value={message}
-                    onChange={(val) => {
+                 <MessageMention
+                    msg={message}
+                    onChange={(val: any) => {
                       setMessage(val.target.value);
                     }}
-                    style={emojiStyle}
-                    placeholder={
-                      "Press ':' for emojis, and template using '@' and shift+enter to send"
-                    }
-                    autoFocus
-                  >
-                    <Mention
-                      trigger="@"
-                      data={[
-                        { id: "{{user}}", display: "Full Name" },
-                        { id: "{{phone}}", display: "Phone Number" },
-                      ]}
-                      style={{
-                        backgroundColor: "#cee4e5",
-                      }}
-                      appendSpaceOnAdd
-                    />
-                    <Mention
-                      trigger=":"
-                      markup="__id__"
-                      regex={neverMatchingRegex}
-                      data={queryEmojis}
-                    />
-                  </MentionsInput>
+                    onClickEmoji={() => {
+                      // setSelectedMessage(template?.messages?.[i]);
+                    }}
+                    onSelectEmoji={(emoji: string) => {
+                      setMessage(message + emoji);
+                    }}
+                  />
+                  
                   {/* <div className="absolute bottom-2 right-2 z-50">
                     <Dropdown
                       label={<BsPlusCircle />}

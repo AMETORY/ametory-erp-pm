@@ -627,6 +627,11 @@ func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg str
 		if matches[0] == "({{agent}})" && member != nil {
 			return member.User.FullName
 		}
+		if matches[0] == "({{product}})" && member != nil {
+			var customData map[string]string
+			json.Unmarshal([]byte(contact.CustomData), &customData)
+			return customData["product"]
+		}
 		return s // Kalau tidak ada datanya, biarkan
 	})
 

@@ -58,6 +58,7 @@ import { uploadFile } from "../services/api/commonApi";
 import { getProducts } from "../services/api/productApi";
 import { ProductModel } from "../models/product";
 import { FileModel } from "../models/file";
+import MessageMention from "../components/MessageMention";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -224,39 +225,17 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <Label>Message</Label>
                   <p className="">
                     {isEditable ? (
-                      <MentionsInput
-                        value={broadcast?.message ?? ""}
-                        onChange={(val) => {
+                      <MessageMention
+                        msg={broadcast?.message ?? ""}
+                        onChange={(val: any) => {
                           setBroadcast({
                             ...broadcast!,
                             message: val.target.value,
                           });
                         }}
-                        style={emojiStyle}
-                        placeholder={
-                          "Press ':' for emojis, and template using '@' and shift+enter to send"
-                        }
-                        autoFocus
-                      >
-                        <Mention
-                          trigger="@"
-                          data={[
-                            { id: "{{user}}", display: "Full Name" },
-                            { id: "{{phone}}", display: "Phone Number" },
-                            { id: "{{agent}}", display: "Agent Name" },
-                          ]}
-                          style={{
-                            backgroundColor: "#cee4e5",
-                          }}
-                          appendSpaceOnAdd
-                        />
-                        <Mention
-                          trigger=":"
-                          markup="__id__"
-                          regex={neverMatchingRegex}
-                          data={queryEmojis}
-                        />
-                      </MentionsInput>
+                        onClickEmoji={() => {}}
+                        onSelectEmoji={(emoji: any) => {}}
+                      />
                     ) : (
                       parseMentions(broadcast?.message ?? "", (type, id) => {})
                     )}
@@ -295,61 +274,62 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       </Dropdown>
                     </div>
                   )}
-                
                 </div>
                 {((broadcast?.products ?? []).length > 0 ||
-                    (broadcast?.files ?? []).length > 0) && (
-                    <div className="flex flex-col gap-2 bg-gray-100 rounded-lg p-2">
-                      {(broadcast?.files ?? []).length > 0 && (
-                        <div className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2">
+                  (broadcast?.files ?? []).length > 0) && (
+                  <div className="flex flex-col gap-2 bg-gray-100 rounded-lg p-2">
+                    {(broadcast?.files ?? []).length > 0 && (
+                      <div className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2">
+                        {" "}
+                        <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
+                          <BsFileEarmark className="w-4 h-4 " />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold">
+                            {(broadcast?.files ?? []).length} Files
+                          </span>
+                          <small>
+                            {(broadcast?.files ?? [])
+                              .slice(0, 3)
+                              .map((e) => e.path.split("/").pop())
+                              .join(", ")}
+                            {(broadcast?.files ?? []).length > 3 ? "..." : ""}
+                          </small>
+                        </div>
+                      </div>
+                    )}
+                    {(broadcast?.products ?? []).map(
+                      (product: any, index: number) => (
+                        <div
+                          key={product.id}
+                          className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2"
+                          onClick={() => {
+                            setSelectedProducts((prev) => [...prev, product]);
+                            setModalProduct(false);
+                          }}
+                        >
                           {" "}
-                          <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
-                                <BsFileEarmark className="w-4 h-4 " />
-                              </div>
+                          {(product.product_images ?? []).length !== 0 ? (
+                            <img
+                              src={product.product_images![0].url}
+                              className="w-10 h-10 rounded-full"
+                            />
+                          ) : (
+                            <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
+                              <BsImage className="w-4 h-4 " />
+                            </div>
+                          )}
                           <div className="flex flex-col">
-                            <span className="font-semibold">{(broadcast?.files ?? []).length} Files</span>
-                            <small>
-                              {(broadcast?.files ?? [])
-                                .slice(0, 3)
-                                .map((e) => e.path.split('/').pop())
-                                .join(', ')}
-                              {(broadcast?.files ?? []).length > 3 ? '...' : ''}
-                            </small>
+                            <span className="font-semibold">
+                              {product.name}
+                            </span>
+                            <small>{product.description}</small>
                           </div>
                         </div>
-                      )}
-                      {(broadcast?.products ?? []).map(
-                        (product: any, index: number) => (
-                          <div
-                            key={product.id}
-                            className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2"
-                            onClick={() => {
-                              setSelectedProducts((prev) => [...prev, product]);
-                              setModalProduct(false);
-                            }}
-                          >
-                            {" "}
-                            {(product.product_images ?? []).length !== 0 ? (
-                              <img
-                                src={product.product_images![0].url}
-                                className="w-10 h-10 rounded-full"
-                              />
-                            ) : (
-                              <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
-                                <BsImage className="w-4 h-4 " />
-                              </div>
-                            )}
-                            <div className="flex flex-col">
-                              <span className="font-semibold">
-                                {product.name}
-                              </span>
-                              <small>{product.description}</small>
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
+                  </div>
+                )}
                 {(files.length > 0 || selectedProducts.length > 0) && (
                   <div className=" flex w-full bg-red-50 p-4 justify-between z-0">
                     <div className="flex flex-col">
@@ -358,8 +338,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       )}
                       {selectedProducts.length > 0 && (
                         <>
-                        <span>{selectedProducts.length} Products</span>
-                        <small>{selectedProducts.map((e) => e.name).join(', ')} </small>
+                          <span>{selectedProducts.length} Products</span>
+                          <small>
+                            {selectedProducts.map((e) => e.name).join(", ")}{" "}
+                          </small>
                         </>
                       )}
                     </div>
@@ -772,11 +754,29 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
           </div>
           <Table>
             <Table.Head>
-              <Table.HeadCell>Name</Table.HeadCell>
+              <Table.HeadCell>
+                <Checkbox
+                  disabled={!isEditable}
+                  checked={
+                    selectedBroadcastContacts.length ===
+                    (broadcast?.contacts ?? []).length
+                  }
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedBroadcastContacts(broadcast?.contacts ?? []);
+                    } else {
+                      setSelectedBroadcastContacts([]);
+                    }
+                  }}
+                  className="mr-2"
+                />
+                Name
+              </Table.HeadCell>
               <Table.HeadCell>Email</Table.HeadCell>
               <Table.HeadCell>Phone</Table.HeadCell>
               <Table.HeadCell>Address</Table.HeadCell>
-              <Table.HeadCell>Position</Table.HeadCell>
+              <Table.HeadCell>Tag</Table.HeadCell>
+              <Table.HeadCell>Data</Table.HeadCell>
               <Table.HeadCell>Info</Table.HeadCell>
               <Table.HeadCell></Table.HeadCell>
             </Table.Head>
@@ -843,7 +843,14 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <Table.Cell>{contact.email}</Table.Cell>
                   <Table.Cell>{contact.phone}</Table.Cell>
                   <Table.Cell>{contact.address}</Table.Cell>
-                  <Table.Cell>{contact.contact_person_position}</Table.Cell>
+                  <Table.Cell>
+                    {(contact.tags ?? []).map((tag) => tag.name).join(", ")}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {Object.keys(contact.custom_data).map(
+                      (key) => `${key}: ${contact.custom_data[key]}`
+                    )}
+                  </Table.Cell>
                   <Table.Cell className="w-32">
                     {broadcast?.status === "COMPLETED" && (
                       <div className="flex gap-2">

@@ -22,6 +22,7 @@ import { money } from "../utils/helper";
 import { MemberContext } from "../contexts/ProfileContext";
 import { MemberModel } from "../models/member";
 import Select from "react-select";
+import MessageMention from "../components/MessageMention";
 
 interface TemplateDetailProps {}
 
@@ -63,40 +64,7 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    fetch(
-      process.env.REACT_APP_BASE_URL+"/assets/static/emojis.json"
-    )
-      .then((response) => {
-        return response.json();
-      })
-      .then((jsonData) => {
-        setEmojis(jsonData.emojis);
-      });
-  }, []);
 
-  const neverMatchingRegex = /($a)/;
-  const queryEmojis = (query: any, callback: (emojis: any) => void) => {
-    if (query.length === 0) return;
-
-    const matches = emojis
-      .filter((emoji: any) => {
-        return emoji.name.indexOf(query.toLowerCase()) > -1;
-      })
-      .slice(0, 10);
-    return matches.map(({ emoji }) => ({ id: emoji }));
-  };
-
-  const groupBy = (emojis: any[], category: string): { [s: string]: any[] } => {
-    return emojis.reduce((acc, curr) => {
-      const key = curr[category];
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(curr);
-      return acc;
-    }, {});
-  };
   const save = async () => {
     setLoading(true);
     try {
@@ -129,7 +97,41 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                   key={i}
                 >
                   <h4 className="font-semibold">#Message {i + 1}</h4>
-                  <div className="relative w-full">
+                  <MessageMention
+                    msg={message.body ?? ""}
+                    onChange={(val: any) => {
+                      setTemplate({
+                        ...template!,
+                        messages: (template?.messages ?? []).map((m, index) => {
+                          if (index === i) {
+                            return {
+                              ...m,
+                              body: val.target.value,
+                            };
+                          }
+                          return m;
+                        }),
+                      });
+                    }}
+                    onClickEmoji={() => {
+                      setSelectedMessage(template?.messages?.[i]);
+                    }}
+                    onSelectEmoji={(emoji: string) => {
+                      setTemplate({
+                        ...template!,
+                        messages: (template?.messages ?? []).map((m, index) => {
+                          if (selectedMessage?.id !== m.id) {
+                            return m;
+                          }
+                          return {
+                            ...selectedMessage,
+                            body: m.body + emoji,
+                          };
+                        }),
+                      });
+                    }}
+                  />
+                  {/* <div className="relative w-full">
                     <MentionsInput
                       value={message.body}
                       onChange={(val: any) => {
@@ -183,7 +185,7 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                     >
                       😀
                     </div>
-                  </div>
+                  </div> */}
                   <div className="mt-8">
                     <h4 className="font-semibold">Files</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -469,54 +471,6 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
           </div>
         </div>
       </div>
-      <Modal
-        dismissible
-        show={modalEmojis}
-        onClose={() => setModalEmojis(false)}
-      >
-        <Modal.Header>Emojis</Modal.Header>
-        <Modal.Body>
-          <div>
-            {Object.entries(groupBy(emojis, "category")).map(
-              ([category, emojis]) => (
-                <div
-                  className="mb-4 hover:bg-gray-100 rounded-lg p-2"
-                  key={category}
-                >
-                  <h3 className="font-bold">{category}</h3>
-                  <div className=" flex flex-wrap gap-1">
-                    {emojis.map((e: any, index: number) => (
-                      <div
-                        key={index}
-                        className="cursor-pointer text-lg"
-                        onClick={() => {
-                          setTemplate({
-                            ...template!,
-                            messages: (template?.messages ?? []).map(
-                              (m, index) => {
-                                if (selectedMessage?.id !== m.id) {
-                                  return m;
-                                }
-                                return {
-                                  ...selectedMessage,
-                                  body: m.body + e.emoji,
-                                };
-                              }
-                            ),
-                          });
-                          // setModalEmojis(false);
-                        }}
-                      >
-                        {e.emoji}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </Modal.Body>
-      </Modal>
       <ModalProductList
         show={modalProduct}
         setShow={setModalProduct}

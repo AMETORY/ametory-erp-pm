@@ -32,4 +32,5 @@ export interface ContactModel {
     retry?: MessageRetry;
   };
   products?: ProductModel[]
+  custom_data?: any
 }
