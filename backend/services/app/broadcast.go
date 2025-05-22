@@ -6,6 +6,7 @@ import (
 	"ametory-pm/models/connection"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"net/http"
@@ -70,7 +71,7 @@ func (s *BroadcastService) CreateBroadcast(broadcast *models.BroadcastModel) err
 func (s *BroadcastService) GetBroadcasts(pagination *Pagination, httpRequest http.Request, search string) ([]models.BroadcastModel, error) {
 	var broadcasts []models.BroadcastModel
 	db := s.ctx.DB.Scopes(paginate(broadcasts, pagination, s.ctx.DB))
-	if err := db.Where("company_id = ?", httpRequest.Header.Get("ID-Company")).Find(&broadcasts).Error; err != nil {
+	if err := db.Where("company_id = ?", httpRequest.Header.Get("ID-Company")).Order("created_at DESC").Find(&broadcasts).Error; err != nil {
 		return nil, err
 	}
 	return broadcasts, nil
@@ -328,6 +329,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 	b.ctx.DB.Where("id = ?", broadcastID).Preload("Member.User").First(&broadcast)
 	time.Sleep(delay)
 	var success bool
+	var isNotOnWhatsapp bool
 
 	// USE SIMULATION
 	if config.App.Server.SimulateBroadcast {
@@ -351,6 +353,22 @@ func (b *BroadcastService) sendWithRetryHandling(
 		// USE REAL API
 		if contact.Phone != nil {
 			if broadcast.TemplateID == nil {
+				resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
+				if err != nil {
+					log.Println("ERROR CHECK NUMBER", resp)
+				}
+
+				var respCheck QueryIsOnWhatsapp
+				if err := json.Unmarshal(resp, &respCheck); err != nil {
+					log.Println("ERROR CHECK NUMBER PARSE RESPONSE")
+				}
+
+				for _, v := range respCheck.Query {
+					if !v.IsIn {
+						isNotOnWhatsapp = true
+					}
+				}
+
 				thumbnail, restFiles := getThumbnail(broadcast.Files)
 				var fileType, fileUrl string
 				if thumbnail != nil {
@@ -366,68 +384,71 @@ func (b *BroadcastService) sendWithRetryHandling(
 					FileUrl:  fileUrl,
 				}
 				fmt.Println("SEND MESSAGE", *contact.Phone)
-				utils.LogJson(waData)
-				_, err := b.whatsmeowService.SendMessage(waData)
-				if err != nil {
-					success = false
-				} else {
-					success = true
-				}
-
-				for _, v := range restFiles {
-					if strings.Contains(v.MimeType, "image") && v.URL != "" {
-						resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-							JID:      sender.Session,
-							Text:     "",
-							To:       *contact.Phone,
-							IsGroup:  false,
-							FileType: "image",
-							FileUrl:  v.URL,
-						})
-						fmt.Println("RESPONSE", resp)
+				// utils.LogJson(waData)
+				if !isNotOnWhatsapp {
+					_, err = b.whatsmeowService.SendMessage(waData)
+					if err != nil {
+						success = false
 					} else {
-						resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-							JID:      sender.Session,
-							Text:     "",
-							To:       *contact.Phone,
-							IsGroup:  false,
-							FileType: "document",
-							FileUrl:  v.URL,
-						})
-						fmt.Println("RESPONSE", resp)
+						success = true
 					}
 
-				}
+					for _, v := range restFiles {
+						if strings.Contains(v.MimeType, "image") && v.URL != "" {
+							resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+								JID:      sender.Session,
+								Text:     "",
+								To:       *contact.Phone,
+								IsGroup:  false,
+								FileType: "image",
+								FileUrl:  v.URL,
+							})
+							fmt.Println("RESPONSE", resp)
+						} else {
+							resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+								JID:      sender.Session,
+								Text:     "",
+								To:       *contact.Phone,
+								IsGroup:  false,
+								FileType: "document",
+								FileUrl:  v.URL,
+							})
+							fmt.Println("RESPONSE", resp)
+						}
 
-				b.ctx.DB.Preload("Products").Find(&broadcast)
-				for _, v := range broadcast.Products {
-					desc := ""
-					var images []mdl.FileModel
-					b.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
-
-					if v.Description != nil {
-						desc = *v.Description
 					}
-					dataMsg := fmt.Sprintf(`*%s*
+
+					b.ctx.DB.Preload("Products").Find(&broadcast)
+					for _, v := range broadcast.Products {
+						desc := ""
+						var images []mdl.FileModel
+						b.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+
+						if v.Description != nil {
+							desc = *v.Description
+						}
+						dataMsg := fmt.Sprintf(`*%s*
 _%s_
 
 %s
 		`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
-					productMsg := whatsmeow_client.WaMessage{
-						JID:     sender.Session,
-						Text:    dataMsg,
-						To:      *contact.Phone,
-						IsGroup: false,
-					}
+						productMsg := whatsmeow_client.WaMessage{
+							JID:     sender.Session,
+							Text:    dataMsg,
+							To:      *contact.Phone,
+							IsGroup: false,
+						}
 
-					if len(images) > 0 {
-						productMsg.FileType = "image"
-						productMsg.FileUrl = images[0].URL
-					}
-					resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
-					fmt.Println("RESPONSE", resp)
+						if len(images) > 0 {
+							productMsg.FileType = "image"
+							productMsg.FileUrl = images[0].URL
+						}
+						resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
+						fmt.Println("RESPONSE", resp)
 
+					}
 				}
+
 			} else {
 				// USE TEMPLATE
 
@@ -435,78 +456,100 @@ _%s_
 				template, err := b.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*broadcast.TemplateID)
 				if err == nil {
 					for _, msg := range template.Messages {
-						thumbnail, restFiles := getThumbnail(msg.Files)
-						var fileType, fileUrl string
-						if thumbnail != nil {
-							fileType = "image"
-							fileUrl = thumbnail.URL
-						}
-						waData := whatsmeow_client.WaMessage{
-							JID:      sender.Session,
-							Text:     parseMsgTemplate(contact, broadcast.Member, msg.Body),
-							To:       *contact.Phone,
-							IsGroup:  false,
-							FileType: fileType,
-							FileUrl:  fileUrl,
-						}
-						_, err := b.whatsmeowService.SendMessage(waData)
+						fmt.Println("CHECK NUMBER")
+						resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
 						if err != nil {
-							success = false
-						} else {
-							success = true
+							log.Println("ERROR CHECK NUMBER", resp)
 						}
 
-						for _, v := range restFiles {
-							if strings.Contains(v.MimeType, "image") && v.URL != "" {
-								resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-									JID:      sender.Session,
-									Text:     "",
-									To:       *contact.Phone,
-									IsGroup:  false,
-									FileType: "image",
-									FileUrl:  v.URL,
-								})
-								fmt.Println("RESPONSE", resp)
+						var respCheck QueryIsOnWhatsapp
+						if err := json.Unmarshal(resp, &respCheck); err != nil {
+							log.Println("ERROR CHECK NUMBER PARSE RESPONSE")
+							return
+						}
+						utils.LogJson(respCheck)
+						for _, v := range respCheck.Query {
+							if !v.IsIn {
+								isNotOnWhatsapp = true
+							}
+						}
+
+						if !isNotOnWhatsapp {
+							thumbnail, restFiles := getThumbnail(msg.Files)
+							var fileType, fileUrl string
+							if thumbnail != nil {
+								fileType = "image"
+								fileUrl = thumbnail.URL
+							}
+							waData := whatsmeow_client.WaMessage{
+								JID:      sender.Session,
+								Text:     parseMsgTemplate(contact, broadcast.Member, msg.Body),
+								To:       *contact.Phone,
+								IsGroup:  false,
+								FileType: fileType,
+								FileUrl:  fileUrl,
+							}
+
+							_, err = b.whatsmeowService.SendMessage(waData)
+							if err != nil {
+								success = false
 							} else {
-								resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-									JID:      sender.Session,
-									Text:     "",
-									To:       *contact.Phone,
-									IsGroup:  false,
-									FileType: "document",
-									FileUrl:  v.URL,
-								})
-								fmt.Println("RESPONSE", resp)
+								success = true
 							}
 
-						}
-						for _, v := range msg.Products {
-							desc := ""
-							var images []mdl.FileModel
-							b.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+							for _, v := range restFiles {
+								if strings.Contains(v.MimeType, "image") && v.URL != "" {
+									resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+										JID:      sender.Session,
+										Text:     "",
+										To:       *contact.Phone,
+										IsGroup:  false,
+										FileType: "image",
+										FileUrl:  v.URL,
+									})
+									fmt.Println("RESPONSE", resp)
+								} else {
+									resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+										JID:      sender.Session,
+										Text:     "",
+										To:       *contact.Phone,
+										IsGroup:  false,
+										FileType: "document",
+										FileUrl:  v.URL,
+									})
+									fmt.Println("RESPONSE", resp)
+								}
 
-							if v.Description != nil {
-								desc = *v.Description
 							}
-							dataMsg := fmt.Sprintf(`*%s*
+							for _, v := range msg.Products {
+								desc := ""
+								var images []mdl.FileModel
+								b.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+
+								if v.Description != nil {
+									desc = *v.Description
+								}
+								dataMsg := fmt.Sprintf(`*%s*
 _%s_
 
 %s
 				`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
-							productMsg := whatsmeow_client.WaMessage{
-								JID:     sender.Session,
-								Text:    dataMsg,
-								To:      *contact.Phone,
-								IsGroup: false,
-							}
-							if len(images) > 0 {
-								productMsg.FileType = "image"
-								productMsg.FileUrl = images[0].URL
-							}
-							resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
-							fmt.Println("RESPONSE", resp)
+								productMsg := whatsmeow_client.WaMessage{
+									JID:     sender.Session,
+									Text:    dataMsg,
+									To:      *contact.Phone,
+									IsGroup: false,
+								}
+								if len(images) > 0 {
+									productMsg.FileType = "image"
+									productMsg.FileUrl = images[0].URL
+								}
+								resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
+								fmt.Println("RESPONSE", resp)
 
+							}
 						}
+
 					}
 				}
 
@@ -529,7 +572,12 @@ _%s_
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
 	} else {
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", false)
-		if attempt >= 3 {
+		if isNotOnWhatsapp {
+			log.Status = "failed"
+			log.ErrorMessage = "number is not registered on whatsapp"
+			logHandler(log)
+			b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
+		} else if attempt >= 3 {
 			log.Status = "undeliverable"
 			log.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
 			logHandler(log)
@@ -649,4 +697,16 @@ func getThumbnail(files []mdl.FileModel) (*mdl.FileModel, []mdl.FileModel) {
 		}
 	}
 	return thumbnail, restFiles
+}
+
+type QueryJID struct {
+	Query        string `json:"Query"`
+	JID          string `json:"JID"`
+	IsIn         bool   `json:"IsIn"`
+	VerifiedName any    `json:"VerifiedName"`
+}
+
+type QueryIsOnWhatsapp struct {
+	Query   []QueryJID `json:"is_on_whatsapp"`
+	Message string     `json:"message"`
 }

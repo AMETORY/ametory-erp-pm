@@ -19,6 +19,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
@@ -30,6 +31,7 @@ type BroadcastHandler struct {
 	ctx           *context.ERPContext
 	broadcastServ *app.BroadcastService
 	contactSrv    *contact.ContactService
+	waService     *whatsmeow_client.WhatsmeowService
 }
 
 func NewBroadcastHandler(erpContext *context.ERPContext) *BroadcastHandler {
@@ -42,11 +44,17 @@ func NewBroadcastHandler(erpContext *context.ERPContext) *BroadcastHandler {
 	if !ok {
 		panic("contact service not found")
 	}
+	var waService *whatsmeow_client.WhatsmeowService
+	waSrv, ok := erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService)
+	if ok {
+		waService = waSrv
+	}
 
 	return &BroadcastHandler{
 		ctx:           erpContext,
 		broadcastServ: broadcastServ,
 		contactSrv:    contactSrv,
+		waService:     waService,
 	}
 }
 
@@ -321,6 +329,7 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 			phoneStr := utils.ParsePhoneNumber(cleanString(rows[i][2]), "")
 			phone = &phoneStr
 		}
+
 		userID := data["user_id"]
 		companyID := data["company_id"]
 

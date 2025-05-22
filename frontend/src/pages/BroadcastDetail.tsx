@@ -28,6 +28,7 @@ import {
   Textarea,
   TextInput,
   ToggleSwitch,
+  Tooltip,
 } from "flowbite-react";
 import { parseMentions } from "../utils/helper-ui";
 import { Mention, MentionsInput } from "react-mentions";
@@ -866,7 +867,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                             {contact.is_success ? (
                               <BsCheck2Circle className="text-green-500" />
                             ) : (
+                              <Tooltip content={(contact.data?.logs??[]).length > 0 && contact.data?.logs?.[0]?.error_message}>
+
                               <FaXmark className="text-red-500" />
+                              </Tooltip>
                             )}
                           </li>
 
