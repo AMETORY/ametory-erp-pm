@@ -537,6 +537,11 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                     <RiAttachment2 /> File Attachment
                   </div>
                 )}
+                {msg.quoted_message && (
+                  <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
+                    {msg.quoted_message}
+                  </div>
+                )}
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}

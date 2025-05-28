@@ -1010,6 +1010,7 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 	}
 
 	convMsg := ""
+	var quotedMsg, quotedMsgID *string
 	if body.Message.Conversation != nil {
 		convMsg = *body.Message.Conversation
 	}
@@ -1119,6 +1120,11 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		convMsg = body.Message.DocumentMessage.Caption
 		mimeType = body.Message.DocumentMessage.Mimetype
 	}
+	if body.Message.ExtendedTextMessage != nil {
+		convMsg = body.Message.ExtendedTextMessage.Text
+		quotedMsg = &body.Message.ExtendedTextMessage.ContextInfo.QuotedMessage.Conversation
+		quotedMsgID = &body.Message.ExtendedTextMessage.ContextInfo.StanzaID
+	}
 	var mediaURLSaved string
 	if body.MediaPath != "" {
 		mediaURL := config.App.Whatsapp.BaseURL + body.MediaPath
@@ -1156,16 +1162,18 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	}
 	msgID := body.Info["ID"].(string)
 	var waData models.WhatsappMessageModel = models.WhatsappMessageModel{
-		Sender:    body.Sender,
-		Message:   convMsg,
-		MimeType:  mimeType,
-		MediaURL:  fileUrl,
-		Info:      string(infoByte),
-		Session:   body.SessionID,
-		JID:       body.JID,
-		IsFromMe:  body.Info["IsFromMe"].(bool),
-		IsGroup:   body.Info["IsGroup"].(bool),
-		MessageID: &msgID,
+		Sender:          body.Sender,
+		Message:         convMsg,
+		MimeType:        mimeType,
+		MediaURL:        fileUrl,
+		Info:            string(infoByte),
+		Session:         body.SessionID,
+		JID:             body.JID,
+		IsFromMe:        body.Info["IsFromMe"].(bool),
+		IsGroup:         body.Info["IsGroup"].(bool),
+		MessageID:       &msgID,
+		QuotedMessage:   quotedMsg,
+		QuotedMessageID: quotedMsgID,
 	}
 
 	if sessionAuth != nil {

@@ -10,6 +10,8 @@ export interface WhatsappMessageModel {
   sender?: string;
   receiver?: string;
   message?: string;
+  quoted_message?: string;
+  quoted_message_id?: string;
   media_url?: string;
   mime_type?: string;
   session?: string;

@@ -21,10 +21,18 @@ type WhatsAppMessage struct {
 }
 
 type ExtendedTextMessage struct {
-	Text        string `json:"text"`
-	ContextInfo struct {
-		MentionedJID []string `json:"mentionedJID"`
-	} `json:"contextInfo"`
+	Text        string             `json:"text"`
+	ContextInfo MessageContextInfo `json:"contextInfo"`
+}
+
+type QuotedMessage struct {
+	Conversation string `json:"conversation"`
+}
+
+type MessageContextInfo struct {
+	StanzaID      string        `json:"stanzaID"`
+	Participant   string        `json:"participant"`
+	QuotedMessage QuotedMessage `json:"quotedMessage"`
 }
 
 type ImageMessage struct {
