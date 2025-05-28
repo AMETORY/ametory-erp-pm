@@ -1182,7 +1182,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	}
 	now := time.Now()
 	var whatsappSession *models.WhatsappMessageSession
-	err = h.erpContext.DB.First(&whatsappSession, "session = ?", body.SessionID).Error
+	err = h.erpContext.DB.First(&whatsappSession, "session = ? AND session_name = ?", body.SessionID, body.SessionName).Error // FIXING SESSION UNIQUE
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		refType := "connection"
 		// CREATE NEW SESSION
@@ -1415,7 +1415,7 @@ params: jika tipe command dibutuhkan parameter
 
 		}
 
-		utils.LogJson(chatHistories)
+		// utils.LogJson(chatHistories)
 		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -1710,7 +1710,7 @@ func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 		return
 	}
 
-	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, session.ContactID, *c.Request)
+	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, session.JID, session.ContactID, *c.Request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
