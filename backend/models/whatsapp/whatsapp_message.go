@@ -99,6 +99,7 @@ type MsgObject struct {
 	SessionName string          `json:"session_name"`
 	MediaPath   string          `json:"media_path"`
 	MimeType    string          `json:"mime_type"`
+	ProfilePic  string          `json:"profile_pic"`
 }
 
 type GroupInfo struct {

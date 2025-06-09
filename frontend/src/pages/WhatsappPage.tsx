@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import {
+  Avatar,
   Badge,
   Button,
   Datepicker,
@@ -22,7 +23,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
 import { PaginationRequest, PaginationResponse } from "../objects/pagination";
-import { getContrastColor, getPagination } from "../utils/helper";
+import { getContrastColor, getPagination, initial } from "../utils/helper";
 import {
   clearWhatsappSession,
   deleteWhatsappSession,
@@ -150,7 +151,16 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     if (mounted) {
       getAllSessions();
     }
-  }, [mounted, sessionId, page, size, search, selectedTags, selectedFilters, sessionTypeSelected]);
+  }, [
+    mounted,
+    sessionId,
+    page,
+    size,
+    search,
+    selectedTags,
+    selectedFilters,
+    sessionTypeSelected,
+  ]);
 
   useEffect(() => {
     if (mounted) {
@@ -287,7 +297,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   key={e.id}
                   style={{ background: sessionId == e.id ? "#e5e7eb" : "" }}
                 >
-                  <div className="flex justify-between w-full items-center">
+                  <div className="flex justify-between w-full items-start">
                     <div
                       className="flex gap-2 items-center  w-full"
                       onClick={() => {
@@ -311,35 +321,46 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          {e.contact?.avatar && (
-                            <img
-                              src={e.contact?.avatar.url}
-                              className=" aspect-square rounded-full object-cover w-8 h-8"
+                          <div className="flex flex-row gap-2 items-start">
+                            <Avatar
+                              size="md"
+                              img={e.contact?.profile_picture?.url}
+                              rounded
+                              stacked
+                              placeholderInitials={initial(e.contact?.name)}
+                              className="cursor-pointer mt-2"
+                              // onClick={() => nav("/profile")}
                             />
-                          )}
-                          <span className="font-semibold">
-                            {e.contact?.name}
-                          </span>
-                        </div>
-                        <small className="line-clamp-2 overflow-hidden text-ellipsis">
-                          {e.last_message}
-                        </small>
-                        <small className="line-clamp-2 overflow-hidden text-ellipsis text-[8pt]">
-                          <Moment fromNow>{e.last_online_at}</Moment>
-                        </small>
-                        <div className="flex flex-wrap gap-2">
-                          {(e.contact?.tags ?? []).map((el) => (
-                            <div
-                              className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
-                              key={el.id}
-                              style={{
-                                background: el.color,
-                                color: getContrastColor(el.color),
-                              }}
-                            >
-                              {el.name}
+                            <div>
+                              <div className="flex flex-col">
+
+                              <span className="font-semibold">
+                                {e.contact?.name} 
+                              </span>
+                              <small>({e.contact?.phone})</small>
+                              <small className="line-clamp-2 overflow-hidden text-ellipsis">
+                                {e.last_message}
+                              </small>
+                              </div>
+                              <small className="line-clamp-2 overflow-hidden text-ellipsis text-[8pt]">
+                                <Moment fromNow>{e.last_online_at}</Moment>
+                              </small>
+                              <div className="flex flex-wrap gap-2">
+                                {(e.contact?.tags ?? []).map((el) => (
+                                  <div
+                                    className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
+                                    key={el.id}
+                                    style={{
+                                      background: el.color,
+                                      color: getContrastColor(el.color),
+                                    }}
+                                  >
+                                    {el.name}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -606,7 +627,6 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         </Modal.Header>
         <Modal.Body>
           <div className="flex flex-col pb-32 space-y-4">
-           
             <div>
               <Label>Connections</Label>
               <Select

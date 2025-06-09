@@ -1091,6 +1091,39 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		sessionAuth = &contact
 	}
 
+	profilePic, _ := sessionAuth.GetProfilePicture(h.erpContext.DB)
+	if profilePic == nil && body.ProfilePic != "" {
+		resp, err := http.Get(body.ProfilePic)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		defer resp.Body.Close()
+		byteValue, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		path := filepath.Join("assets", "files", sessionAuth.ID+".jpg")
+		os.MkdirAll(filepath.Dir(path), os.ModePerm)
+		if err := os.WriteFile(path, byteValue, 0644); err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		mediaURLSaved := config.App.Server.BaseURL + "/" + path
+
+		h.erpContext.DB.Create(&models.FileModel{
+			FileName: sessionAuth.Name,
+			Path:     path,
+			URL:      mediaURLSaved,
+			RefID:    sessionAuth.ID,
+			RefType:  "contact",
+		})
+
+	}
 	// fmt.Println("session", sessionAuth)
 
 	if body.Sender == "status" {
@@ -1153,6 +1186,8 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		fileUrl = mediaURLSaved
 
 	}
+
+	fmt.Println("PROFILE PICTURE", body.ProfilePic)
 
 	infoByte, err := json.Marshal(body.Info)
 	if err != nil {
@@ -1651,6 +1686,8 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
+	session.Contact.ProfilePicture, _ = session.Contact.GetProfilePicture(h.erpContext.DB)
 
 	var connection connection.ConnectionModel
 	err = h.erpContext.DB.First(&connection, "id = ?", session.RefID).Error

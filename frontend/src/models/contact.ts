@@ -33,4 +33,5 @@ export interface ContactModel {
   };
   products?: ProductModel[]
   custom_data?: any
+  profile_picture?: FileModel | null;
 }

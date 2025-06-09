@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Button,
   Dropdown,
   Modal,
@@ -30,7 +31,7 @@ import {
   markAsRead,
   updateWhatsappSession,
 } from "../services/api/whatsappApi";
-import { debounce } from "../utils/helper";
+import { debounce, initial } from "../utils/helper";
 import { IoCheckmarkDone } from "react-icons/io5";
 import {
   BsChevronDown,
@@ -102,7 +103,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         })
         .catch((err) => {
           // toast.error(`${err}`);
-          window.location.href = "/whatsapp";
+          // window.location.href = "/whatsapp";
         })
         .finally(() => {});
 
@@ -220,7 +221,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       })
       .catch((err) => {
         console.error(err);
-        window.location.href = "/whatsapp";
+        // window.location.href = "/whatsapp";
       });
   }, [session, sessionId]);
 
@@ -346,19 +347,18 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         const savedPosition = scrollPositions[sessionId] || 0;
         container.scrollTop = savedPosition;
       }
-     
     }
   }, [messages, sessionId]);
 
   useEffect(() => {
+    setShowScrollButton(
+      (chatContainerRef.current?.scrollHeight ?? 0) -
+        (chatContainerRef.current?.scrollTop ?? 0) -
+        (chatContainerRef.current?.clientHeight ?? 0) >
+        50
+    );
 
-      setShowScrollButton((chatContainerRef.current?.scrollHeight ?? 0) -
-          (chatContainerRef.current?.scrollTop ?? 0) -
-          (chatContainerRef.current?.clientHeight ?? 0) > 50);
-  
-    return () => {
-      
-    }
+    return () => {};
   }, [scrollPositions]);
 
   useEffect(() => {
@@ -411,14 +411,17 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     <div className="flex flex-col h-full ">
       <div className="shoutbox border-b py-2 min-h-[40px] flex justify-between items-center">
         <div className="flex gap-2 items-center px-4">
-          {session?.contact?.avatar && (
-            <img
-              src={session?.contact?.avatar.url}
-              className=" aspect-square rounded-full object-cover w-8 h-8"
-            />
-          )}
+          <Avatar
+            size="md"
+            img={session?.contact?.profile_picture?.url}
+            rounded
+            stacked
+            placeholderInitials={initial(session?.contact?.name)}
+            className="cursor-pointer mt-2"
+            // onClick={() => nav("/profile")}
+          />
           <div className="flex flex-col">
-            <span className="font-semibold">{session?.contact?.name}</span>
+            <span className="font-semibold">{session?.contact?.name} ({session?.contact?.phone})</span>
             <div className="flex justify-between">
               <Moment className="text-xs" fromNow>
                 {session?.last_online_at}
@@ -537,11 +540,11 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                     <RiAttachment2 /> File Attachment
                   </div>
                 )}
-                {msg.quoted_message && (
-                  <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
-                    {msg.quoted_message}
-                  </div>
-                )}
+              {msg.quoted_message && (
+                <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
+                  {msg.quoted_message}
+                </div>
+              )}
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
               <div className="text-[10px] justify-between flex items-center">
                 {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
@@ -557,7 +560,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             </div>
           </div>
         ))}
-        {showScrollBottom  &&
+        {showScrollBottom && (
           <button
             className="fixed bottom-[60px] right-6 p-2 rounded-full bg-gray-700 hover:bg-gray-300 z-50 text-white transition-colors"
             onClick={() => {
@@ -569,7 +572,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           >
             <BsChevronDown />
           </button>
-        }
+        )}
       </div>
       {(files.length > 0 || selectedProducts.length > 0) && (
         <div className="absolute bottom-[50px] flex w-full bg-red-50 p-4 justify-between z-0">

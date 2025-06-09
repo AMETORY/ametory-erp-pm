@@ -10,9 +10,15 @@ import {
 } from "../services/api/contactApi";
 import { ContactModel } from "../models/contact";
 import { LoadingContext } from "../contexts/LoadingContext";
-import { getContrastColor, getPagination, randomColor } from "../utils/helper";
+import {
+  getContrastColor,
+  getPagination,
+  initial,
+  randomColor,
+} from "../utils/helper";
 import toast from "react-hot-toast";
 import {
+  Avatar,
   Button,
   Drawer,
   DrawerItems,
@@ -217,23 +223,36 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   onClick={() => {}}
                 >
                   <div className="flex flex-col">
-                    {contact.name}
-                    {(contact.tags ?? []).length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {contact.tags?.map((tag) => (
-                          <span
-                            className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100"
-                            key={tag.id}
-                            style={{
-                              color: getContrastColor(tag.color),
-                              backgroundColor: tag.color,
-                            }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
+                    <div className="flex flex-row gap-2 items-start">
+                      <Avatar
+                        size="sm"
+                        img={contact?.profile_picture?.url}
+                        rounded
+                        stacked
+                        placeholderInitials={initial(contact?.name)}
+                        className="cursor-pointer mt-2"
+                        // onClick={() => nav("/profile")}
+                      />
+                      <div>
+                        {contact.name}
+                        {(contact.tags ?? []).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {contact.tags?.map((tag) => (
+                              <span
+                                className="px-2  text-[8pt] font-semibold text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100"
+                                key={tag.id}
+                                style={{
+                                  color: getContrastColor(tag.color),
+                                  backgroundColor: tag.color,
+                                }}
+                              >
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </Table.Cell>
                 <Table.Cell>{contact.email}</Table.Cell>
@@ -286,7 +305,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
             ))}
           </Table.Body>
         </Table>
-        
+
         <Pagination
           className="mt-4"
           currentPage={page}

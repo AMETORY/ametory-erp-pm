@@ -20,7 +20,8 @@ export const getPagination = (resp) => {
 
 export const initial = (str) => {
     if (!str) return '';
-    return str.split(' ').map(word => word.charAt(0).toUpperCase()).join('');
+    const words = str.split(' ').slice(0, 3);
+    return words.map(word => word.charAt(0).toUpperCase()).join('');
 };
 
 
