@@ -23,6 +23,8 @@ import { MemberContext } from "../contexts/ProfileContext";
 import { MemberModel } from "../models/member";
 import Select from "react-select";
 import MessageMention from "../components/MessageMention";
+import MessageTemplateField from "../components/MessageTemplateField";
+import { FileModel } from "../models/file";
 
 interface TemplateDetailProps {}
 
@@ -92,309 +94,92 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
             <div className="mt-8">
               <h3 className="text-2xl font-semibold">Messages</h3>
               {template?.messages?.map((message, i) => (
-                <div
-                  className="bg-gray-50 rounded-lg p-4 flex flex-col mb-8"
+                <MessageTemplateField
                   key={i}
-                >
-                  <h4 className="font-semibold">#Message {i + 1}</h4>
-                  <MessageMention
-                    msg={message.body ?? ""}
-                    onChange={(val: any) => {
-                      setTemplate({
-                        ...template!,
-                        messages: (template?.messages ?? []).map((m, index) => {
-                          if (index === i) {
-                            return {
-                              ...m,
-                              body: val.target.value,
-                            };
+                  title={`#Message ${i + 1}`}
+                  onChangeBody={(val: string) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          return {
+                            ...m,
+                            body: val,
+                          };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  index={i}
+                  body={message.body ?? ""}
+                  onClickEmoji={() => {
+                    setSelectedMessage(template?.messages?.[i]);
+                  }}
+                  files={message.files ?? []}
+                  onUploadImage={(file: FileModel, index?: number) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          if (!m.files) {
+                            m.files = [];
+                          }
+                          if (
+                            (m.files ?? []).filter((f) =>
+                              f.mime_type.includes("image")
+                            ).length === 0
+                          ) {
+                            m.files = [file];
+                          } else {
+                            m.files = m.files.map((f) => {
+                              if (f.mime_type.includes("image")) {
+                                return file;
+                              }
+                              return f;
+                            });
                           }
                           return m;
-                        }),
-                      });
-                    }}
-                    onClickEmoji={() => {
-                      setSelectedMessage(template?.messages?.[i]);
-                    }}
-                    onSelectEmoji={(emoji: string) => {
-                      setTemplate({
-                        ...template!,
-                        messages: (template?.messages ?? []).map((m, index) => {
-                          if (selectedMessage?.id !== m.id) {
-                            return m;
-                          }
-                          return {
-                            ...selectedMessage,
-                            body: m.body + emoji,
-                          };
-                        }),
-                      });
-                    }}
-                  />
-                  {/* <div className="relative w-full">
-                    <MentionsInput
-                      value={message.body}
-                      onChange={(val: any) => {
-                        setTemplate({
-                          ...template!,
-                          messages: (template?.messages ?? []).map(
-                            (m, index) => {
-                              if (index === i) {
-                                return {
-                                  ...m,
-                                  body: val.target.value,
-                                };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  onUploadFile={(file: FileModel, index?: number) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (!m.files) {
+                          m.files = [];
+                        }
+                        if (index === i) {
+                          if (
+                            (m.files ?? []).filter(
+                              (f) => !f.mime_type.includes("image")
+                            ).length === 0
+                          ) {
+                            m.files.push(file);
+                          } else {
+                            m.files = m.files.map((f) => {
+                              if (!f.mime_type.includes("image")) {
+                                return file;
                               }
-                              return m;
-                            }
-                          ),
-                        });
-                      }}
-                      style={emojiStyle}
-                      placeholder={
-                        "Press ':' for emojis and shift+enter for new line"
-                      }
-                      className="w-full bg-white"
-                      autoFocus
-                    >
-                      <Mention
-                        trigger="@"
-                        data={[
-                          { id: "{{user}}", display: "Full Name" },
-                          { id: "{{phone}}", display: "Phone Number" },
-                          { id: "{{agent}}", display: "Agent Name" },
-                        ]}
-                        style={{
-                          backgroundColor: "#cee4e5",
-                        }}
-                        appendSpaceOnAdd
-                      />
-                      <Mention
-                        trigger=":"
-                        markup="__id__"
-                        regex={neverMatchingRegex}
-                        data={queryEmojis}
-                      />
-                    </MentionsInput>
-                    <div
-                      className="absolute bottom-2 right-2 cursor-pointer"
-                      onClick={() => {
-                        setModalEmojis(true);
-                        setSelectedMessage(template?.messages?.[i]);
-                      }}
-                    >
-                      😀
-                    </div>
-                  </div> */}
-                  <div className="mt-8">
-                    <h4 className="font-semibold">Files</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div
-                        className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100"
-                        onClick={() => {
-                          document.getElementById(`image-${i}`)?.click();
-                        }}
-                      >
-                        {(message.files ?? []).filter((f) =>
-                          f.mime_type.includes("image")
-                        ).length === 0 ? (
-                          <div className="flex flex-col items-center">
-                            <span>Add Photo to message</span>
-                            <BsCamera />
-                          </div>
-                        ) : (
-                          <img
-                            className="w-32 h-32 object-cover"
-                            src={
-                              (message.files ?? []).find((f) =>
-                                f.mime_type.includes("image")
-                              )?.url
-                            }
-                          />
-                        )}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          id={`image-${i}`}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              uploadFile(file, {}, () => {}).then(
-                                (resp: any) => {
-                                  setTemplate({
-                                    ...template!,
-                                    messages: (template?.messages ?? []).map(
-                                      (m, index) => {
-                                        if (index === i) {
-                                          if (!m.files) {
-                                            m.files = [];
-                                          }
-                                          if (
-                                            (m.files ?? []).filter((f) =>
-                                              f.mime_type.includes("image")
-                                            ).length === 0
-                                          ) {
-                                            m.files = [resp.data];
-                                          } else {
-                                            m.files = m.files.map((f) => {
-                                              if (
-                                                f.mime_type.includes("image")
-                                              ) {
-                                                return resp.data;
-                                              }
-                                              return f;
-                                            });
-                                          }
-                                          console.log(m);
-                                          return m;
-                                        }
-                                        return m;
-                                      }
-                                    ),
-                                  });
-                                }
-                              );
-                            }
-                          }}
-                        />
-                      </div>
-                      <div
-                        className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100"
-                        onClick={() => {
-                          document.getElementById(`image-${i}-file`)?.click();
-                        }}
-                      >
-                        {(message.files ?? []).filter(
-                          (f) => !f.mime_type.includes("image")
-                        ).length === 0 ? (
-                          <div className="flex flex-col items-center">
-                            <span>Add File to message</span>
-                            <HiOutlineDocumentAdd size={32} />
-                          </div>
-                        ) : (
-                          // <IoAttach className="rotate-[30deg]" size={32}/>
-                          <div className="flex items-center flex-col px-8">
-                            <IoDocumentsOutline size={32} />
-                            <small className="text-center mt-4">
-                              {
-                                (message.files ?? []).find(
-                                  (f) => !f.mime_type.includes("image")
-                                )?.file_name
-                              }
-                            </small>
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".doc,.docx,.pdf,.xls,.xlsx,.txt"
-                          id={`image-${i}-file`}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              uploadFile(file, {}, () => {}).then(
-                                (resp: any) => {
-                                  setTemplate({
-                                    ...template!,
-                                    messages: (template?.messages ?? []).map(
-                                      (m, index) => {
-                                        if (!m.files) {
-                                          m.files = [];
-                                        }
-                                        if (index === i) {
-                                          if (
-                                            (m.files ?? []).filter(
-                                              (f) =>
-                                                !f.mime_type.includes("image")
-                                            ).length === 0
-                                          ) {
-                                            m.files.push(resp.data);
-                                          } else {
-                                            m.files = m.files.map((f) => {
-                                              if (
-                                                !f.mime_type.includes("image")
-                                              ) {
-                                                return resp.data;
-                                              }
-                                              return f;
-                                            });
-                                          }
-                                          // console.log(m);
-                                          return m;
-                                        }
-                                        return m;
-                                      }
-                                    ),
-                                  });
-                                }
-                              );
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-8">
-                    <h4 className="font-semibold">Product</h4>
-                    <div className="grid grid-cols-2 gap-4 ">
-                      <div
-                        className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100"
-                        onClick={() => {
-                          setSelectedMessage(message);
-                          setModalProduct(true);
-                        }}
-                      >
-                        {(message.products ?? []).length === 0 ? (
-                          <div className="flex flex-col items-center">
-                            <span>Add Product</span>
-                            <BsCart size={32} />
-                          </div>
-                        ) : (
-                          <div className="flex items-center flex-col  px-8">
-                            {(message.products![0].product_images ?? [])
-                              .length > 0 && (
-                              <img
-                                src={
-                                  message.products![0].product_images![0].url
-                                }
-                                alt="product"
-                                className="w-32 h-32 rounded-lg"
-                              />
-                            )}
-                            <h3 className="font-semibold mt-2 text-center">
-                              {message.products![0].name}
-                            </h3>
-                            <small>{money(message.products![0].price)}</small>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    {i > 0 && (
-                      <Button
-                        className=""
-                        color="red"
-                        onClick={() => {
-                          setLoading(true);
-                          deleteMessageTemplate(template!.id!, message.id!)
-                            .catch((err) => {
-                              toast.error(`${err}`);
-                            })
-                            .then(() => {
-                              getDetail();
-                            })
-                            .finally(() => {
-                              setLoading(false);
+                              return f;
                             });
-                        }}
-                      >
-                        + Delete Message
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                          }
+                          return m;
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  onTapProduct={() => {
+                    setSelectedMessage(message);
+                    setModalProduct(true);
+                  }}
+                  product={message.products && message.products[0]}
+                  showDelete={i > 0}
+                />
               ))}
               {(template?.messages ?? []).length < 3 && (
                 <Button

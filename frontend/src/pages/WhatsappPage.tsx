@@ -290,10 +290,10 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
               overflowY: "auto",
             }}
           >
-            <ul className="space-y-2">
+            <ul className="">
               {sessions.map((e) => (
                 <li
-                  className="flex justify-between items-center p-2 hover:bg-gray-50 cursor-pointer hover:font-semibold group/item"
+                  className="flex justify-between items-center p-2 hover:bg-gray-50 cursor-pointer hover:font-semibold group/item border-b last:border-b-0"
                   key={e.id}
                   style={{ background: sessionId == e.id ? "#e5e7eb" : "" }}
                 >

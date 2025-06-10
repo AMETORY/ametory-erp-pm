@@ -204,6 +204,11 @@ func (s *BroadcastService) Send(b *models.BroadcastModel) {
 		go func() {
 			time.Sleep(time.Until(*b.ScheduledAt))
 			b.Status = "PROCESSING"
+			err := s.ctx.DB.First(&b, "id = ?", b.ID).Error
+			if err != nil {
+				log.Println("ERROR", err)
+				return
+			}
 			s.ctx.DB.Save(b)
 			s.startBroadcast(b)
 		}()

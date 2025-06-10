@@ -1,23 +1,8 @@
-import { useContext, useEffect, useRef, useState, type FC } from "react";
-import { useParams } from "react-router-dom";
-import AdminLayout from "../components/layouts/admin";
-import {
-  addContactBroadcast,
-  addContactFromFileBroadcast,
-  deleteContactBroadcast,
-  getBroadcast,
-  sendBroadcast,
-  updateBroadcast,
-} from "../services/api/broadcastApi";
-import { BroadcastModel } from "../models/broadcast";
-import { LoadingContext } from "../contexts/LoadingContext";
-import toast from "react-hot-toast";
 import {
   Badge,
   Button,
   Checkbox,
   Datepicker,
-  Dropdown,
   FileInput,
   Label,
   Modal,
@@ -28,38 +13,47 @@ import {
   Textarea,
   TextInput,
   ToggleSwitch,
-  Tooltip,
+  Tooltip
 } from "flowbite-react";
-import { parseMentions } from "../utils/helper-ui";
-import { Mention, MentionsInput } from "react-mentions";
-import Moment from "react-moment";
 import moment from "moment";
-import Select from "react-select";
-import { ConnectionModel } from "../models/connection";
-import { getConnections } from "../services/api/connectionApi";
-import { countContactByTag, getContacts } from "../services/api/contactApi";
-import { TagModel } from "../models/tag";
-import { getContrastColor, getPagination, money } from "../utils/helper";
-import { ContactModel } from "../models/contact";
-import { HiMagnifyingGlass } from "react-icons/hi2";
-import { SearchContext } from "../contexts/SearchContext";
-import { PaginationResponse } from "../objects/pagination";
+import { useContext, useEffect, useRef, useState, type FC } from "react";
+import Chart from "react-google-charts";
+import toast from "react-hot-toast";
 import {
   BsCheck2Circle,
-  BsFileEarmark,
-  BsImage,
-  BsInfoCircle,
-  BsPlusCircle,
-  BsTag,
+  BsImage
 } from "react-icons/bs";
 import { FaXmark } from "react-icons/fa6";
+import { HiMagnifyingGlass } from "react-icons/hi2";
+import Moment from "react-moment";
+import { useParams } from "react-router-dom";
+import Select from "react-select";
+import AdminLayout from "../components/layouts/admin";
+import MessageTemplateField from "../components/MessageTemplateField";
+import ModalProductList from "../components/ModalProductList";
+import { LoadingContext } from "../contexts/LoadingContext";
 import { WebsocketContext } from "../contexts/WebsocketContext";
-import Chart from "react-google-charts";
-import { uploadFile } from "../services/api/commonApi";
-import { getProducts } from "../services/api/productApi";
-import { ProductModel } from "../models/product";
+import { BroadcastModel } from "../models/broadcast";
+import { ConnectionModel } from "../models/connection";
+import { ContactModel } from "../models/contact";
 import { FileModel } from "../models/file";
-import MessageMention from "../components/MessageMention";
+import { ProductModel } from "../models/product";
+import { TagModel } from "../models/tag";
+import { PaginationResponse } from "../objects/pagination";
+import {
+  addContactBroadcast,
+  addContactFromFileBroadcast,
+  deleteContactBroadcast,
+  getBroadcast,
+  sendBroadcast,
+  updateBroadcast,
+} from "../services/api/broadcastApi";
+import { uploadFile } from "../services/api/commonApi";
+import { getConnections } from "../services/api/connectionApi";
+import { countContactByTag, getContacts } from "../services/api/contactApi";
+import { getProducts } from "../services/api/productApi";
+import { getContrastColor, money } from "../utils/helper";
+import { parseMentions } from "../utils/helper-ui";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -95,25 +89,25 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
-      .then((response) => {
-        return response.json();
-      })
-      .then((jsonData) => {
-        setEmojis(jsonData.emojis);
-      });
-  }, []);
-  const queryEmojis = (query: any, callback: (emojis: any) => void) => {
-    if (query.length === 0) return;
+  // useEffect(() => {
+  //   fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
+  //     .then((response) => {
+  //       return response.json();
+  //     })
+  //     .then((jsonData) => {
+  //       setEmojis(jsonData.emojis);
+  //     });
+  // }, []);
+  // const queryEmojis = (query: any, callback: (emojis: any) => void) => {
+  //   if (query.length === 0) return;
 
-    const matches = emojis
-      .filter((emoji: any) => {
-        return emoji.name.indexOf(query.toLowerCase()) > -1;
-      })
-      .slice(0, 10);
-    return matches.map(({ emoji }) => ({ id: emoji }));
-  };
+  //   const matches = emojis
+  //     .filter((emoji: any) => {
+  //       return emoji.name.indexOf(query.toLowerCase()) > -1;
+  //     })
+  //     .slice(0, 10);
+  //   return matches.map(({ emoji }) => ({ id: emoji }));
+  // };
 
   useEffect(() => {
     if (
@@ -178,6 +172,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
         setBroadcast(res.data);
         setPagination(res.pagination);
         setisEditable(res.data.status === "DRAFT");
+        setFiles(res.data.files ?? []);
+        setSelectedProducts(res.data.products ?? []);
       })
       .catch((error) => {
         toast.error(`${error}`);
@@ -223,7 +219,64 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             ) : (
               <>
                 <div className="relative">
-                  <Label>Message</Label>
+                  <MessageTemplateField
+                    readonly={!isEditable}
+                    index={0}
+                    title={"Message"}
+                    body={broadcast?.message ?? ""}
+                    onChangeBody={(val) => {
+                      setBroadcast({
+                        ...broadcast!,
+                        message: val,
+                      });
+                    }}
+                    onClickEmoji={() => {}}
+                    files={files}
+                    onUploadFile={(file) => {
+                
+                      if (
+                        (files ?? []).filter(
+                          (f) => !f.mime_type.includes("image")
+                        ).length === 0
+                      ) {
+                        // files = [file];
+                        setFiles(prev => [...prev, file]);
+                      } else {
+                        setFiles([
+                          ...files.map((f) => {
+                            if (!f.mime_type.includes("image")) {
+                              return file;
+                            }
+                            return f;
+                          }),
+                        ]);
+                      }
+                    }}
+                    onUploadImage={(file: FileModel, index?: number) => {
+                      if (
+                        (files ?? []).filter((f) =>
+                          f.mime_type.includes("image")
+                        ).length === 0
+                      ) {
+                        // files = [file];
+                        setFiles(prev => [...prev, file]);
+                      } else {
+                        setFiles([
+                          ...files.map((f) => {
+                            if (f.mime_type.includes("image")) {
+                              return file;
+                            }
+                            return f;
+                          }),
+                        ]);
+                      }
+                    }}
+                    onTapProduct={() => {
+                    setModalProduct(true);
+                  }}
+                  product={selectedProducts && selectedProducts[0]}
+                  />
+                  {/* <Label>Message</Label>
                   <p className="">
                     {isEditable ? (
                       <MessageMention
@@ -274,9 +327,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                         </Dropdown.Item>
                       </Dropdown>
                     </div>
-                  )}
+                  )} */}
                 </div>
-                {((broadcast?.products ?? []).length > 0 ||
+                {/* {((broadcast?.products ?? []).length > 0 ||
                   (broadcast?.files ?? []).length > 0) && (
                   <div className="flex flex-col gap-2 bg-gray-100 rounded-lg p-2">
                     {(broadcast?.files ?? []).length > 0 && (
@@ -356,7 +409,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       <FaXmark />
                     </button>
                   </div>
-                )}
+                )} */}
               </>
             )}
 
@@ -867,9 +920,13 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                             {contact.is_success ? (
                               <BsCheck2Circle className="text-green-500" />
                             ) : (
-                              <Tooltip content={(contact.data?.logs??[]).length > 0 && contact.data?.logs?.[0]?.error_message}>
-
-                              <FaXmark className="text-red-500" />
+                              <Tooltip
+                                content={
+                                  (contact.data?.logs ?? []).length > 0 &&
+                                  contact.data?.logs?.[0]?.error_message
+                                }
+                              >
+                                <FaXmark className="text-red-500" />
                               </Tooltip>
                             )}
                           </li>
@@ -1187,6 +1244,13 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
           </div>
         </Modal.Body>
       </Modal>
+       <ModalProductList
+        show={modalProduct}
+        setShow={setModalProduct}
+        selectProduct={(val) => {
+          setSelectedProducts((prev) => [val]);
+        }}
+      />
     </AdminLayout>
   );
 };
