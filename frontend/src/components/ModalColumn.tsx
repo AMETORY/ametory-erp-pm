@@ -1,7 +1,15 @@
 import { Button, Label, Modal, TextInput, ToggleSwitch } from "flowbite-react";
 import { useEffect, useState, type FC } from "react";
-import { ColumnActionModel, ColumnModel } from "../models/column";
+import toast from "react-hot-toast";
+import { BsCamera, BsCheck2Circle, BsTrash } from "react-icons/bs";
+import { GoPaperclip } from "react-icons/go";
+import { HiOutlineDocumentAdd } from "react-icons/hi";
+import { IoDocumentsOutline } from "react-icons/io5";
+import { Mention, MentionsInput } from "react-mentions";
 import Select from "react-select";
+import { ColumnActionModel, ColumnModel } from "../models/column";
+import { FileModel } from "../models/file";
+import { deleteFile, uploadFile } from "../services/api/commonApi";
 import {
   addNewColumnAction,
   deleteColumnAction,
@@ -9,14 +17,9 @@ import {
   getColumn,
   updateColumn,
 } from "../services/api/projectApi";
-import toast from "react-hot-toast";
-import { Mention, MentionsInput } from "react-mentions";
 import { parseMentions } from "../utils/helper-ui";
-import { BsCamera, BsCheck, BsCheck2Circle, BsTrash } from "react-icons/bs";
-import { deleteFile, uploadFile } from "../services/api/commonApi";
-import { HiOutlineDocumentAdd, HiPaperClip } from "react-icons/hi";
-import { IoDocumentsOutline } from "react-icons/io5";
-import { GoPaperclip } from "react-icons/go";
+import MessageTemplateField from "./MessageTemplateField";
+import moment from "moment";
 const neverMatchingRegex = /($a)/;
 
 interface ModalColumnProps {
@@ -196,6 +199,14 @@ const ModalColumn: FC<ModalColumnProps> = ({
                             </div>
                           </div>
                         ))}
+                        <div>
+                          <Label>Hour</Label>
+                          <div>{action?.action_hour}</div>
+                        </div>
+                        <div>
+                          <Label>Action Status</Label>
+                          <div>{action?.action_status}</div>
+                        </div>
                       </td>
                       <td className="px-2 py-2 border">
                         <div className="grid grid-cols-2 ">
@@ -284,6 +295,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
         </Modal.Footer>
       </Modal>
       <Modal
+        size="5xl"
         dismissible
         show={!!selectedAction}
         onClose={() => setSelectedAction(undefined)}
@@ -353,7 +365,101 @@ const ModalColumn: FC<ModalColumnProps> = ({
             {selectedAction?.action === "send_whatsapp_message" && (
               <>
                 <div>
-                  <Label htmlFor="action_data" value="Message" />
+                  <MessageTemplateField
+                    disableProduct
+                    index={0}
+                    title={"Message"}
+                    body={selectedAction?.action_data?.message ?? ""}
+                    onChangeBody={(val) => {
+                      setSelectedAction({
+                        ...selectedAction!,
+                        action_data: {
+                          ...selectedAction!.action_data!,
+                          message: val,
+                        },
+                      });
+                    }}
+                    onClickEmoji={function (): void {}}
+                    files={selectedAction?.files ?? []}
+                    onUploadFile={function (
+                      file: FileModel,
+                      index?: number
+                    ): void {
+                      let files = selectedAction?.files ?? [];
+                      if (
+                        files.filter((f) => !f.mime_type.includes("image"))
+                          .length === 0
+                      ) {
+                        files = [...files, file];
+                      } else {
+                        files = files.map((f) => {
+                          if (!f.mime_type.includes("image")) {
+                            return file;
+                          }
+                          return f;
+                        });
+                      }
+                      setSelectedAction({
+                        ...selectedAction,
+                        files: files,
+                      });
+                    }}
+                    onUploadImage={function (
+                      file: FileModel,
+                      index?: number
+                    ): void {
+                      let files = selectedAction?.files ?? [];
+                      if (
+                        files.filter((f) => f.mime_type.includes("image"))
+                          .length === 0
+                      ) {
+                        files = [...files, file];
+                      } else {
+                        files = files.map((f) => {
+                          if (f.mime_type.includes("image")) {
+                            return file;
+                          }
+                          return f;
+                        });
+                      }
+                      setSelectedAction({
+                        ...selectedAction,
+                        files: files,
+                      });
+                    }}
+                    onDeleteFile={(file: FileModel) => {
+                      const confirmFirst = window.confirm(
+                        "Are you sure you want to delete this file?"
+                      );
+                      if (!confirmFirst) return;
+
+                      deleteFile(file?.id!).then(() => {
+                        setSelectedAction({
+                          ...selectedAction!,
+                          files: (selectedAction?.files ?? []).filter(
+                            (f) => f.id !== file.id
+                          ),
+                        });
+                      });
+                    }}
+                    onDeleteImage={(file: FileModel) => {
+                      const confirmFirst = window.confirm(
+                        "Are you sure you want to delete this image?"
+                      );
+                      if (!confirmFirst) return;
+
+                      deleteFile(file?.id!).then(() => {
+                        setSelectedAction({
+                          ...selectedAction!,
+                          files: (selectedAction?.files ?? []).filter(
+                            (f) => f.id !== file.id
+                          ),
+                        });
+                      });
+                    }}
+                  />
+
+                  {/* <Label htmlFor="action_data" value="Message" />
                   <MentionsInput
                     value={selectedAction?.action_data?.message}
                     onChange={(val) => {
@@ -388,9 +494,9 @@ const ModalColumn: FC<ModalColumnProps> = ({
                       regex={neverMatchingRegex}
                       data={queryEmojis}
                     />
-                  </MentionsInput>
+                  </MentionsInput> */}
                 </div>
-                <div className="mt-8">
+                {/* <div className="mt-8">
                   <h4 className="font-semibold">Files</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative h-fit">
@@ -584,7 +690,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                       />
                     </div>
                   </div>
-                </div>
+                </div> */}
               </>
             )}
             {selectedAction?.action_trigger === "IDLE" && (
@@ -626,6 +732,42 @@ const ModalColumn: FC<ModalColumnProps> = ({
                   />
                 </div>
                 <div>
+                  <Label htmlFor="hour" value="Hour" />
+                  <div className="flex col-span-2">
+                    <input
+                      type="time"
+                      id="time"
+                      className="rounded-none rounded-s-lg bg-gray-50 border text-gray-900 leading-none focus:ring-blue-500 focus:border-blue-500 block flex-1 w-full text-sm border-gray-300 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                      value={selectedAction?.action_hour}
+                      onChange={(e) => {
+                        setSelectedAction({
+                          ...selectedAction!,
+                          action_data: {
+                            ...selectedAction!.action_data!,
+                          },
+                          action_hour: e!.target.value,
+                        });
+                      }}
+                    />
+                    <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border rounded-s-0 border-s-0 border-gray-300 rounded-e-md dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600">
+                      <svg
+                        className="w-4 h-4 text-gray-500 dark:text-gray-400"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+                {/*                 
+                <div>
                   <ToggleSwitch
                     onChange={(e) =>
                       setSelectedAction({
@@ -635,7 +777,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                     }
                     checked={selectedAction?.status === "ACTIVE"}
                   />
-                </div>
+                </div> */}
               </>
             )}
           </div>

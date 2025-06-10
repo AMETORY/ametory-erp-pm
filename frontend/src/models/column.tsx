@@ -13,7 +13,6 @@ export interface ColumnModel {
   actions?: ColumnActionModel[];
 }
 
-
 export interface ColumnActionModel {
   id: string;
   created_at: string;
@@ -24,4 +23,6 @@ export interface ColumnActionModel {
   action_data: any;
   status: string;
   files: FileModel[];
+  action_hour?: string;
+  action_status?: string;
 }

@@ -123,9 +123,6 @@ func main() {
 	contactService := contact.NewContactService(erpContext, companyService)
 	erpContext.ContactService = contactService
 
-	pmService := project_management.NewProjectManagementService(erpContext)
-	erpContext.ProjectManagementService = pmService
-
 	rbacSrv := auth.NewRBACService(erpContext)
 	erpContext.RBACService = rbacSrv
 
@@ -183,6 +180,9 @@ func main() {
 	waSrv := whatsmeow_client.NewWhatsmeowService(cfg.Whatsapp.BaseURL, cfg.Whatsapp.MockNumber, cfg.Whatsapp.IsMock, "")
 	erpContext.AddThirdPartyService("WA", waSrv)
 
+	pmService := project_management.NewProjectManagementService(erpContext)
+	erpContext.ProjectManagementService = pmService
+
 	broadcastSrv := app.NewBroadcastService(erpContext)
 	erpContext.AddThirdPartyService("BROADCAST", broadcastSrv)
 
@@ -231,7 +231,8 @@ func main() {
 
 	go func() {
 		c := cron.New()
-		c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
+		c.AddFunc("0 8 * * * *", func() { worker.CheckIdleColumn(erpContext) })
+		// c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
 		c.Start()
 	}()
 

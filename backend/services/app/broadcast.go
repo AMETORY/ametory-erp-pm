@@ -4,6 +4,7 @@ import (
 	"ametory-pm/config"
 	"ametory-pm/models"
 	"ametory-pm/models/connection"
+	app_utils "ametory-pm/services/app/utils"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -374,7 +375,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 					}
 				}
 
-				thumbnail, restFiles := getThumbnail(broadcast.Files)
+				thumbnail, restFiles := app_utils.GetThumbnail(broadcast.Files)
 				var fileType, fileUrl string
 				if thumbnail != nil {
 					fileType = "image"
@@ -480,7 +481,7 @@ _%s_
 						}
 
 						if !isNotOnWhatsapp {
-							thumbnail, restFiles := getThumbnail(msg.Files)
+							thumbnail, restFiles := app_utils.GetThumbnail(msg.Files)
 							var fileType, fileUrl string
 							if thumbnail != nil {
 								fileType = "image"
@@ -504,7 +505,7 @@ _%s_
 
 							for _, v := range restFiles {
 								if strings.Contains(v.MimeType, "image") && v.URL != "" {
-									resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+									resp, _ := b.whatsmeowService.SendMessage(whatsmeow_client.WaMessage{
 										JID:      sender.Session,
 										Text:     "",
 										To:       *contact.Phone,
@@ -514,7 +515,7 @@ _%s_
 									})
 									fmt.Println("RESPONSE", resp)
 								} else {
-									resp, _ := b.ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
+									resp, _ := b.whatsmeowService.SendMessage(whatsmeow_client.WaMessage{
 										JID:      sender.Session,
 										Text:     "",
 										To:       *contact.Phone,
@@ -689,19 +690,6 @@ func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg str
 	})
 
 	return result
-}
-
-func getThumbnail(files []mdl.FileModel) (*mdl.FileModel, []mdl.FileModel) {
-	restFiles := []mdl.FileModel{}
-	var thumbnail *mdl.FileModel
-	for _, v := range files {
-		if strings.HasPrefix(v.MimeType, "image/") && thumbnail == nil {
-			thumbnail = &v
-		} else {
-			restFiles = append(restFiles, v)
-		}
-	}
-	return thumbnail, restFiles
 }
 
 type QueryJID struct {
