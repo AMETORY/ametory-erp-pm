@@ -229,6 +229,9 @@ func main() {
 		worker.ScheduledBroadcastWorker(erpContext)
 	}()
 	go func() {
+		worker.ScheduledMessageWorker(erpContext)
+	}()
+	go func() {
 		worker.ImportContact(erpContext)
 	}()
 

@@ -40,6 +40,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
   onAddAction,
 }) => {
   const [selectedAction, setSelectedAction] = useState<ColumnActionModel>();
+  const [actions, setActions] = useState<ColumnActionModel[]>([]);
   const [emojis, setEmojis] = useState([]);
   let triggers = [
     {
@@ -65,6 +66,12 @@ const ModalColumn: FC<ModalColumnProps> = ({
       value: "hours",
     },
   ];
+
+  useEffect(() => {
+    if (column) {
+      setActions(column.actions ?? []);
+    }
+  }, [column]);
 
   useEffect(() => {
     fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
@@ -171,7 +178,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {column.actions?.map((action) => (
+                  {actions.map((action) => (
                     <tr key={action.id}>
                       <td className="px-2 py-2 border">{action.name}</td>
                       <td className="px-2 py-2 border">
@@ -184,29 +191,39 @@ const ModalColumn: FC<ModalColumnProps> = ({
                       <td className="px-2 py-2 border">
                         {Object.keys(action.action_data).map((key) => (
                           <div key={key}>
-                            <Label>
-                              {key
-                                .replaceAll("_", " ")
-                                .replace(/^\w/, (c) => c.toUpperCase())}
-                            </Label>
-                            <div>
-                              {key == "message"
-                                ? parseMentions(
-                                    action.action_data[key],
-                                    (type, id) => {}
-                                  )
-                                : action.action_data[key]}
-                            </div>
+                            {(action.action_trigger == "IDLE" ||
+                              key == "message") && (
+                              <Label>
+                                {key
+                                  .replaceAll("_", " ")
+                                  .replace(/^\w/, (c) => c.toUpperCase())}
+                              </Label>
+                            )}
+                            {(action.action_trigger == "IDLE" ||
+                              key == "message") && (
+                              <div>
+                                {key == "message"
+                                  ? parseMentions(
+                                      action.action_data[key],
+                                      (type, id) => {}
+                                    )
+                                  : action.action_data[key]}
+                              </div>
+                            )}
                           </div>
                         ))}
-                        <div>
-                          <Label>Hour</Label>
-                          <div>{action?.action_hour}</div>
-                        </div>
-                        <div>
-                          <Label>Action Status</Label>
-                          <div>{action?.action_status}</div>
-                        </div>
+                        {action.action_trigger == "IDLE" && (
+                          <>
+                            <div>
+                              <Label>Hour</Label>
+                              <div>{action?.action_hour}</div>
+                            </div>
+                            <div>
+                              <Label>Action Status</Label>
+                              <div>{action?.action_status}</div>
+                            </div>
+                          </>
+                        )}
                       </td>
                       <td className="px-2 py-2 border">
                         <div className="grid grid-cols-2 ">
@@ -789,8 +806,10 @@ const ModalColumn: FC<ModalColumnProps> = ({
                 () => {
                   setSelectedAction(undefined);
                   getColumn(projectId!, column!.id!).then((resp: any) => {
-                    onChangeColumn(resp.data);
-                    onAddAction(resp.data);
+                    // console.log(resp.data)
+                    setActions(resp.data.actions);
+                    // onChangeColumn(resp.data);
+                    // onAddAction(resp.data);
                   });
                 }
               );

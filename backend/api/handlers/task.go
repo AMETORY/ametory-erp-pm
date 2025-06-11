@@ -204,11 +204,11 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 				continue
 			}
 
-			fmt.Println("ACTION TRIGGER", act.Column.Name, act.ActionTrigger)
-			fmt.Println("ACTION ", act.Column.Name, act.Action)
-			fmt.Println("ACTION Status", act.Column.Name, act.Status)
 			// MOVE IN
 			if act.ActionTrigger == "MOVE_IN" && act.Action == "send_whatsapp_message" && act.Status == "ACTIVE" {
+				fmt.Println("ACTION MOVE IN TRIGGER", act.Column.Name, act.ActionTrigger)
+				fmt.Println("ACTION MOVE IN ", act.Column.Name, act.Action)
+				fmt.Println("ACTION MOVE IN Status", act.Column.Name, act.Status)
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
@@ -216,7 +216,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 						JID:     waSession.JID,
 						Message: msg,
 					}
-					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, waSession.JID, act.Files, []models.ProductModel{}, false)
+					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, *waSession.Contact.Phone, act.Files, []models.ProductModel{}, false)
 					_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 					if err != nil {
 						log.Println("ERROR", err)
@@ -241,12 +241,12 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 				fmt.Println("ERROR UNMARSHAL", err)
 				continue
 			}
-			fmt.Println("ACTION TRIGGER", act.Column.Name, act.ActionTrigger)
-			fmt.Println("ACTION ", act.Column.Name, act.Action)
-			fmt.Println("ACTION Status", act.Column.Name, act.Status)
 
 			// MOVE OUT
 			if act.ActionTrigger == "MOVE_OUT" && act.Action == "send_whatsapp_message" && act.Status == "ACTIVE" {
+				fmt.Println("ACTION MOVE OUT TRIGGER", act.Column.Name, act.ActionTrigger)
+				fmt.Println("ACTION MOVE OUT ", act.Column.Name, act.Action)
+				fmt.Println("ACTION MOVE OUT Status", act.Column.Name, act.Status)
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
@@ -254,7 +254,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 						JID:     waSession.JID,
 						Message: msg,
 					}
-					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, waSession.JID, act.Files, []models.ProductModel{}, false)
+					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, *waSession.Contact.Phone, act.Files, []models.ProductModel{}, false)
 					_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 					if err != nil {
 						log.Println("ERROR", err)

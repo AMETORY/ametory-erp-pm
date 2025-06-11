@@ -1,9 +1,17 @@
 package objects
 
-import "time"
+import (
+	"time"
+
+	"github.com/AMETORY/ametory-erp-modules/shared/models"
+)
 
 type ScheduledMessage struct {
-	To      string    `json:"to"`
-	Message string    `json:"message"`
-	Time    time.Time `json:"time"`
+	To       string                      `json:"to"`
+	Message  string                      `json:"message"`
+	Duration time.Duration               `json:"duration"`
+	Files    []models.FileModel          `json:"files"`
+	Data     models.WhatsappMessageModel `json:"data"`
+	Action   *models.ColumnAction        `json:"action"`
+	Task     *models.TaskModel           `json:"task"`
 }

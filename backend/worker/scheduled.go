@@ -2,6 +2,7 @@ package worker
 
 import (
 	"ametory-pm/models"
+	"ametory-pm/objects"
 	"ametory-pm/services/app"
 	"encoding/json"
 	"fmt"
@@ -9,10 +10,13 @@ import (
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
+	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 )
 
 func ScheduledBroadcastWorker(erpContext *context.ERPContext) {
-	fmt.Println("START SCHEDULED WORKER")
+	fmt.Println("START SCHEDULED BROADCAST WORKER")
 
 	broadcastSrv, ok := erpContext.ThirdPartyServices["BROADCAST"].(*app.BroadcastService)
 	appService, ok2 := erpContext.AppService.(*app.AppService)
@@ -46,4 +50,57 @@ func ScheduledBroadcastWorker(erpContext *context.ERPContext) {
 		}
 	}
 
+}
+
+func ScheduledMessageWorker(erpContext *context.ERPContext) {
+	fmt.Println("START SCHEDULED MESSAGE WORKER")
+	customerRelationshipService, ok := erpContext.CustomerRelationshipService.(*customer_relationship.CustomerRelationshipService)
+	appService, ok2 := erpContext.AppService.(*app.AppService)
+	if ok && ok2 {
+		dataSub := appService.Redis.Subscribe(*erpContext.Ctx, "MESSAGE:SCHEDULED")
+		for {
+			msg, err := dataSub.ReceiveMessage(*erpContext.Ctx)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			var msgData objects.ScheduledMessage
+			err = json.Unmarshal([]byte(msg.Payload), &msgData)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			time.Sleep(msgData.Duration)
+
+			log.Println("MESSAGE SCHEDULED", msgData.Message, msgData.Duration)
+			whatsmeowService, ok := erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService)
+			if !ok {
+				log.Println("ThirdPartyServices is not instance of whatsmeow_client.WhatsmeowService")
+				continue
+			}
+			customerRelationshipService.WhatsappService.SetMsgData(whatsmeowService, &msgData.Data, msgData.To, msgData.Files, []mdl.ProductModel{}, false)
+			_, err = customer_relationship.SendCustomerServiceMessage(customerRelationshipService.WhatsappService)
+			if err != nil {
+				log.Println("ERROR", err)
+				continue
+			}
+			if msgData.Action != nil {
+				err = erpContext.DB.Model(&mdl.ColumnAction{}).Where("id = ?", msgData.Action.ID).Update("action_status", "READY").Error
+				if err != nil {
+					log.Println("ERROR", err)
+					continue
+				}
+			}
+
+			if msgData.Task != nil {
+				err = erpContext.DB.Model(&mdl.TaskModel{}).Where("id = ?", msgData.Task.ID).Update("last_action_trigger_at", time.Now()).Error
+				if err != nil {
+					log.Println("ERROR", err)
+					continue
+				}
+			}
+
+		}
+	}
 }
