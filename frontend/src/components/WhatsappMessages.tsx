@@ -233,12 +233,18 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     ) {
       setMessages([...messages, wsMsg.data]);
       setTimeout(() => {
-        scrollToBottom();
+        // scrollToBottom();
         setSession({
           ...session,
           last_online_at: new Date(),
         });
       }, 300);
+      setTimeout(() => {
+        chatContainerRef.current?.scrollTo({
+          top: chatContainerRef?.current?.scrollHeight ?? 0,
+          behavior: "smooth",
+        });
+      }, 700);
     }
 
     if (
@@ -391,6 +397,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       setOpenAttachment(false);
       setFiles([]);
       setSelectedProducts([]);
+      setContent("");
       await createWAMessage(sessionId!, {
         message: content,
         files: files,
@@ -398,6 +405,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         is_caption: isCaption,
       });
       setIsCaption(false);
+      // chatContainerRef.current?.scrollTo({
+      //   top: chatContainerRef?.current?.scrollHeight ?? 0,
+      //   behavior: "smooth",
+      // });
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -421,7 +432,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             // onClick={() => nav("/profile")}
           />
           <div className="flex flex-col">
-            <span className="font-semibold">{session?.contact?.name} ({session?.contact?.phone})</span>
+            <span className="font-semibold">
+              {session?.contact?.name} ({session?.contact?.phone})
+            </span>
             <div className="flex justify-between">
               <Moment className="text-xs" fromNow>
                 {session?.last_online_at}
