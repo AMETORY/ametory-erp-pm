@@ -14,6 +14,8 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/shared/objects"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
@@ -25,9 +27,15 @@ type ContactHandler struct {
 	contactService              *contact.ContactService
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
 	appService                  *app.AppService
+	waService                   *whatsmeow_client.WhatsmeowService
 }
 
 func NewContactHandler(ctx *context.ERPContext) *ContactHandler {
+	var waService *whatsmeow_client.WhatsmeowService
+	waSrv, ok := ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService)
+	if ok {
+		waService = waSrv
+	}
 	contactService, ok := ctx.ContactService.(*contact.ContactService)
 	if !ok {
 		panic("invalid contact service")
@@ -49,6 +57,7 @@ func NewContactHandler(ctx *context.ERPContext) *ContactHandler {
 		contactService:              contactService,
 		customerRelationshipService: customerRelationshipService,
 		appService:                  appService,
+		waService:                   waService,
 	}
 }
 
@@ -135,7 +144,20 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 
 		}
 
-		sendWAMessage(h.ctx, whatsappSession.JID, *contact.Phone, input.Message)
+		// sendWAMessage(h.ctx, whatsappSession.JID, *contact.Phone, input.Message)
+		waData := whatsmeow_client.WaMessage{
+			JID:     whatsappSession.JID,
+			Text:    input.Message,
+			To:      *contact.Phone,
+			IsGroup: false,
+		}
+		h.waService.SetChatData(waData)
+		_, err = objects.SendChatMessage(h.waService)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
 		info := map[string]interface{}{
 			"Timestamp": time.Now().Format(time.RFC3339),
 		}

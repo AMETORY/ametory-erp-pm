@@ -13,16 +13,13 @@ import {
   Textarea,
   TextInput,
   ToggleSwitch,
-  Tooltip
+  Tooltip,
 } from "flowbite-react";
 import moment from "moment";
 import { useContext, useEffect, useRef, useState, type FC } from "react";
 import Chart from "react-google-charts";
 import toast from "react-hot-toast";
-import {
-  BsCheck2Circle,
-  BsImage
-} from "react-icons/bs";
+import { BsCheck2Circle, BsImage } from "react-icons/bs";
 import { FaXmark } from "react-icons/fa6";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import Moment from "react-moment";
@@ -233,14 +230,13 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     onClickEmoji={() => {}}
                     files={files}
                     onUploadFile={(file) => {
-                
                       if (
                         (files ?? []).filter(
                           (f) => !f.mime_type.includes("image")
                         ).length === 0
                       ) {
                         // files = [file];
-                        setFiles(prev => [...prev, file]);
+                        setFiles((prev) => [...prev, file]);
                       } else {
                         setFiles([
                           ...files.map((f) => {
@@ -259,7 +255,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                         ).length === 0
                       ) {
                         // files = [file];
-                        setFiles(prev => [...prev, file]);
+                        setFiles((prev) => [...prev, file]);
                       } else {
                         setFiles([
                           ...files.map((f) => {
@@ -272,9 +268,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       }
                     }}
                     onTapProduct={() => {
-                    setModalProduct(true);
-                  }}
-                  product={selectedProducts && selectedProducts[0]}
+                      setModalProduct(true);
+                    }}
+                    product={selectedProducts && selectedProducts[0]}
                   />
                   {/* <Label>Message</Label>
                   <p className="">
@@ -413,46 +409,6 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               </>
             )}
 
-            <div>
-              <Label>Status</Label>
-              <div className="w-fit">
-                <Badge
-                  color={
-                    broadcast?.status === "DRAFT"
-                      ? "warning"
-                      : broadcast?.status === "FAILED"
-                      ? "danger"
-                      : "success"
-                  }
-                >
-                  {broadcast?.status}
-                </Badge>
-              </div>
-            </div>
-            {broadcast?.status !== "DRAFT" && (
-              <div>
-                <Label>Sequence</Label>
-                <p className="">{broadcast?.group_count ?? 0}</p>
-              </div>
-            )}
-
-            <div>
-              <Label>Max Contact per Sequence</Label>
-              {isEditable ? (
-                <TextInput
-                  type="number"
-                  value={broadcast?.max_contacts_per_batch ?? 0}
-                  onChange={(val) => {
-                    setBroadcast({
-                      ...broadcast!,
-                      max_contacts_per_batch: Number(val.target.value),
-                    });
-                  }}
-                />
-              ) : (
-                <div className="w-fit">{broadcast?.max_contacts_per_batch}</div>
-              )}
-            </div>
             <div className="flex gap-2">
               {broadcast?.status === "DRAFT" && (
                 <Button
@@ -560,6 +516,46 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             </div>
           </div>
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
+            <div>
+              <Label>Status</Label>
+              <div className="w-fit">
+                <Badge
+                  color={
+                    broadcast?.status === "DRAFT"
+                      ? "warning"
+                      : broadcast?.status === "FAILED"
+                      ? "danger"
+                      : "success"
+                  }
+                >
+                  {broadcast?.status}
+                </Badge>
+              </div>
+            </div>
+            {broadcast?.status !== "DRAFT" && (
+              <div>
+                <Label>Sequence</Label>
+                <p className="">{broadcast?.group_count ?? 0}</p>
+              </div>
+            )}
+
+            <div>
+              <Label>Max Contact per Sequence</Label>
+              {isEditable ? (
+                <TextInput
+                  type="number"
+                  value={broadcast?.max_contacts_per_batch ?? 0}
+                  onChange={(val) => {
+                    setBroadcast({
+                      ...broadcast!,
+                      max_contacts_per_batch: Number(val.target.value),
+                    });
+                  }}
+                />
+              ) : (
+                <div className="w-fit">{broadcast?.max_contacts_per_batch}</div>
+              )}
+            </div>
             <div>
               <Label>Delay Time (ms)</Label>
               {isEditable ? (
@@ -1244,7 +1240,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
           </div>
         </Modal.Body>
       </Modal>
-       <ModalProductList
+      <ModalProductList
         show={modalProduct}
         setShow={setModalProduct}
         selectProduct={(val) => {

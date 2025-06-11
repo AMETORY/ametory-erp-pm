@@ -226,13 +226,16 @@ func main() {
 		worker.SendMail(erpContext)
 	}()
 	go func() {
+		worker.ScheduledBroadcastWorker(erpContext)
+	}()
+	go func() {
 		worker.ImportContact(erpContext)
 	}()
 
 	go func() {
 		c := cron.New()
-		c.AddFunc("0 8 * * * *", func() { worker.CheckIdleColumn(erpContext) })
-		// c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
+		// c.AddFunc("0 8 * * * *", func() { worker.CheckIdleColumn(erpContext) })
+		c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
 		c.Start()
 	}()
 

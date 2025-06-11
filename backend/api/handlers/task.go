@@ -8,12 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"log"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
@@ -21,13 +24,21 @@ import (
 )
 
 type TaskHandler struct {
-	ctx             *context.ERPContext
-	pmService       *project_management.ProjectManagementService
-	appService      *app.AppService
-	rapidApiService *services.RapidApiService
+	ctx                         *context.ERPContext
+	pmService                   *project_management.ProjectManagementService
+	appService                  *app.AppService
+	rapidApiService             *services.RapidApiService
+	waService                   *whatsmeow_client.WhatsmeowService
+	customerRelationshipService *customer_relationship.CustomerRelationshipService
 }
 
 func NewTaskHandler(ctx *context.ERPContext) *TaskHandler {
+	var waService *whatsmeow_client.WhatsmeowService
+	waSrv, ok := ctx.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService)
+	if ok {
+		waService = waSrv
+	}
+
 	pmService, ok := ctx.ProjectManagementService.(*project_management.ProjectManagementService)
 	if !ok {
 		panic("ProjectManagementService is not instance of project_management.ProjectManagementService")
@@ -41,11 +52,18 @@ func NewTaskHandler(ctx *context.ERPContext) *TaskHandler {
 	if !ok {
 		panic("RapidApiService is not instance of services.RapidApiService")
 	}
+	var customerRelationshipService *customer_relationship.CustomerRelationshipService
+	customerRelationshipSrv, ok := ctx.CustomerRelationshipService.(*customer_relationship.CustomerRelationshipService)
+	if ok {
+		customerRelationshipService = customerRelationshipSrv
+	}
 	return &TaskHandler{
-		ctx:             ctx,
-		pmService:       pmService,
-		appService:      appService,
-		rapidApiService: rapidApiService,
+		ctx:                         ctx,
+		pmService:                   pmService,
+		appService:                  appService,
+		rapidApiService:             rapidApiService,
+		waService:                   waService,
+		customerRelationshipService: customerRelationshipService,
 	}
 }
 
@@ -194,15 +212,19 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
-					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
-
-					for _, v := range act.Files {
-						if strings.Contains(v.MimeType, "image") && v.URL != "" {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "image", v.URL)
-						} else {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "document", v.URL)
-						}
+					msgData := mdl.WhatsappMessageModel{
+						JID:     waSession.JID,
+						Message: msg,
 					}
+					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, waSession.JID, act.Files, []models.ProductModel{}, false)
+					_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+					if err != nil {
+						log.Println("ERROR", err)
+						c.JSON(500, gin.H{"error": err.Error()})
+						return
+					}
+					// sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
+
 				}
 			}
 
@@ -228,13 +250,16 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 
 				if waSession.Contact.Phone != nil {
 					msg := parseMsgTemplate(*waSession.Contact, &member, actionData["message"].(string))
-					sendWAMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, msg)
-					for _, v := range act.Files {
-						if strings.Contains(v.MimeType, "image") && v.URL != "" {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "image", v.URL)
-						} else {
-							sendWAFileMessage(h.ctx, waSession.JID, *waSession.Contact.Phone, "", "document", v.URL)
-						}
+					msgData := mdl.WhatsappMessageModel{
+						JID:     waSession.JID,
+						Message: msg,
+					}
+					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, waSession.JID, act.Files, []models.ProductModel{}, false)
+					_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+					if err != nil {
+						log.Println("ERROR", err)
+						c.JSON(500, gin.H{"error": err.Error()})
+						return
 					}
 				}
 			}

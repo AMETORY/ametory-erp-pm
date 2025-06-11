@@ -24,6 +24,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/shared/objects"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
@@ -121,19 +122,6 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 	return result
 }
 
-func getThumbnail(files []models.FileModel) (*models.FileModel, []models.FileModel) {
-	restFiles := []models.FileModel{}
-	var thumbnail *models.FileModel
-	for _, v := range files {
-		if strings.HasPrefix(v.MimeType, "image/") && thumbnail == nil {
-			thumbnail = &v
-		} else {
-			restFiles = append(restFiles, v)
-		}
-	}
-	return thumbnail, restFiles
-}
-
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	var input struct {
 		Message   string                `json:"message"`
@@ -203,19 +191,20 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	member := c.MustGet("member").(models.MemberModel)
 
 	parsedMessage := parseMsgTemplate(*session.Contact, &member, input.Message)
+	now := time.Now()
+	templateID := parseTemplateID(input.Message)
 
-	thumbnail, attachments := getThumbnail(input.Files)
-	var mediaURL, mimeType string
-	if thumbnail != nil {
-		mediaURL = thumbnail.URL
-		mimeType = thumbnail.MimeType
-	}
+	// thumbnail, attachments := getThumbnail(input.Files)
+	// var mediaURL, mimeType string
+	// if thumbnail != nil {
+	// 	mediaURL = thumbnail.URL
+	// 	mimeType = thumbnail.MimeType
+	// }
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
-		Sender:       splitSep[0],
-		Receiver:     *session.Contact.Phone,
-		Message:      parsedMessage,
-		MediaURL:     mediaURL,
-		MimeType:     mimeType,
+		Sender:   splitSep[0],
+		Receiver: *session.Contact.Phone,
+		Message:  parsedMessage,
+
 		MessageInfo:  info,
 		Info:         infoStr,
 		Session:      session.Session,
@@ -230,37 +219,47 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		MemberID:     &memberID,
 		RefID:        refID,
 	}
-	now := time.Now()
-	templateID := parseTemplateID(input.Message)
-	if templateID != nil {
-		member := c.MustGet("member").(models.MemberModel)
+	to := waDataReply.Receiver
+	if waDataReply.IsGroup {
+		to = waDataReply.Session
+	}
+	if templateID == nil {
+		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true)
+		_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		msgNotif := gin.H{
+			"message":    input.Message,
+			"command":    "WHATSAPP_RECEIVED",
+			"session_id": session.ID,
+			"data":       waDataReply,
+		}
+		msgNotifStr, _ := json.Marshal(msgNotif)
+		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+		})
+	} else {
 		template, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*templateID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		for _, msg := range template.Messages {
-			now := time.Now()
-			waDataReply.ID = utils.Uuid()
 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
-			waDataReply.CreatedAt = &now
-			err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-			session.LastMessage = waDataReply.Message
-			session.LastOnlineAt = &now
-			err = h.erpContext.DB.Save(&session).Error
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
 
+			h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, msg.Files, msg.Products, true)
+			_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 			msgNotif := gin.H{
-				"message":    waDataReply.Message,
+				"message":    input.Message,
 				"command":    "WHATSAPP_RECEIVED",
 				"session_id": session.ID,
 				"data":       waDataReply,
@@ -270,161 +269,11 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 				url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
 				return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 			})
-			to := waDataReply.Receiver
-			if waDataReply.IsGroup {
-				to = waDataReply.Session
-			}
-			h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-				JID:     waDataReply.JID,
-				Text:    waDataReply.Message,
-				To:      to,
-				IsGroup: waDataReply.IsGroup,
-			})
-
-			for _, v := range msg.Files {
-
-				now := time.Now()
-				waDataReply.ID = utils.Uuid()
-				waDataReply.Message = ""
-				waDataReply.CreatedAt = &now
-				waDataReply.MediaURL = v.URL
-				waDataReply.MimeType = v.MimeType
-				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
-				if err != nil {
-					log.Println(err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
-				session.LastMessage = waDataReply.Message
-				session.LastOnlineAt = &now
-				err = h.erpContext.DB.Save(&session).Error
-				if err != nil {
-					log.Println(err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
-
-				msgNotif := gin.H{
-					"message":    waDataReply.Message,
-					"command":    "WHATSAPP_RECEIVED",
-					"session_id": session.ID,
-					"data":       waDataReply,
-				}
-				msgNotifStr, _ := json.Marshal(msgNotif)
-				h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
-					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
-					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-				})
-
-				if strings.Contains(v.MimeType, "image") && v.URL != "" {
-					resp, _ := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-						JID:      waDataReply.JID,
-						Text:     "",
-						To:       to,
-						IsGroup:  waDataReply.IsGroup,
-						FileType: "image",
-						FileUrl:  v.URL,
-					})
-					fmt.Println("RESPONSE", resp)
-				} else {
-					resp, _ := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-						JID:      waDataReply.JID,
-						Text:     "",
-						To:       to,
-						IsGroup:  waDataReply.IsGroup,
-						FileType: "document",
-						FileUrl:  v.URL,
-					})
-					fmt.Println("RESPONSE", resp)
-				}
-
-			}
-
-			for _, v := range msg.Products {
-				desc := ""
-				var images []models.FileModel
-				h.erpContext.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
-
-				if v.Description != nil {
-					desc = *v.Description
-				}
-				dataMsg := fmt.Sprintf(`*%s*
-_%s_
-
-%s
-				`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
-				productMsg := whatsmeow_client.WaMessage{
-					JID:      waDataReply.JID,
-					Text:     dataMsg,
-					To:       to,
-					IsGroup:  waDataReply.IsGroup,
-					FileType: "image",
-				}
-
-				now := time.Now()
-				waDataReply.ID = utils.Uuid()
-				waDataReply.Message = dataMsg
-				waDataReply.CreatedAt = &now
-				if len(images) > 0 {
-					waDataReply.MediaURL = images[0].URL
-					waDataReply.MimeType = images[0].MimeType
-				}
-
-				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
-				if err != nil {
-					log.Println(err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
-				session.LastMessage = waDataReply.Message
-				session.LastOnlineAt = &now
-				err = h.erpContext.DB.Save(&session).Error
-				if err != nil {
-					log.Println(err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
-
-				msgNotif := gin.H{
-					"message":    waDataReply.Message,
-					"command":    "WHATSAPP_RECEIVED",
-					"session_id": session.ID,
-					"data":       waDataReply,
-				}
-				msgNotifStr, _ := json.Marshal(msgNotif)
-				h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
-					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
-					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-				})
-
-				if len(images) > 0 {
-					productMsg.FileType = "image"
-					productMsg.FileUrl = images[0].URL
-					waDataReply.MediaURL = images[0].URL
-					waDataReply.MimeType = images[0].MimeType
-				}
-
-				h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
-			}
-			time.Sleep(time.Second * 1)
-
 		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-		return
 	}
 
-	waDataReply.ID = utils.Uuid()
-	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	session.LastMessage = input.Message
+	session.LastMessage = waDataReply.Message
 	session.LastOnlineAt = &now
-
 	err = h.erpContext.DB.Save(&session).Error
 	if err != nil {
 		log.Println(err)
@@ -432,186 +281,457 @@ _%s_
 		return
 	}
 
-	msgNotif := gin.H{
-		"message":    input.Message,
-		"command":    "WHATSAPP_RECEIVED",
-		"session_id": session.ID,
-		"data":       waDataReply,
-	}
-	msgNotifStr, _ := json.Marshal(msgNotif)
-	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
-		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
-		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-	})
-	to := waDataReply.Receiver
-	if waDataReply.IsGroup {
-		to = waDataReply.Session
-	}
+	// 	if templateID != nil {
+	// 		member := c.MustGet("member").(models.MemberModel)
+	// 		template, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*templateID)
+	// 		if err != nil {
+	// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+	// 		for _, msg := range template.Messages {
+	// 			now := time.Now()
+	// 			waDataReply.ID = utils.Uuid()
+	// 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
+	// 			waDataReply.CreatedAt = &now
+	// 			err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 			if err != nil {
+	// 				log.Println(err)
+	// 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 				return
+	// 			}
+	// 			session.LastMessage = waDataReply.Message
+	// 			session.LastOnlineAt = &now
+	// 			err = h.erpContext.DB.Save(&session).Error
+	// 			if err != nil {
+	// 				log.Println(err)
+	// 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 				return
+	// 			}
 
-	var fileType, fileUrl string
-	if thumbnail != nil {
-		fileType = "image"
-		fileUrl = thumbnail.URL
-	}
-	resp, err := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-		JID:      waDataReply.JID,
-		Text:     waDataReply.Message,
-		To:       to,
-		IsGroup:  waDataReply.IsGroup,
-		FileType: fileType,
-		FileUrl:  fileUrl,
-	})
+	// 			msgNotif := gin.H{
+	// 				"message":    waDataReply.Message,
+	// 				"command":    "WHATSAPP_RECEIVED",
+	// 				"session_id": session.ID,
+	// 				"data":       waDataReply,
+	// 			}
+	// 			msgNotifStr, _ := json.Marshal(msgNotif)
+	// 			h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 				url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 				return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 			})
+	// 			to := waDataReply.Receiver
+	// 			if waDataReply.IsGroup {
+	// 				to = waDataReply.Session
+	// 			}
 
-	respData, ok := resp.(map[string]any)["data"].(map[string]any)
-	if ok {
-		// utils.LogJson(respData["ID"])
-		msgID, ok2 := respData["ID"].(string)
-		if ok2 {
-			waDataReply.MessageID = &msgID
-			h.erpContext.DB.Save(&waDataReply)
-		}
+	// 			thumbnail, restFiles := models.GetThumbnail(msg.Files)
 
-	}
+	// 			var fileType, fileUrl string
+	// 			if thumbnail != nil {
+	// 				fileType = "image"
+	// 				fileUrl = thumbnail.URL
+	// 			}
 
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	// 			msgData := whatsmeow_client.WaMessage{
+	// 				JID:      waDataReply.JID,
+	// 				Text:     waDataReply.Message,
+	// 				To:       to,
+	// 				IsGroup:  waDataReply.IsGroup,
+	// 				FileType: fileType,
+	// 				FileUrl:  fileUrl,
+	// 			}
 
-	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	for _, v := range attachments {
+	// 			h.waService.SetChatData(msgData)
+	// 			_, err := objects.SendChatMessage(h.waService)
+	// 			if err != nil {
+	// 				log.Println(err)
+	// 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 				return
+	// 			}
 
-		now := time.Now()
-		waDataReply.ID = utils.Uuid()
-		waDataReply.Message = ""
-		waDataReply.CreatedAt = &now
-		waDataReply.MediaURL = v.URL
-		waDataReply.MimeType = v.MimeType
-		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
-		if err != nil {
-			log.Println(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		session.LastMessage = waDataReply.Message
-		session.LastOnlineAt = &now
-		err = h.erpContext.DB.Save(&session).Error
-		if err != nil {
-			log.Println(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	// 			// h.waService.SendMessage(whatsmeow_client.WaMessage{
+	// 			// 	JID:     waDataReply.JID,
+	// 			// 	Text:    waDataReply.Message,
+	// 			// 	To:      to,
+	// 			// 	IsGroup: waDataReply.IsGroup,
+	// 			// })
+	// 			for _, v := range restFiles {
+	// 				msgFileData := whatsmeow_client.WaMessage{
+	// 					JID:     waDataReply.JID,
+	// 					To:      to,
+	// 					IsGroup: waDataReply.IsGroup,
+	// 					FileUrl: v.URL,
+	// 				}
+	// 				if strings.Contains(v.MimeType, "image") && v.URL != "" {
+	// 					msgFileData.FileType = "image"
+	// 				} else {
+	// 					msgFileData.FileType = "file"
+	// 				}
+	// 				h.waService.SetChatData(msgFileData)
+	// 				_, err := objects.SendChatMessage(h.waService)
+	// 				if err != nil {
+	// 					log.Println(err)
+	// 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 					return
+	// 				}
 
-		msgNotif := gin.H{
-			"message":    waDataReply.Message,
-			"command":    "WHATSAPP_RECEIVED",
-			"session_id": session.ID,
-			"data":       waDataReply,
-		}
-		msgNotifStr, _ := json.Marshal(msgNotif)
-		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
-			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
-			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-		})
+	// 				// msgFile := mdl.WhatsappMessageModel{
+	// 				// 	MediaURL: v.URL,
+	// 				// 	MimeType: v.MimeType,
+	// 				// }
+	// 				waDataReply.ID = utils.Uuid()
+	// 				waDataReply.MediaURL = v.URL
+	// 				waDataReply.MimeType = v.MimeType
+	// 				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 				if err != nil {
+	// 					log.Println(err)
+	// 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 					return
+	// 				}
+	// 				msgNotif := gin.H{
+	// 					"message":    waDataReply.Message,
+	// 					"command":    "WHATSAPP_RECEIVED",
+	// 					"session_id": session.ID,
+	// 					"data":       waDataReply,
+	// 				}
+	// 				msgNotifStr, _ := json.Marshal(msgNotif)
+	// 				h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 				})
+	// 			}
 
-		if strings.Contains(v.MimeType, "image") && v.URL != "" {
-			resp, _ := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-				JID:      waDataReply.JID,
-				Text:     "",
-				To:       to,
-				IsGroup:  waDataReply.IsGroup,
-				FileType: "image",
-				FileUrl:  v.URL,
-			})
-			fmt.Println("RESPONSE", resp)
-		} else {
-			resp, _ := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(whatsmeow_client.WaMessage{
-				JID:      waDataReply.JID,
-				Text:     "",
-				To:       to,
-				IsGroup:  waDataReply.IsGroup,
-				FileType: "document",
-				FileUrl:  v.URL,
-			})
-			fmt.Println("RESPONSE", resp)
-		}
+	// 			// for _, v := range msg.Files {
 
-		time.Sleep(time.Millisecond * 500)
-	}
+	// 			// 	now := time.Now()
+	// 			// 	waDataReply.ID = utils.Uuid()
+	// 			// 	waDataReply.Message = ""
+	// 			// 	waDataReply.CreatedAt = &now
+	// 			// 	waDataReply.MediaURL = v.URL
+	// 			// 	waDataReply.MimeType = v.MimeType
+	// 			// 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 			// 	if err != nil {
+	// 			// 		log.Println(err)
+	// 			// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			// 		return
+	// 			// 	}
+	// 			// 	session.LastMessage = waDataReply.Message
+	// 			// 	session.LastOnlineAt = &now
+	// 			// 	err = h.erpContext.DB.Save(&session).Error
+	// 			// 	if err != nil {
+	// 			// 		log.Println(err)
+	// 			// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			// 		return
+	// 			// 	}
 
-	for _, v := range input.Products {
-		desc := ""
-		var images []models.FileModel
-		h.erpContext.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+	// 			// 	msgNotif := gin.H{
+	// 			// 		"message":    waDataReply.Message,
+	// 			// 		"command":    "WHATSAPP_RECEIVED",
+	// 			// 		"session_id": session.ID,
+	// 			// 		"data":       waDataReply,
+	// 			// 	}
+	// 			// 	msgNotifStr, _ := json.Marshal(msgNotif)
+	// 			// 	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 			// 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 			// 		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 			// 	})
 
-		if v.Description != nil {
-			desc = *v.Description
-		}
-		dataMsg := fmt.Sprintf(`*%s*
-_%s_
+	// 			// 	if strings.Contains(v.MimeType, "image") && v.URL != "" {
+	// 			// 		resp, _ := h.waService.SendMessage(whatsmeow_client.WaMessage{
+	// 			// 			JID:      waDataReply.JID,
+	// 			// 			Text:     "",
+	// 			// 			To:       to,
+	// 			// 			IsGroup:  waDataReply.IsGroup,
+	// 			// 			FileType: "image",
+	// 			// 			FileUrl:  v.URL,
+	// 			// 		})
+	// 			// 		fmt.Println("RESPONSE", resp)
+	// 			// 	} else {
+	// 			// 		resp, _ := h.waService.SendMessage(whatsmeow_client.WaMessage{
+	// 			// 			JID:      waDataReply.JID,
+	// 			// 			Text:     "",
+	// 			// 			To:       to,
+	// 			// 			IsGroup:  waDataReply.IsGroup,
+	// 			// 			FileType: "document",
+	// 			// 			FileUrl:  v.URL,
+	// 			// 		})
+	// 			// 		fmt.Println("RESPONSE", resp)
+	// 			// 	}
 
-%s
-		`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
-		productMsg := whatsmeow_client.WaMessage{
-			JID:      waDataReply.JID,
-			Text:     dataMsg,
-			To:       to,
-			IsGroup:  waDataReply.IsGroup,
-			FileType: "image",
-		}
+	// 			// }
 
-		now := time.Now()
-		waDataReply.ID = utils.Uuid()
-		waDataReply.Message = dataMsg
-		waDataReply.CreatedAt = &now
-		if len(images) > 0 {
-			waDataReply.MediaURL = images[0].URL
-			waDataReply.MimeType = images[0].MimeType
-		}
+	// 			for _, v := range msg.Products {
+	// 				desc := ""
+	// 				var images []models.FileModel
+	// 				h.erpContext.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
 
-		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
-		if err != nil {
-			log.Println(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		session.LastMessage = waDataReply.Message
-		session.LastOnlineAt = &now
-		err = h.erpContext.DB.Save(&session).Error
-		if err != nil {
-			log.Println(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	// 				if v.Description != nil {
+	// 					desc = *v.Description
+	// 				}
+	// 				dataMsg := fmt.Sprintf(`*%s*
+	// _%s_
 
-		msgNotif := gin.H{
-			"message":    waDataReply.Message,
-			"command":    "WHATSAPP_RECEIVED",
-			"session_id": session.ID,
-			"data":       waDataReply,
-		}
-		msgNotifStr, _ := json.Marshal(msgNotif)
-		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
-			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
-			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-		})
+	// %s
+	// 				`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
+	// 				productMsg := whatsmeow_client.WaMessage{
+	// 					JID:      waDataReply.JID,
+	// 					Text:     dataMsg,
+	// 					To:       to,
+	// 					IsGroup:  waDataReply.IsGroup,
+	// 					FileType: "image",
+	// 				}
 
-		if len(images) > 0 {
-			productMsg.FileType = "image"
-			productMsg.FileUrl = images[0].URL
-			waDataReply.MediaURL = images[0].URL
-			waDataReply.MimeType = images[0].MimeType
-		}
+	// 				now := time.Now()
+	// 				waDataReply.ID = utils.Uuid()
+	// 				waDataReply.Message = dataMsg
+	// 				waDataReply.CreatedAt = &now
+	// 				if len(images) > 0 {
+	// 					waDataReply.MediaURL = images[0].URL
+	// 					waDataReply.MimeType = images[0].MimeType
+	// 				}
 
-		h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(productMsg)
-	}
+	// 				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 				if err != nil {
+	// 					log.Println(err)
+	// 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 					return
+	// 				}
+	// 				session.LastMessage = waDataReply.Message
+	// 				session.LastOnlineAt = &now
+	// 				err = h.erpContext.DB.Save(&session).Error
+	// 				if err != nil {
+	// 					log.Println(err)
+	// 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 					return
+	// 				}
 
-	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": msg})
+	// 				msgNotif := gin.H{
+	// 					"message":    waDataReply.Message,
+	// 					"command":    "WHATSAPP_RECEIVED",
+	// 					"session_id": session.ID,
+	// 					"data":       waDataReply,
+	// 				}
+	// 				msgNotifStr, _ := json.Marshal(msgNotif)
+	// 				h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 				})
+
+	// 				if len(images) > 0 {
+	// 					productMsg.FileType = "image"
+	// 					productMsg.FileUrl = images[0].URL
+	// 					waDataReply.MediaURL = images[0].URL
+	// 					waDataReply.MimeType = images[0].MimeType
+	// 				}
+
+	// 				h.waService.SendMessage(productMsg)
+	// 			}
+	// 			time.Sleep(time.Second * 1)
+
+	// 		}
+
+	// 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	// 		return
+	// 	}
+
+	// 	waDataReply.ID = utils.Uuid()
+	// 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 		return
+	// 	}
+
+	// 	session.LastMessage = input.Message
+	// 	session.LastOnlineAt = &now
+
+	// 	err = h.erpContext.DB.Save(&session).Error
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 		return
+	// 	}
+
+	// 	msgNotif := gin.H{
+	// 		"message":    input.Message,
+	// 		"command":    "WHATSAPP_RECEIVED",
+	// 		"session_id": session.ID,
+	// 		"data":       waDataReply,
+	// 	}
+	// 	msgNotifStr, _ := json.Marshal(msgNotif)
+	// 	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 	})
+	// 	to := waDataReply.Receiver
+	// 	if waDataReply.IsGroup {
+	// 		to = waDataReply.Session
+	// 	}
+
+	// 	var fileType, fileUrl string
+	// 	if thumbnail != nil {
+	// 		fileType = "image"
+	// 		fileUrl = thumbnail.URL
+	// 	}
+	// 	resp, err := h.waService.SendMessage(whatsmeow_client.WaMessage{
+	// 		JID:      waDataReply.JID,
+	// 		Text:     waDataReply.Message,
+	// 		To:       to,
+	// 		IsGroup:  waDataReply.IsGroup,
+	// 		FileType: fileType,
+	// 		FileUrl:  fileUrl,
+	// 	})
+
+	// 	respData, ok := resp.(map[string]any)["data"].(map[string]any)
+	// 	if ok {
+	// 		// utils.LogJson(respData["ID"])
+	// 		msgID, ok2 := respData["ID"].(string)
+	// 		if ok2 {
+	// 			waDataReply.MessageID = &msgID
+	// 			h.erpContext.DB.Save(&waDataReply)
+	// 		}
+
+	// 	}
+
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 		return
+	// 	}
+
+	// 	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappLastMessages(session.JID, session.Session)
+	// 	if err != nil {
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 		return
+	// 	}
+	// 	for _, v := range attachments {
+
+	// 		now := time.Now()
+	// 		waDataReply.ID = utils.Uuid()
+	// 		waDataReply.Message = ""
+	// 		waDataReply.CreatedAt = &now
+	// 		waDataReply.MediaURL = v.URL
+	// 		waDataReply.MimeType = v.MimeType
+	// 		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+	// 		session.LastMessage = waDataReply.Message
+	// 		session.LastOnlineAt = &now
+	// 		err = h.erpContext.DB.Save(&session).Error
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+
+	// 		msgNotif := gin.H{
+	// 			"message":    waDataReply.Message,
+	// 			"command":    "WHATSAPP_RECEIVED",
+	// 			"session_id": session.ID,
+	// 			"data":       waDataReply,
+	// 		}
+	// 		msgNotifStr, _ := json.Marshal(msgNotif)
+	// 		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 		})
+
+	// 		if strings.Contains(v.MimeType, "image") && v.URL != "" {
+	// 			resp, _ := h.waService.SendMessage(whatsmeow_client.WaMessage{
+	// 				JID:      waDataReply.JID,
+	// 				Text:     "",
+	// 				To:       to,
+	// 				IsGroup:  waDataReply.IsGroup,
+	// 				FileType: "image",
+	// 				FileUrl:  v.URL,
+	// 			})
+	// 			fmt.Println("RESPONSE", resp)
+	// 		} else {
+	// 			resp, _ := h.waService.SendMessage(whatsmeow_client.WaMessage{
+	// 				JID:      waDataReply.JID,
+	// 				Text:     "",
+	// 				To:       to,
+	// 				IsGroup:  waDataReply.IsGroup,
+	// 				FileType: "document",
+	// 				FileUrl:  v.URL,
+	// 			})
+	// 			fmt.Println("RESPONSE", resp)
+	// 		}
+
+	// 		time.Sleep(time.Millisecond * 500)
+	// 	}
+
+	// 	for _, v := range input.Products {
+	// 		desc := ""
+	// 		var images []models.FileModel
+	// 		h.erpContext.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+
+	// 		if v.Description != nil {
+	// 			desc = *v.Description
+	// 		}
+	// 		dataMsg := fmt.Sprintf(`*%s*
+	// _%s_
+
+	// %s
+	// 		`, v.DisplayName, utils.FormatRupiah(v.Price), desc)
+	// 		productMsg := whatsmeow_client.WaMessage{
+	// 			JID:      waDataReply.JID,
+	// 			Text:     dataMsg,
+	// 			To:       to,
+	// 			IsGroup:  waDataReply.IsGroup,
+	// 			FileType: "image",
+	// 		}
+
+	// 		now := time.Now()
+	// 		waDataReply.ID = utils.Uuid()
+	// 		waDataReply.Message = dataMsg
+	// 		waDataReply.CreatedAt = &now
+	// 		if len(images) > 0 {
+	// 			waDataReply.MediaURL = images[0].URL
+	// 			waDataReply.MimeType = images[0].MimeType
+	// 		}
+
+	// 		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waDataReply)
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+	// 		session.LastMessage = waDataReply.Message
+	// 		session.LastOnlineAt = &now
+	// 		err = h.erpContext.DB.Save(&session).Error
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+
+	// 		msgNotif := gin.H{
+	// 			"message":    waDataReply.Message,
+	// 			"command":    "WHATSAPP_RECEIVED",
+	// 			"session_id": session.ID,
+	// 			"data":       waDataReply,
+	// 		}
+	// 		msgNotifStr, _ := json.Marshal(msgNotif)
+	// 		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+	// 			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+	// 			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	// 		})
+
+	// 		if len(images) > 0 {
+	// 			productMsg.FileType = "image"
+	// 			productMsg.FileUrl = images[0].URL
+	// 			waDataReply.MediaURL = images[0].URL
+	// 			waDataReply.MimeType = images[0].MimeType
+	// 		}
+
+	// 		h.waService.SendMessage(productMsg)
+	// 	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": waDataReply})
 }
 
 func (h *WhatsappHandler) GetDevice(c *gin.Context) {
@@ -956,7 +1076,20 @@ func (h *WhatsappHandler) WhatsappRegisterHandler(c *gin.Context) {
 		return
 	}
 
-	sendWAMessage(h.erpContext, data["jid"].(string), phoneNumber, "Registration has been completed")
+	// sendWAMessage(h.erpContext, data["jid"].(string), phoneNumber, "Registration has been completed")
+
+	waData := whatsmeow_client.WaMessage{
+		JID:     data["jid"].(string),
+		Text:    "Registration has been completed",
+		To:      phoneNumber,
+		IsGroup: false,
+	}
+	h.waService.SetChatData(waData)
+	_, err = objects.SendChatMessage(h.waService)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(200, gin.H{"message": "Registration has been completed"})
 }
@@ -1053,7 +1186,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		sessionAuth = session
 
 		if convMsg == "LOGIN" && session == nil {
-			err := doLogin(h.erpContext, body.JID, body.Sender, conn)
+			err := doLogin(h.erpContext, h.waService, body.JID, body.Sender, conn)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
@@ -1062,7 +1195,20 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 
 		if session == nil {
-			sendWAMessage(h.erpContext, body.JID, body.Sender, "Anda belum Login, silakan ketik *LOGIN* lalu kirim untuk melakukan login")
+			// sendWAMessage(h.erpContext, body.JID, body.Sender, "Anda belum Login, silakan ketik *LOGIN* lalu kirim untuk melakukan login")
+
+			waData := whatsmeow_client.WaMessage{
+				JID:     body.JID,
+				Text:    "Anda belum Login, silakan ketik *LOGIN* lalu kirim untuk melakukan login",
+				To:      body.Sender,
+				IsGroup: false,
+			}
+			h.waService.SetChatData(waData)
+			_, err = objects.SendChatMessage(h.waService)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
 			return
 		}
 
@@ -1377,7 +1523,20 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	var replyResponse *models.WhatsappMessageModel
 
 	if conn.GeminiAgent == nil && conn.IsAutoPilot && autopilot && conn.AutoResponseMessage != "" {
-		sendWAMessage(h.erpContext, body.JID, body.Sender, conn.AutoResponseMessage)
+		// sendWAMessage(h.erpContext, body.JID, body.Sender, conn.AutoResponseMessage)
+		waData := whatsmeow_client.WaMessage{
+			JID:     body.JID,
+			Text:    conn.AutoResponseMessage,
+			To:      body.Sender,
+			IsGroup: false,
+		}
+		h.waService.SetChatData(waData)
+		_, err = objects.SendChatMessage(h.waService)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
 		replyResponse = &models.WhatsappMessageModel{
 			Receiver:    body.Sender,
 			Message:     conn.AutoResponseMessage,
@@ -1389,6 +1548,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			IsGroup:     body.Info["IsGroup"].(bool),
 			IsAutoPilot: true,
 		}
+
 	}
 	if conn.GeminiAgent != nil && conn.IsAutoPilot && autopilot {
 		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
@@ -1471,7 +1631,19 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
+		// sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
+		waData := whatsmeow_client.WaMessage{
+			JID:     body.JID,
+			Text:    response.Response,
+			To:      body.Sender,
+			IsGroup: false,
+		}
+		h.waService.SetChatData(waData)
+		_, err = objects.SendChatMessage(h.waService)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 		replyResponse = &models.WhatsappMessageModel{
 			Receiver:    body.Sender,
 			Message:     response.Response,
@@ -1557,7 +1729,7 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 					if err == nil {
 						fmt.Println("NEW CONNECTION", conn)
 						v.SessionName = conn.SessionName
-						resp, err := h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).GetJIDBySessionName(conn.SessionName)
+						resp, err := h.waService.GetJIDBySessionName(conn.SessionName)
 						if err == nil {
 							v.JID = resp["jid"].(string)
 						}
@@ -1708,7 +1880,7 @@ func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
 	}
 
 	if msg.MessageID != nil && !msg.IsRead {
-		err = h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).MarkAsRead(msg.JID, []string{*msg.MessageID}, msg.Sender)
+		err = h.waService.MarkAsRead(msg.JID, []string{*msg.MessageID}, msg.Sender)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
@@ -1758,7 +1930,7 @@ func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": messages})
 }
 
-func doLogin(erpContext *context.ERPContext, jid, sender string, conn *connection.ConnectionModel) error {
+func doLogin(erpContext *context.ERPContext, waService *whatsmeow_client.WhatsmeowService, jid, sender string, conn *connection.ConnectionModel) error {
 	var member *models.ContactModel
 	err := erpContext.DB.Find(&member, "phone = ?", sender).Error
 	if err != nil {
@@ -1777,7 +1949,18 @@ Session anda akan berlaku selama 7 hari:
 
 *ADMIN*
 			`, member.Name, conn.Name)
-	sendWAMessage(erpContext, jid, sender, msgContent)
+	// sendWAMessage(erpContext, jid, sender, msgContent)
+	waData := whatsmeow_client.WaMessage{
+		JID:     jid,
+		Text:    msgContent,
+		To:      sender,
+		IsGroup: false,
+	}
+	waService.SetChatData(waData)
+	_, err = objects.SendChatMessage(waService)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1828,7 +2011,7 @@ Session anda akan berlaku selama 7 hari:
 // 			IsGroup: false,
 // 		}
 
-// 		h.erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
+// 		h.waService.SendMessage(replyData)
 // 		return
 // 	}
 // 	if msg.Message.Conversation != nil {
@@ -2146,28 +2329,28 @@ Session anda akan berlaku selama 7 hari:
 //		c.JSON(http.StatusOK, gin.H{"message": "ok", "data": msg})
 //	}
 
-func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) (any, error) {
-	replyData := whatsmeow_client.WaMessage{
-		JID:     jid,
-		Text:    message,
-		To:      to,
-		IsGroup: false,
-	}
-	// utils.LogJson(replyData)
-	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
-}
-func sendWAFileMessage(erpContext *context.ERPContext, jid, to, message, fileType, fileUrl string) (any, error) {
-	replyData := whatsmeow_client.WaMessage{
-		JID:      jid,
-		Text:     message,
-		To:       to,
-		IsGroup:  false,
-		FileType: fileType,
-		FileUrl:  fileUrl,
-	}
-	// utils.LogJson(replyData)
-	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
-}
+// func sendWAMessage(erpContext *context.ERPContext, jid, to, message string) (any, error) {
+// 	replyData := whatsmeow_client.WaMessage{
+// 		JID:     jid,
+// 		Text:    message,
+// 		To:      to,
+// 		IsGroup: false,
+// 	}
+// 	// utils.LogJson(replyData)
+// 	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
+// }
+// func sendWAFileMessage(erpContext *context.ERPContext, jid, to, message, fileType, fileUrl string) (any, error) {
+// 	replyData := whatsmeow_client.WaMessage{
+// 		JID:      jid,
+// 		Text:     message,
+// 		To:       to,
+// 		IsGroup:  false,
+// 		FileType: fileType,
+// 		FileUrl:  fileUrl,
+// 	}
+// 	// utils.LogJson(replyData)
+// 	return erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService).SendMessage(replyData)
+// }
 
 type geminiResponse struct {
 	Response string         `json:"response"`
