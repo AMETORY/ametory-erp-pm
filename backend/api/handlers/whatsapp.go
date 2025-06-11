@@ -32,6 +32,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type WhatsappHandler struct {
@@ -1468,6 +1469,14 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 				})
 			}
 		}
+	}
+
+	whatsappSession.IsGroup = waData.IsGroup
+	fmt.Println("UPDATE SESSION")
+	err = h.erpContext.DB.Omit(clause.Associations).Save(&whatsappSession).Error
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(&waData)
