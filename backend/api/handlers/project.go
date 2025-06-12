@@ -44,8 +44,16 @@ func NewProjectHandler(ctx *context.ERPContext) *ProjectHandler {
 }
 
 func (h *ProjectHandler) GetProjectsHandler(c *gin.Context) {
-	memberID := c.MustGet("memberID").(string)
-	projects, err := h.pmService.ProjectService.GetProjects(*c.Request, c.Query("search"), &memberID)
+	memberIDStr := c.MustGet("memberID").(string)
+	member := c.MustGet("member").(models.MemberModel)
+
+	var memberID *string = &memberIDStr
+
+	if member.Role.IsSuperAdmin {
+		memberID = nil
+	}
+
+	projects, err := h.pmService.ProjectService.GetProjects(*c.Request, c.Query("search"), memberID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -58,9 +66,17 @@ func (h *ProjectHandler) GetTemplatesHandler(c *gin.Context) {
 }
 
 func (h *ProjectHandler) GetProjectHandler(c *gin.Context) {
-	memberID := c.MustGet("memberID").(string)
+	memberIDStr := c.MustGet("memberID").(string)
+	member := c.MustGet("member").(models.MemberModel)
+
+	var memberID *string = &memberIDStr
+
+	if member.Role.IsSuperAdmin {
+		memberID = nil
+	}
+
 	id := c.Param("id")
-	project, err := h.pmService.ProjectService.GetProjectByID(id, &memberID)
+	project, err := h.pmService.ProjectService.GetProjectByID(id, memberID)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return

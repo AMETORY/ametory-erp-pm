@@ -51,6 +51,7 @@ import { countContactByTag, getContacts } from "../services/api/contactApi";
 import { getProducts } from "../services/api/productApi";
 import { getContrastColor, money } from "../utils/helper";
 import { parseMentions } from "../utils/helper-ui";
+import { IoDocumentsOutline } from "react-icons/io5";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -204,11 +205,64 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             {broadcast?.template_id ? (
               <div>
                 <Label>Template</Label>
-                <div>{broadcast?.template?.title}</div>
+                <div className="mb-4">{broadcast?.template?.title}</div>
                 {(broadcast?.template?.messages ?? []).map(
                   (msg: any, index: number) => (
-                    <div className="p-4 border rounded-lg">
-                      {parseMentions(msg.body, () => {})}
+                    <div className="" key={index}>
+                      <div className="p-4 border rounded-lg mb-4">
+                        {parseMentions(msg.body, () => {})}
+                      </div>
+                      <div className="mb-4">
+                        {(msg.files ??[]).length > 0 && (<h3 className="text-lg font-semibold">Files</h3>)}
+                        {(msg.files ??[]).length > 0 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {msg.files
+                              .filter((f: any) => f.mime_type.includes("image"))
+                              .map((file: any, index: number) => (
+                                <div key={index}>
+                                  <img
+                                    src={file.url}
+                                    className="w-full aspect-square rounded-lg object-cover"
+                                  />
+                                </div>
+                              ))}
+                            {msg.files
+                              .filter(
+                                (f: any) => !f.mime_type.includes("image")
+                              )
+                              .map((file: any, index: number) => (
+                                <div
+                                  key={index}
+                                  className="flex flex-col justify-center items-center text-center w-full aspect-square rounded-lg border p-4"
+                                >
+                                  <IoDocumentsOutline size={32} />
+                                  <small className="text-center mt-4">
+                                    {file?.file_name}
+                                  </small>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mb-4">
+                        {(msg.products??[]).length > 0 && (<h3 className="text-lg font-semibold">Product</h3> )}
+                        {(msg.products??[]).length > 0 && (
+                          <div className="flex items-center flex-col  px-8">
+                            {(msg.products[0].product_images ?? []).length >
+                              0 && (
+                              <img
+                                src={msg.products[0].product_images![0].url}
+                                alt="product"
+                                className="w-32 h-32 rounded-lg"
+                              />
+                            )}
+                            <h3 className="font-semibold mt-2 text-center">
+                              {msg.products[0].name}
+                            </h3>
+                            <small>{money(msg.products[0].price)}</small>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 )}
@@ -271,6 +325,12 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       setModalProduct(true);
                     }}
                     product={selectedProducts && selectedProducts[0]}
+                    onDeleteImage={(file: FileModel) => {
+                      setFiles(files.filter((f) => f.id !== file.id));
+                    }}
+                    onDeleteFile={(file: FileModel) => {
+                      setFiles(files.filter((f) => f.id !== file.id));
+                    }}
                   />
                   {/* <Label>Message</Label>
                   <p className="">

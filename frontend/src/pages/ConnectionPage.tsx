@@ -56,9 +56,9 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   const nav = useNavigate();
   var connectionType = [
     { label: "WHATSAPP", value: "whatsapp" },
-    { label: "TELEGRAM", value: "telegram" },
+    // { label: "TELEGRAM", value: "telegram" },
     { label: "INSTAGRAM", value: "instagram" },
-    { label: "TIKTOK", value: "tiktok" },
+    // { label: "TIKTOK", value: "tiktok" },
   ];
 
   useEffect(() => {

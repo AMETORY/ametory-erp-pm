@@ -132,6 +132,20 @@ func (h *BroadcastHandler) GetBroadcastHandler(c *gin.Context) {
 	}
 	broadcast.Contacts = contacts
 	broadcast.ContactCount = int(pagination.TotalRows)
+
+	template, ok := broadcast.Template.(mdl.WhatsappMessageTemplate)
+	if ok {
+		for i, message := range template.Messages {
+			for j, v := range message.Products {
+				var images []mdl.FileModel
+				h.ctx.DB.Where("ref_id = ? and ref_type = ?", v.ID, "product").Find(&images)
+				v.ProductImages = images
+				template.Messages[i].Products[j] = v
+			}
+
+		}
+	}
+	broadcast.Template = template
 	c.JSON(200, gin.H{"data": broadcast, "pagination": pagination, "message": "Broadcast retrieved successfully"})
 }
 

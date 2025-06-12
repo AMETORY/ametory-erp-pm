@@ -69,8 +69,9 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
       <div className="mt-8">
         <h4 className="font-semibold">Files</h4>
         <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 relative">
+          <div className="flex flex-col justify-center items-center p-2 rounded-lg bg-white relative">
             <div
+              className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 w-full h-full flex justify-center items-center p-16"
               onClick={() => {
                 if (readonly) return;
                 document.getElementById(`image-${index}`)?.click();
@@ -78,9 +79,9 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
             >
               {files.filter((f) => f.mime_type.includes("image")).length ===
               0 ? (
-                <div className="flex flex-col items-center">
-                  <span className="text-center">Add Photo to message</span>
-                  <BsCamera />
+                <div className="flex flex-col items-center text-center">
+                  <span> {readonly ? "No Photo" : "Add Photo to message"} </span>
+                  {readonly ? null : <BsCamera />}
                 </div>
               ) : (
                 <img
@@ -116,8 +117,9 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
               />
             )}
           </div>
-          <div className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 relative">
+          <div className="flex flex-col justify-center items-center p-2 rounded-lg bg-white relative">
             <div
+              className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 w-full h-full flex justify-center items-center p-16"
               onClick={() => {
                 if (readonly) return;
                 document.getElementById(`image-${index}-file`)?.click();
@@ -125,9 +127,9 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
             >
               {files.filter((f) => !f.mime_type.includes("image")).length ===
               0 ? (
-                <div className="flex flex-col items-center">
-                  <span>Add File to message</span>
-                  <HiOutlineDocumentAdd size={32} />
+                <div className="flex flex-col items-center text-center">
+                  <span>{readonly ? "No File" : "Add File to message"} </span>
+                  {readonly ? null : <HiOutlineDocumentAdd size={32} />}
                 </div>
               ) : (
                 // <IoAttach className="rotate-[30deg]" size={32}/>
@@ -161,7 +163,7 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
                 size={20}
                 className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
                 onClick={() => {
-                  onDeleteImage?.(
+                  onDeleteFile?.(
                     files.find((f) => !f.mime_type.includes("image"))!
                   );
                 }}
@@ -182,9 +184,9 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
               }}
             >
               {!product ? (
-                <div className="flex flex-col items-center">
-                  <span>Add Product</span>
-                  <BsCart size={32} />
+                <div className="flex flex-col items-center text-center">
+                  <span> {readonly ? "No Product" : "Add Product"} </span>
+                  {readonly ? null : <BsCart size={32} />}
                 </div>
               ) : (
                 <div className="flex items-center flex-col  px-8">

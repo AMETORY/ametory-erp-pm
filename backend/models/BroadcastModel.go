@@ -67,6 +67,7 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 	if b.TemplateID != nil {
 		var template models.WhatsappMessageTemplate
 		tx.Model(&models.WhatsappMessageTemplate{}).Where("id = ?", *b.TemplateID).First(&template)
+
 		b.Template = template
 	}
 
