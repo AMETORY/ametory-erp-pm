@@ -199,7 +199,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
                 ]);
 
                 timeout.current = window.setTimeout(() => {
-                  markAsRead(message!.id!);
+                  markAsRead(message!.id!, "");
                 }, 500);
               }
             }

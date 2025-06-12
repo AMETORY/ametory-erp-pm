@@ -33,4 +33,5 @@ export interface ConnectionModel {
   auto_response_start_time?: string;
   auto_response_end_time?: string;
   auto_response_message?: string;
+  auth_data?: any
 }

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strconv"
 
+	tiktok "tiktokshop/open/sdk_golang/service"
+
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
@@ -22,6 +24,7 @@ type ConnectionHandler struct {
 	ctx                *context.ERPContext
 	appService         *app.AppService
 	whatsappWebService *whatsmeow_client.WhatsmeowService
+	tiktokService      *tiktok.TiktokService
 }
 
 func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
@@ -34,10 +37,15 @@ func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
 	if !ok {
 		panic("ThirdPartyServices is not instance of whatsmeow_client.WhatsmeowService")
 	}
+	tiktokService, ok := ctx.ThirdPartyServices["Tiktok"].(*tiktok.TiktokService)
+	if !ok {
+		panic("ThirdPartyServices is not instance of tiktok.TiktokService")
+	}
 	return &ConnectionHandler{
 		ctx:                ctx,
 		appService:         appService,
 		whatsappWebService: whatsappWebService,
+		tiktokService:      tiktokService,
 	}
 }
 
@@ -101,6 +109,24 @@ func (h *ConnectionHandler) GetConnectionHandler(c *gin.Context) {
 			connection.Connected = respJson.IsConnected
 		}
 	}
+
+	// if connection.Type == "tiktok" && connection.Status == "ACTIVE" {
+	// 	authData := map[string]interface{}{}
+	// 	if connection.AuthData != nil {
+	// 		if err := json.Unmarshal([]byte(*connection.AuthData), &authData); err != nil {
+	// 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+	// 		resp, err := h.tiktokService.CustomerService202309GetConversationsGet(authData["access_token"].(string), connection.Password, "", 10)
+	// 		if err != nil {
+	// 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 			return
+	// 		}
+
+	// 		utils.LogJson(resp)
+	// 	}
+
+	// }
 	c.JSON(http.StatusOK, gin.H{"data": connection, "message": "Connection retrieved successfully"})
 }
 
@@ -161,6 +187,58 @@ func (h *ConnectionHandler) SyncContactConnectionHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": respJson})
 }
+func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
+	id := c.Param("id")
+	conn, err := h.appService.ConnectionService.GetConnection(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var requestBody map[string]interface{}
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+		return
+	}
+
+	if requestBody["type"] == "tiktok" {
+		resp, err := h.tiktokService.AuthorizeConnection(id, requestBody["tiktok_code"].(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// conn.AccessToken = resp.Data.AccessToken
+
+		b, err := json.Marshal(resp.Data)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		data := json.RawMessage(b)
+		conn.AuthData = &data
+		conn.AccessToken = resp.Data.AccessToken
+		conn.Status = "ACTIVE"
+		err = h.ctx.DB.Save(&conn).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		shops, err := h.tiktokService.Authorization202309GetAuthorizedShopsGet(resp.Data.AccessToken)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully", "data": shops})
+		return
+	}
+
+	// You can now use requestBody to access all JSON request data
+
+	c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully", "data": requestBody})
+}
 func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
 	id := c.Param("id")
 	_, err := h.appService.ConnectionService.GetConnection(id)
@@ -175,7 +253,7 @@ func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
 		return
 	}
 
-	if err := h.appService.ConnectionService.UpdateConnection(&input); err != nil {
+	if err := h.appService.ConnectionService.UpdateConnection(id, &input); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

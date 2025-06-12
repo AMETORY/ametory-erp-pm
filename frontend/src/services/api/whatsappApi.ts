@@ -53,8 +53,8 @@ export const getWhatsappMessages = async (session_id: string, req: PaginationReq
 };
 
 
-export const markAsRead = async ( message_id: string) => {
-  return customFetch(`api/v1/whatsapp/messages/${message_id}/read`, {
+export const markAsRead = async ( message_id: string, session_id: string) => {
+  return customFetch(`api/v1/whatsapp/messages/${message_id}/read?session_id=${session_id}`, {
     method: "PUT",
   });
 };

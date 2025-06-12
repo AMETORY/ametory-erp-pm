@@ -12,7 +12,7 @@ import {
 } from "flowbite-react";
 import QRCode from "react-qr-code";
 import { WebsocketContext } from "../contexts/WebsocketContext";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { LoadingContext } from "../contexts/LoadingContext";
 import {
   connectDevice,
@@ -29,6 +29,7 @@ import {
   BsCheck2Circle,
   BsInstagram,
   BsTelegram,
+  BsTiktok,
   BsWhatsapp,
 } from "react-icons/bs";
 import { FaCircleXmark } from "react-icons/fa6";
@@ -38,12 +39,14 @@ import { ProjectModel } from "../models/project";
 import { ColumnModel } from "../models/column";
 import TelegramIntegrationGuide from "./TelegramGuide";
 import { LuInstagram } from "react-icons/lu";
+import { asyncStorage } from "../utils/async_storage";
 
 interface ConnectionDrawerProps {
   connection: ConnectionModel;
   onUpdate: (connection: ConnectionModel) => void;
   onFinish: () => void;
   onSave: () => void;
+  onAuthorize: () => void;
 }
 
 const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
@@ -51,6 +54,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
   onUpdate,
   onFinish,
   onSave,
+  onAuthorize,
 }) => {
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
@@ -61,6 +65,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
   const [geminiAgents, setGeminiAgents] = useState<GeminiAgent[]>([]);
   const [projects, setProjects] = useState<ProjectModel[]>([]);
   const [columns, setColumns] = useState<ColumnModel[]>([]);
+  const nav = useNavigate();
 
   useEffect(() => {
     setMounted(true);
@@ -87,6 +92,8 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
     switch (type) {
       case "whatsapp":
         return <BsWhatsapp className="mr-2 w-4" />;
+      case "tiktok":
+        return <BsTiktok className="mr-2 w-4" />;
       case "telegram":
         return <BsTelegram className="mr-2 w-4" />;
       case "instagram":
@@ -149,24 +156,65 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           )}
         </>
       )}
-     
+      {connection.type == "tiktok" && (
+        <>
+          <div className="flex gap-2 flex-row">
+            <Button
+              className="mt-4 bg-yellow-400"
+              onClick={async () => {
+                asyncStorage
+                  .setItem("tiktok-connection-id", connection.id)
+                  .then(() => {
+                    window.location.href = `https://services.tiktokshop.com/open/authorize?service_id=${process.env.REACT_APP_TIKTOK_SERVICE_ID}`;
+                  });
+              }}
+            >
+              {connection?.status == "ACTIVE" ? "Re-Authorize" : "Authorize"}
+            </Button>
+            {/* <Button
+                className="mt-4"
+                onClick={async () => {
+                  onSave();
+                }}
+              >
+                SAVE
+              </Button> */}
+          </div>
+        </>
+      )}
+      {connection.type == "tiktok" &&
+        connection?.status == "ACTIVE" &&
+        connection.session_name && (
+          <>
+            <div className="mt-4">
+              <Label className="font-bold">Connected To</Label>
+              <p>{connection?.session_name}</p>
+            </div>
+            <div className="mt-4">
+              <Label className="font-bold">Shop ID</Label>
+              <p>{connection?.username}</p>
+            </div>
+          </>
+        )}
 
-      { connection.type == "instagram" && (
+      {connection.type == "instagram" && (
         <div className="mt-4">
           <Button
             className="mt-4"
             color="primary"
-            style={{ width: "100%", backgroundColor: "#e1306c", color: "white" }}
+            style={{
+              width: "100%",
+              backgroundColor: "#e1306c",
+              color: "white",
+            }}
             onClick={() => {
-              
               // Add your logic to connect to Facebook here
               window.open(
-                `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=https://app.senandika.web.id/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&client_id=1033935721571526&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`,
-              )
-
+                `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=https://app.senandika.web.id/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&client_id=1033935721571526&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`
+              );
             }}
           >
-          <BsInstagram className="mr-2 w-4" />  Hubungkan ke Instagram
+            <BsInstagram className="mr-2 w-4" /> Hubungkan ke Instagram
           </Button>
         </div>
       )}

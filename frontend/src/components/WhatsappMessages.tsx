@@ -149,7 +149,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
         timeout.current = window.setTimeout(() => {
           if (!msg.is_from_me) {
-            markAsRead(msg!.id!);
+            markAsRead(msg!.id!, sessionId);
           }
         }, 500);
       }
@@ -194,9 +194,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   }),
                 ]);
 
+                if (timeout.current) {
+                  window.clearTimeout(timeout.current);
+                }
+
                 timeout.current = window.setTimeout(() => {
                   if (!message?.is_from_me) {
-                    markAsRead(message!.id!);
+                    markAsRead(message!.id!, sessionId);
                   }
                 }, 500);
               }

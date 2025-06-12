@@ -13,6 +13,7 @@ import {
 } from "flowbite-react";
 import Select, { InputActionMeta } from "react-select";
 import {
+  authorizeConnection,
   createConnection,
   deleteConnection,
   getConnection,
@@ -57,6 +58,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     { label: "WHATSAPP", value: "whatsapp" },
     { label: "TELEGRAM", value: "telegram" },
     { label: "INSTAGRAM", value: "instagram" },
+    { label: "TIKTOK", value: "tiktok" },
   ];
 
   useEffect(() => {
@@ -319,6 +321,9 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
               // setShowDetailOpen(false);
               getAllConnections();
               setActiveConnection(undefined);
+            }}
+            onAuthorize={async() => {
+                 
             }}
             onSave={async () => {
               try {

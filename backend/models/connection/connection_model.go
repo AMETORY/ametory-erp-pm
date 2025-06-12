@@ -1,6 +1,8 @@
 package connection
 
 import (
+	"encoding/json"
+
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/google/uuid"
@@ -46,6 +48,7 @@ type ConnectionModel struct {
 	AutoResponseStartTime *string              `json:"auto_response_start_time" gorm:"type:varchar(32)"`
 	AutoResponseEndTime   *string              `json:"auto_response_end_time" gorm:"type:varchar(32)"`
 	AutoResponseMessage   string               `json:"auto_response_message" gorm:"column:auto_response_message;type:varchar(255)"`
+	AuthData              *json.RawMessage     `json:"auth_data" gorm:"type:json;default:'{}'"`
 }
 
 func (ConnectionModel) TableName() string {

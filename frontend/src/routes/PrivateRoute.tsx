@@ -32,6 +32,7 @@ import PrivacyPolicy from "../pages/PrivacyPolicy";
 import FacebookCallback from "../pages/FacebookCallback";
 import InstagramPage from "../pages/InstagramPage";
 import TermUsePage from "../pages/TermUsePage";
+import TiktokAuth from "../pages/TiktokAuth";
 
 interface PrivateRouteProps {}
 
@@ -74,6 +75,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/template" element={<TemplatePage />} />
       <Route path="/template/:templateId" element={<TemplateDetail />} />
       <Route path="/broadcast/:broadcastId" element={<BroadcastDetail/>} />
+      <Route path="/auth/tiktok/callback" element={<TiktokAuth/>} />
       <Route path="/whatsapp/:sessionId" element={<WhatsappPage />} />
       <Route
         path="/task-attribute/:attributeId"

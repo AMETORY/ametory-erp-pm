@@ -69,9 +69,9 @@ func (c *ConnectionService) CreateConnection(con *connection.ConnectionModel) er
 	return nil
 }
 
-func (c *ConnectionService) UpdateConnection(con *connection.ConnectionModel) error {
+func (c *ConnectionService) UpdateConnection(id string, con *connection.ConnectionModel) error {
 
-	if err := c.ctx.DB.Save(con).Error; err != nil {
+	if err := c.ctx.DB.Where("id = ?", id).Updates(con).Error; err != nil {
 		return err
 	}
 	return nil

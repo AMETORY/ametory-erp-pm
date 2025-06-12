@@ -14,6 +14,7 @@ type Config struct {
 	Google   GoogleConfig   `mapstructure:"google"`
 	Whatsapp WhatsappConfig `mapstructure:"whatsapp"`
 	Facebook FacebookConfig `mapstructure:"facebook"`
+	Tiktok   TiktokConfig   `mapstructure:"tiktok"`
 }
 
 var App = &Config{}

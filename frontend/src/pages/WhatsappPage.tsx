@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useRef, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import {
   Avatar,
@@ -28,6 +28,7 @@ import {
   clearWhatsappSession,
   deleteWhatsappSession,
   exportXls,
+  getWhatsappSessionDetail,
   getWhatsappSessions,
   updateWhatsappSession,
 } from "../services/api/whatsappApi";
@@ -59,6 +60,7 @@ import { SearchContext } from "../contexts/SearchContext";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
+  const timeout = useRef<number | null>(null);
   const [members, setMembers] = useState<MemberModel[]>([]);
   const { loading, setLoading } = useContext(LoadingContext);
   const [selectedMembers, setSelectedMembers] = useState<
@@ -189,14 +191,35 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   };
 
   useEffect(() => {
-    if (
-      wsMsg?.command == "WHATSAPP_RECEIVED" ||
-      wsMsg?.command == "UPDATE_SESSION" ||
-      wsMsg?.command == "WHATSAPP_MESSAGE_READ" ||
-      wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE"
-    ) {
-      getAllSessions();
+    if (timeout.current) {
+      window.clearTimeout(timeout.current);
     }
+
+    timeout.current = window.setTimeout(() => {
+      if (
+        wsMsg?.command === "WHATSAPP_RECEIVED" ||
+        wsMsg?.command === "WHATSAPP_MESSAGE_READ" ||
+        wsMsg?.command === "WHATSAPP_CLEAR_MESSAGE"
+      ) {
+        getAllSessions();
+      } else if (wsMsg?.command === "UPDATE_SESSION") {
+        if (wsMsg?.session_id) {
+          getWhatsappSessionDetail(wsMsg?.session_id).then((resp: any) => {
+            // console.log("SESSION DATA", resp.data);
+            setSessions(
+              sessions.map((s) => {
+                if (s.id === resp.data.id) {
+                  return resp.data;
+                }
+                return s;
+              })
+            );
+          });
+        } else {
+          getAllSessions();
+        }
+      }
+    }, 500);
   }, [wsMsg, profile, sessionId]);
 
   const getAllContact = async (s: string) => {
@@ -333,14 +356,13 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                             />
                             <div>
                               <div className="flex flex-col">
-
-                              <span className="font-semibold">
-                                {e.contact?.name} 
-                              </span>
-                              <small>({e.contact?.phone})</small>
-                              <small className="line-clamp-2 overflow-hidden text-ellipsis">
-                                {e.last_message}
-                              </small>
+                                <span className="font-semibold">
+                                  {e.contact?.name}
+                                </span>
+                                <small>({e.contact?.phone})</small>
+                                <small className="line-clamp-2 overflow-hidden text-ellipsis">
+                                  {e.last_message}
+                                </small>
                               </div>
                               <small className="line-clamp-2 overflow-hidden text-ellipsis text-[8pt]">
                                 <Moment fromNow>{e.last_online_at}</Moment>

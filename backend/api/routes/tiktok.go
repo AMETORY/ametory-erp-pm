@@ -13,6 +13,6 @@ func SetupTiktokRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	group := r.Group("/tiktok")
 	group.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
-		group.GET("/webhook/connection/:connectionID", handler.WebhookHandler)
 	}
+	r.GET("/tiktok/webhook", handler.WebhookHandler)
 }

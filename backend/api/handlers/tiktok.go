@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"ametory-pm/models/connection"
 	"log"
 	"net/http"
 
@@ -18,15 +17,15 @@ func NewTiktokHandler(ctx *context.ERPContext) *TiktokHandler {
 }
 
 func (h *TiktokHandler) WebhookHandler(c *gin.Context) {
-	connectionID := c.Param("connectionID")
-
-	var connection connection.ConnectionModel
-	err := h.ctx.DB.First(&connection, "id = ?", connectionID).Error
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var requestData map[string]interface{}
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
 		return
 	}
+
+	// Use requestData for further processing
+
+	log.Println("Received TikTok webhook data:", requestData)
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok"})
 }

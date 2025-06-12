@@ -35,6 +35,8 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/robfig/cron"
 
+	tiktok "tiktokshop/open/sdk_golang/service"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -149,6 +151,11 @@ func main() {
 		}
 
 	}
+
+	// fmt.Println("TIKTOK", cfg.Tiktok.AppKey, cfg.Tiktok.AppSecret, cfg.Tiktok.ServiceID)
+
+	tiktokService := tiktok.NewTiktokService(erpContext, appService, csrService, cfg.Tiktok.AppKey, cfg.Tiktok.AppSecret, cfg.Tiktok.ServiceID)
+	erpContext.AddThirdPartyService("Tiktok", tiktokService)
 
 	emailSender := thirdparty.NewSMTPSender(cfg.Email.Server, cfg.Email.Port, cfg.Email.Username, cfg.Email.Password, mail.Address{Name: cfg.Email.From, Address: cfg.Email.From})
 	emailSender.SetTemplate("../templates/email/layout.html", "../templates/email/body.html")

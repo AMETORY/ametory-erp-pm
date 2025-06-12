@@ -12,6 +12,7 @@ require (
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/driver/sqlserver v1.5.4
 	gorm.io/gorm v1.25.12
+	tiktokshop/open/sdk_golang v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -116,7 +117,7 @@ require (
 )
 
 require (
-	github.com/AMETORY/ametory-erp-modules v0.0.0-00010101000000-000000000000
+	github.com/AMETORY/ametory-erp-modules v0.0.0-20250603050350-99b356832e0a
 	github.com/bytedance/sonic v1.12.6 // indirect
 	github.com/bytedance/sonic/loader v0.2.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
@@ -152,3 +153,5 @@ require (
 )
 
 replace github.com/AMETORY/ametory-erp-modules => ../../ametory-erp-modules
+
+replace tiktokshop/open/sdk_golang => ../tiktok

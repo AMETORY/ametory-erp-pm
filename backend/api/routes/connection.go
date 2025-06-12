@@ -17,6 +17,7 @@ func SetupConnectionRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		connectionGroup.GET("/:id", connectionHandler.GetConnectionHandler)
 		connectionGroup.POST("/create", connectionHandler.CreateConnectionHandler)
 		connectionGroup.PUT("/:id", connectionHandler.UpdateConnectionHandler)
+		connectionGroup.PUT("/:id/authorize", connectionHandler.AuthorizeConnectionHandler)
 		connectionGroup.PUT("/:id/sync-contact", connectionHandler.SyncContactConnectionHandler)
 		connectionGroup.PUT("/:id/connect", connectionHandler.ConnectDeviceHandler)
 		connectionGroup.PUT("/:id/get-qr/:session", connectionHandler.GetQRDeviceHandler)

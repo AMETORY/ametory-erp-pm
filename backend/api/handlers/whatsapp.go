@@ -1881,6 +1881,7 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 }
 func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
 	messageId := c.Param("messageId")
+	sessionId := c.Query("session_id")
 
 	msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessage(messageId)
 	if err != nil {
@@ -1902,8 +1903,9 @@ func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
 	}
 
 	msgNotif := gin.H{
-		"message": "ok",
-		"command": "UPDATE_SESSION",
+		"message":    "ok",
+		"command":    "UPDATE_SESSION",
+		"session_id": sessionId,
 	}
 	msgNotifStr, _ := json.Marshal(msgNotif)
 	h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
