@@ -354,7 +354,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                               className="cursor-pointer mt-2"
                               // onClick={() => nav("/profile")}
                             />
-                            <div>
+                            <div className="w-3/4">
                               <div className="flex flex-col">
                                 <span className="font-semibold">
                                   {e.contact?.name}
