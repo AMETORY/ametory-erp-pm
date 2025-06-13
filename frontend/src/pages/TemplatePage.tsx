@@ -125,7 +125,26 @@ const TemplatePage: FC<TemplatePageProps> = ({}) => {
                   <span className="font-medium">{template.title}</span>
                 </Table.Cell>
                 <Table.Cell>
-                  <span className="font-medium">{template.description}</span>
+                  <div className="flex flex-row gap-4">
+                    {(template.messages ?? []).length > 0 &&
+                      (template?.messages?.[0]?.files ?? []).filter((file) =>
+                        file.mime_type.includes("image")
+                      ).length > 0 && (
+                        <div className="w-16 h-16 aspect-square border rounded-lg">
+                          <img
+                            src={
+                              template?.messages?.[0]?.files?.find((file) =>
+                                file.mime_type.includes("image")
+                              )?.url
+                            }
+                            alt=""
+                            className="object-cover w-full h-full rounded-lg"
+                          />
+                        </div>
+                      )}
+
+                    <span className="font-medium">{template.description}</span>
+                  </div>
                 </Table.Cell>
 
                 <Table.Cell>
@@ -188,7 +207,11 @@ const TemplatePage: FC<TemplatePageProps> = ({}) => {
             </div>
 
             <div>
-              <Label htmlFor="description" value="Description" className="mb-1" />
+              <Label
+                htmlFor="description"
+                value="Description"
+                className="mb-1"
+              />
               <Textarea
                 rows={7}
                 id="description"

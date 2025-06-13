@@ -15,6 +15,7 @@ export interface UserModel {
   companies?: CompanyModel[];
   profile_picture?: FileModel | null;
   role_id?: string | null;
+  role?: RoleModel | null;
   birth_date?: string | null;
   latitude?: number;
   longitude?: number;

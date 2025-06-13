@@ -1,13 +1,14 @@
-import { useContext, useEffect, useState, type FC } from "react";
+import { act, useContext, useEffect, useState, type FC } from "react";
 import { LoadingContext } from "../contexts/LoadingContext";
 import { MemberInvitationModel, MemberModel } from "../models/member";
 import { PaginationResponse } from "../objects/pagination";
 import {
-    deleteInvitation,
+  deleteInvitation,
   getInvitedMembers,
   getMembers,
   getRoles,
   inviteMember,
+  updateMember,
 } from "../services/api/commonApi";
 import { getPagination, initial } from "../utils/helper";
 import toast from "react-hot-toast";
@@ -17,6 +18,9 @@ import {
   Badge,
   Button,
   Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Pagination,
   Table,
   Tabs,
@@ -24,10 +28,13 @@ import {
 } from "flowbite-react";
 import { useNavigate } from "react-router-dom";
 import { RoleModel } from "../models/role";
+import { MemberContext, ProfileContext } from "../contexts/ProfileContext";
 
 interface MemberPageProps {}
 
 const MemberPage: FC<MemberPageProps> = ({}) => {
+  const { profile } = useContext(ProfileContext);
+  const { member: activeMember } = useContext(MemberContext);
   const [inviteModal, setInviteModal] = useState(false);
   const { loading, setLoading } = useContext(LoadingContext);
   const [members, setMembers] = useState<MemberModel[]>([]);
@@ -184,7 +191,7 @@ const MemberPage: FC<MemberPageProps> = ({}) => {
           <Table.HeadCell>Name</Table.HeadCell>
           <Table.HeadCell>Email</Table.HeadCell>
           <Table.HeadCell>Role</Table.HeadCell>
-          <Table.HeadCell>Status</Table.HeadCell>
+          <Table.HeadCell>Avatar</Table.HeadCell>
           <Table.HeadCell></Table.HeadCell>
         </Table.Head>
 
@@ -232,12 +239,19 @@ const MemberPage: FC<MemberPageProps> = ({}) => {
                 />
               </Table.Cell>
               <Table.Cell>
-                {/* <a
+                {activeMember?.role?.is_super_admin && (
+                  <a
                     href="#"
                     className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMember(member);
+                    }}
                   >
                     Edit
-                  </a> */}
+                  </a>
+                )}
+
                 <a
                   href="#"
                   className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
@@ -389,6 +403,85 @@ const MemberPage: FC<MemberPageProps> = ({}) => {
             Close
           </Button>
         </Modal.Footer>
+      </Modal>
+      <Modal show={member != null} onClose={() => setMember(null)}>
+        <ModalHeader>Update Member</ModalHeader>
+        <ModalBody>
+          <form className="flex flex-col gap-4">
+            <div>
+              <label
+                htmlFor="full_name"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Full Name
+              </label>
+              <div>{member?.user?.full_name}</div>
+            </div>
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Email
+              </label>
+              <div>{member?.user?.email}</div>
+            </div>
+            <div>
+              <label
+                htmlFor="role"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Role
+              </label>
+              <select
+                value={member?.role?.id}
+                id="role"
+                className="block w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                onChange={(e) => {
+                  setMember({
+                    ...member!,
+                    role: {
+                      ...member?.role!,
+                      id: e.target.value,
+                    },
+                    role_id: e.target.value,
+                  });
+                }}
+              >
+                <option value="">Select Role</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        </ModalBody>
+        <ModalFooter className="flex justify-end">
+          <Button
+            type="submit"
+            color="blue"
+            onClick={async () => {
+              try {
+                setLoading(true);
+                await updateMember(member?.id!, member);
+                setMember(null);
+                toast.success("Member updated successfully");
+                getAllMembers();
+              } catch (error) {
+                toast.error(`${error}`);
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            Save
+          </Button>
+          <Button color="gray" onClick={() => setMember(null)}>
+            Close
+          </Button>
+        </ModalFooter>
       </Modal>
     </AdminLayout>
   );

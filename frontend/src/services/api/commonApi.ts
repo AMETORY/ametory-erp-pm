@@ -25,6 +25,22 @@ export const inviteMember = async (req: any) => {
     body: JSON.stringify(req),
   });
 };
+
+export const createCompany = async (req: any) => {
+  return await customFetch(`api/v1/company`, {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+};
+
+
+export const updateMember = async (id: string, req: any) => {
+  return await customFetch(`api/v1/members/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(req),
+  });
+};
+
 export const getInvitedMembers = async (req: PaginationRequest) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", String(req.page));

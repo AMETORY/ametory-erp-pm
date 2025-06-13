@@ -6,6 +6,8 @@ import {
   HR,
   Label,
   Modal,
+  ModalBody,
+  ModalHeader,
   Table,
   Tabs,
   TabsRef,
@@ -15,6 +17,7 @@ import {
 import { BsInfoCircle, BsPlugin } from "react-icons/bs";
 import {
   addRapidAPIPlugins,
+  createCompany,
   deleteCompanyRapidAPIPlugin,
   getCompanyRapidAPIPlugins,
   getRapidAPIPlugins,
@@ -33,11 +36,17 @@ import {
 import Select, { InputActionMeta } from "react-select";
 import { LuLink, LuLink2 } from "react-icons/lu";
 import { Link } from "react-router-dom";
-import { ActiveCompanyContext } from "../contexts/CompanyContext";
+import {
+  ActiveCompanyContext,
+  CompaniesContext,
+} from "../contexts/CompanyContext";
+import { getProfile } from "../services/api/authApi";
 
 interface SettingPageProps {}
 
 const SettingPage: FC<SettingPageProps> = ({}) => {
+  const { companies, setCompanies } = useContext(CompaniesContext);
+
   const { activeCompany, setActiveCompany } = useContext(ActiveCompanyContext);
   const tabsRef = useRef<TabsRef>(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -45,14 +54,17 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
   const [mounted, setMounted] = useState(false);
   const { loading, setLoading } = useContext(LoadingContext);
   const [file, setFile] = useState<FileModel>();
+  const [fileNewCompany, setNewCompanyFile] = useState<FileModel>();
   const [plugins, setPlugins] = useState<RapidApiPluginModel[]>([]);
   const [modalPluginOpen, setModalPluginOpen] = useState(false);
   const [selectedPlugin, setSelectedPlugin] = useState<RapidApiPluginModel>();
+  const [modalCompany, setModalCompany] = useState(false);
   const [companyPlugins, setCompanyPlugins] = useState<
     CompanyRapidApiPluginModel[]
   >([]);
   const [pluginKey, setPluginKey] = useState("");
   const [pluginHost, setPluginHost] = useState("");
+  const [newCompany, setNewCompany] = useState<CompanyModel>();
 
   useEffect(() => {
     setMounted(true);
@@ -95,7 +107,6 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
       setLoading(true);
       const resp: any = await getCompanyRapidAPIPlugins();
       setCompanyPlugins(resp.data);
-      
     } catch (error: any) {
       toast.error(`${error}`);
     } finally {
@@ -200,7 +211,16 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
               placeholder="Enter company phone"
             />
           </div>
-          <div>
+          <div className="flex justify-end items-center gap-2">
+            <Button
+              className="mt-8  bg-green-600"
+              onClick={async () => {
+                setModalCompany(true);
+                setNewCompany({});
+              }}
+            >
+              Create New Company
+            </Button>
             <Button
               type="submit"
               className="mt-8 w-32"
@@ -437,6 +457,114 @@ const SettingPage: FC<SettingPageProps> = ({}) => {
         <Modal.Footer>
           <div className="flex gap-2 justify-end">
             <Button onClick={addPlugin}>Save</Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={modalCompany} onClose={() => setModalCompany(false)}>
+        <ModalHeader>Create Company</ModalHeader>
+        <ModalBody className="space-y-4 flex flex-col">
+          {newCompany?.logo && (
+            <div className="flex justify-center py-4 items-center">
+              <img
+                className="w-64 h-64 aspect-square object-cover rounded-full"
+                src={newCompany?.logo}
+                alt="profile"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Logo</label>
+            <FileInput
+              accept="image/*"
+              id="file-upload"
+              onChange={(el) => {
+                if (el.target.files) {
+                  let f = el.target.files[0];
+                  if (!f) return;
+                  uploadFile(f, {}, (val) => {
+                    console.log(val);
+                  }).then((v: any) => {
+                    setNewCompanyFile(v.data);
+                    setNewCompany({
+                      ...newCompany!,
+                      logo: v.data.url,
+                    });
+                  });
+                }
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Name</label>
+            <TextInput
+              type="text"
+              value={newCompany?.name}
+              name="company_name"
+              onChange={(e) =>
+                setNewCompany({ ...newCompany!, name: e.target.value })
+              }
+              placeholder="Enter company name"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Address</label>
+            <Textarea
+              value={newCompany?.address}
+              name="address"
+              onChange={(e) =>
+                setNewCompany({ ...newCompany!, address: e.target.value })
+              }
+              placeholder="Enter company address"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Email</label>
+            <TextInput
+              type="email"
+              value={newCompany?.email}
+              name="email"
+              onChange={(e) =>
+                setNewCompany({ ...newCompany!, email: e.target.value })
+              }
+              placeholder="Enter company email"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Phone</label>
+            <TextInput
+              type="text"
+              name="phone"
+              value={newCompany?.phone}
+              onChange={(e) =>
+                setNewCompany({ ...newCompany!, phone: e.target.value })
+              }
+              placeholder="Enter company phone"
+            />
+          </div>
+        </ModalBody>
+        <Modal.Footer>
+          <div className="flex gap-2 justify-end">
+            <Button
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  // console.log(newCompany)
+                  const response = await createCompany(newCompany);
+                  setModalCompany(false);
+                  toast.success("Company created successfully");
+                  getProfile().then((res: any) => {
+                    setCompanies(res.user.companies);
+                  });
+                } catch (error) {
+                  toast.error(`${error}`);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Save
+            </Button>
           </div>
         </Modal.Footer>
       </Modal>

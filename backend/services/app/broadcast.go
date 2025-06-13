@@ -413,6 +413,10 @@ func (b *BroadcastService) sendWithRetryHandling(
 				if err == nil {
 					for _, v := range template.Messages {
 						success = true
+						msgData := mdl.WhatsappMessageModel{
+							JID:     sender.Session,
+							Message: parseMsgTemplate(contact, broadcast.Member, v.Body),
+						}
 						b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false)
 						_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
 						if err != nil {

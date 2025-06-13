@@ -85,21 +85,67 @@ func (h *CommonHandler) GetMembersHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"data": members})
 }
 
+func (h *CommonHandler) CreateCompanyHandler(c *gin.Context) {
+	user := c.MustGet("user").(models.UserModel)
+	var input models.CompanyModel
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.companyService.CreateCompany(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err = h.ctx.DB.Model(&user).Association("Companies").Append(&input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var superAdmin *models.RoleModel
+	roles := h.appService.GenerateDefaultRoles(input.ID)
+
+	for _, v := range roles {
+		if v.IsSuperAdmin {
+			user.Roles = append(user.Roles, v)
+			h.ctx.DB.Save(&user)
+			superAdmin = &v
+		}
+	}
+
+	// CREATE MEMBER
+	if superAdmin != nil {
+		member := models.MemberModel{
+			UserID:    user.ID,
+			CompanyID: &input.ID,
+			RoleID:    &superAdmin.ID,
+		}
+		err = h.ctx.DB.Create(&member).Error
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.JSON(200, gin.H{"message": "Company created successfully"})
+}
 func (h *CommonHandler) GetRolesHandler(c *gin.Context) {
 	roles, err := h.rbacService.GetAllRoles(*c.Request, c.Query("search"))
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	items := roles.Items.(*[]models.RoleModel)
-	newItems := make([]models.RoleModel, 0)
-	for _, v := range *items {
-		if !v.IsSuperAdmin {
-			v.Permissions = nil
-			newItems = append(newItems, v)
-		}
-	}
-	roles.Items = &newItems
+	// items := roles.Items.(*[]models.RoleModel)
+	// newItems := make([]models.RoleModel, 0)
+	// for _, v := range *items {
+	// 	if !v.IsSuperAdmin {
+	// 		v.Permissions = nil
+	// 		newItems = append(newItems, v)
+	// 	}
+	// }
+	// roles.Items = &newItems
 	c.JSON(200, gin.H{"data": roles})
 }
 
@@ -120,6 +166,21 @@ func (h *CommonHandler) DeleteInvitedHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Invitation deleted successfully"})
+}
+
+func (h *CommonHandler) UpdateMemberHandler(c *gin.Context) {
+	id := c.Param("id")
+	var member models.MemberModel
+	if err := c.ShouldBindJSON(&member); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.pmService.MemberService.UpdateMember(id, &member)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Member updated successfully"})
 }
 
 func (h *CommonHandler) InviteMemberHandler(c *gin.Context) {
