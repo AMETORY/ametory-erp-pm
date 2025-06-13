@@ -198,7 +198,22 @@ func (h *AuthHandler) ForgotPasswordHandler(c *gin.Context) {
 		return
 	}
 
+	link := ""
 	user.Password = hashedPassword
+
+	if user.VerificationToken != "" {
+		var verificationToken string
+		var verificationTokenExpiredAt *time.Time
+		// Generate verification token
+
+		verificationToken = utils.RandString(32, false)
+		exp := time.Now().AddDate(0, 0, 7)
+		verificationTokenExpiredAt = &exp
+
+		user.VerificationToken = verificationToken
+		user.VerificationTokenExpiredAt = verificationTokenExpiredAt
+		link = fmt.Sprintf("%s/verify/%s", h.appService.Config.Server.FrontendURL, user.VerificationToken)
+	}
 
 	if err := h.ctx.DB.Save(&user).Error; err != nil {
 		c.JSON(500, gin.H{"message": err.Error()})
@@ -209,7 +224,7 @@ func (h *AuthHandler) ForgotPasswordHandler(c *gin.Context) {
 		Email:    user.Email,
 		Subject:  "Permintaan Penggatian PASSWORD",
 		Notif:    "Berikut ini adalah PASSWORD baru Anda",
-		Link:     "",
+		Link:     link,
 		Password: newPassword,
 	}
 

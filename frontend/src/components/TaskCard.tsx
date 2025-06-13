@@ -1,7 +1,7 @@
 import { useEffect, type FC } from "react";
 import { TaskModel } from "../models/task";
 import { Avatar } from "flowbite-react";
-import { colorToStyle, getColor, initial, money } from "../utils/helper";
+import { colorToStyle, getColor, getContrastColor, initial, money } from "../utils/helper";
 import { GoCommentDiscussion } from "react-icons/go";
 import { BsCheck2Circle } from "react-icons/bs";
 import { FormFieldType } from "../models/form";
@@ -96,6 +96,17 @@ const TaskCard: FC<TaskCardProps> = ({ task, isdragged = false, onClick }) => {
           />
         </div>
       </div>
+      {task.tags && (
+        <div>
+          <ul className="text-xs flex flex-row gap-1">
+            {(task.tags??[])
+             
+              .map((e) => (
+                <li key={e.id} className="rounded px-2" style={{ backgroundColor: e.color, color: getContrastColor(e.color)  }}>{e.name}</li>
+              ))}
+          </ul>
+        </div>
+      )}
       {task.task_attribute && (
         <div>
           <ul className="text-xs">

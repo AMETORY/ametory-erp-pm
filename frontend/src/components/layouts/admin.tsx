@@ -91,9 +91,25 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
   const renderSelectCompany = () => {
     return (
       <div className="flex flex-row items-center justify-center h-full   w-full">
-        <div className="bg-white p-4 rounded-md shadow-md">
+        <div className="bg-white p-4 rounded-md shadow-md max-w-[50%]">
           <h2 className="text-lg font-bold">Select Company First</h2>
-          <p>You need to select company first to access this page</p>
+          <small>You need to select company first to access this page</small>
+
+          <ul className="my-4 flex flex-col space-y-2">
+            {profile?.companies?.map((c: any) => (
+              <li
+                key={c.id}
+                className="px-2 hover:bg-gray-100 py-2 cursor-pointer"
+                onClick={() => {
+                  setCompanyID(c.id!);
+                  window.location.href = "/";
+                }}
+              >
+                <h3 className="font-semibold text-lg">{c.name}</h3>
+                <address>{c.address}</address>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     );
