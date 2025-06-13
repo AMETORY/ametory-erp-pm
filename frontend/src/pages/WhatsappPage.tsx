@@ -72,7 +72,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [messages, setMessages] = useState<WhatsappMessageModel[]>([]);
   const [sessions, setSessions] = useState<WhatsappMessageSessionModel[]>([]);
   const [page, setPage] = useState(1);
-  const [size, setsize] = useState(20);
+  const [size, setSize] = useState(20);
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [mounted, setMounted] = useState(false);
   const { sessionId } = useParams();
@@ -156,7 +156,6 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   }, [
     mounted,
     sessionId,
-    page,
     size,
     search,
     selectedTags,
@@ -236,13 +235,13 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     }
   };
 
-  const getAllSessions = async () => {
+  const getAllSessions = async (p?: number) => {
     try {
       // console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
       // console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
       // setLoading(true);
       let params: PaginationRequest = {
-        page,
+        page: p ?? (search == "" ? 1 : page),
         size,
         search,
         tag_ids: selectedTags.map((t) => t.id).join(","),
@@ -257,7 +256,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         params["type"] = sessionTypeSelected;
       }
       const resp: any = await getWhatsappSessions(sessionId ?? "", params);
-      setSessions(resp.data.items);
+      setSessions(p ? [...sessions, ...resp.data.items] : resp.data.items);
       setPagination(getPagination(resp.data));
     } catch (error) {
       toast.error(`${error}`);
@@ -447,6 +446,19 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   </div>
                 </li>
               ))}
+              {!pagination?.last && (
+                <div className="w-full flex justify-center p-4">
+                  <button
+                    className="btn btn-primary hover:bg-gray-200 px-4 py-2 rounded-lg"
+                    onClick={() => {
+                      getAllSessions((pagination?.page ?? 0) + 1);
+                      setPage((pagination?.page ?? 0) + 1);
+                    }}
+                  >
+                    Load More
+                  </button>
+                </div>
+              )}
             </ul>
           </div>
           <div className="w-full border-l relative">
@@ -624,6 +636,22 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                     <span>{option.label}</span>
                   </div>
                 )}
+              />
+            </div>
+            <div>
+              <Label htmlFor="Total List" value="List Contact" />
+              <Select
+                value={{ value: `${size}`, label: `${size}` }}
+                options={[
+                  { value: "20", label: "20" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                  { value: "200", label: "200" },
+                  { value: "500", label: "500" },
+                ]}
+                onChange={(e) => {
+                  setSize(parseInt(e!.value));
+                }}
               />
             </div>
           </div>

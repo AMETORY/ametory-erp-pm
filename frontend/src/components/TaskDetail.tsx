@@ -88,21 +88,33 @@ import {
   markAsRead,
 } from "../services/api/whatsappApi";
 import { priorityOptions, severityOptions } from "../utils/constants";
-import { getColor, initial, invert, money, nl2br } from "../utils/helper";
+import {
+  getColor,
+  getContrastColor,
+  initial,
+  invert,
+  money,
+  nl2br,
+  randomColor,
+} from "../utils/helper";
 import { parseMentions } from "../utils/helper-ui";
-
+import CreatableSelect from "react-select/creatable";
+import { createTag, getTags } from "../services/api/tagApi";
+import { TagModel } from "../models/tag";
 interface TaskDetailProps {
   task: TaskModel;
   project: ProjectModel;
   onSwitchFullscreen: () => void;
   onClose: () => void;
+  onUpdate?: (task: TaskModel) => void;
 }
 
 const TaskDetail: FC<TaskDetailProps> = ({
   task,
   project,
   onSwitchFullscreen,
-  onClose
+  onClose,
+  onUpdate,
 }) => {
   const { activeCompany, setActiveCompany } = useContext(ActiveCompanyContext);
   const [preference, setPreference] = useState<ProjectPreference>();
@@ -146,6 +158,7 @@ const TaskDetail: FC<TaskDetailProps> = ({
   const timeout = useRef<number | null>(null);
   const [content, setContent] = useState("");
   const [openAttachment, setOpenAttachment] = useState(false);
+  const [tags, setTags] = useState<TagModel[]>([]);
   useEffect(() => {
     if (!activeTask?.ref_id) return;
     if (
@@ -172,6 +185,16 @@ const TaskDetail: FC<TaskDetailProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const getAllTags = async () => {
+    try {
+      let resp: any = await getTags({ page: 1, size: 100 });
+      setTags(resp.data.items);
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+    }
+  };
 
   const handleScroll = () => {
     const messageElements = document.querySelectorAll(".message");
@@ -1062,13 +1085,12 @@ const TaskDetail: FC<TaskDetailProps> = ({
                       "Are you sure you want to delete this task? This action is irreversible."
                     )
                   ) {
-                    onClose()
+                    onClose();
                     deleteTask(project!.id!, task.id!)
                       .catch(toast.error)
                       .then(() => {
                         toast.success("Task deleted successfully");
                         setIsEditted(false);
-                        
                       });
                   }
                 }}
@@ -1171,6 +1193,73 @@ const TaskDetail: FC<TaskDetailProps> = ({
                     // console.log(newValue, actionMeta);
                   }}
                 />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-2 py-1 w-28"> Tag</td>
+              <td className="px-2 py-1 w-28">
+                <div>
+                  <CreatableSelect
+                    id="tag"
+                    name="tag"
+                    onCreateOption={(e) => {
+                      console.log(e);
+                      createTag({
+                        name: e,
+                        color: randomColor({ luminosity: "dark" }),
+                      }).then(() => {
+                        getAllTags();
+                      });
+                    }}
+                    onInputChange={(e) => {
+                      getTags({ page: 1, size: 100, search: e }).then(
+                        (response: any) => {
+                          setTags(response.data.items);
+                        }
+                      );
+                    }}
+                    isMulti={true}
+                    options={tags.map((tag) => ({
+                      value: tag.id,
+                      label: tag.name,
+                      color: tag.color,
+                    }))}
+                    value={(activeTask?.tags ?? []).map((tag) => ({
+                      value: tag.id,
+                      label: tag.name,
+                      color: tag.color,
+                    }))}
+                    onChange={(e) => {
+                      setActiveTask({
+                        ...activeTask!,
+                        tags: e.map((tag) => ({
+                          id: tag.value,
+                          name: tag.label,
+                          color: tag.color,
+                        })),
+                      });
+                    }}
+                    formatOptionLabel={(option) => (
+                      <div
+                        className="w-fit px-2 py-1 rounded-lg"
+                        style={{
+                          backgroundColor: option.color,
+                          color: getContrastColor(option.color),
+                        }}
+                      >
+                        <span>{option.label}</span>
+                      </div>
+                    )}
+                    formatGroupLabel={(option) => (
+                      <div
+                        className="w-fit px-2 py-1 rounded-lg"
+                        style={{ backgroundColor: "white" }}
+                      >
+                        <span>{option.label}</span>
+                      </div>
+                    )}
+                  />
+                </div>
               </td>
             </tr>
             <tr>
@@ -1890,33 +1979,70 @@ const TaskDetail: FC<TaskDetailProps> = ({
                 <tr>
                   <td className="px-2 py-1 w-1/3"> Attribute</td>
                   <td className="px-2 py-1">
-                    <Select
-                      className="w-full"
-                      isSearchable={false}
-                      defaultValue={{
-                        label: activeTask?.task_attribute?.title,
-                        value: activeTask?.task_attribute_id,
-                      }}
-                      // value={activeTask?.task_attribute_id}
-                      onChange={(val) => {
-                        setIsEditted(true);
-                        setActiveTask({
-                          ...activeTask,
-                          task_attribute_id: val?.value,
-                        });
-                      }}
-                      options={taskAttributes.map((e) => ({
-                        label: e.title,
-                        value: e.id,
-                      }))}
-                      inputValue={""}
-                      onInputChange={(
-                        newValue: string,
-                        actionMeta: InputActionMeta
-                      ) => {
-                        // console.log(newValue, actionMeta);
-                      }}
-                    />
+                    <div className="flex flex-row gap-2 items-center">
+                      <Select
+                        className="w-full"
+                        isSearchable={false}
+                        defaultValue={{
+                          label: activeTask?.task_attribute?.title,
+                          value: activeTask?.task_attribute_id,
+                        }}
+                        value={{
+                          label: activeTask?.task_attribute?.title,
+                          value: activeTask?.task_attribute?.id,
+                        }}
+                        onChange={(val) => {
+                          setActiveTask({
+                            ...activeTask,
+                            task_attribute: taskAttributes.find(
+                              (e) => e.id === val?.value
+                            ),
+                            task_attribute_id: val?.value,
+                          });
+                          setIsEditted(true);
+                        }}
+                        options={taskAttributes.map((e) => ({
+                          label: e.title,
+                          value: e.id,
+                        }))}
+                        inputValue={""}
+                        onInputChange={(
+                          newValue: string,
+                          actionMeta: InputActionMeta
+                        ) => {
+                          // console.log(newValue, actionMeta);
+                        }}
+                      />
+                      <HiRefresh
+                        size={24}
+                        className="cursor-pointer text-red-400 hover:text-red-600"
+                        onClick={() => {
+                          onUpdate?.({
+                            ...activeTask,
+                            task_attribute: {
+                              ...activeTask?.task_attribute!,
+                              fields: [],
+                            },
+                            task_attribute_id: null,
+                          });
+
+                          setActiveTask({
+                            ...activeTask,
+                            task_attribute: {
+                              ...activeTask?.task_attribute!,
+                              fields: [],
+                            },
+                            task_attribute_id: null,
+                          });
+
+                          updateTask(task!.project_id!, task.id!, {
+                            ...task,
+                            task_attribute: null,
+                            task_attribute_id: null,
+                          });
+                        }}
+                      />
+                    </div>
                   </td>
                 </tr>
                 {(activeTask?.task_attribute?.fields ?? []).map((e) => (

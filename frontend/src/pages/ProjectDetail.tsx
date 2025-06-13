@@ -428,6 +428,9 @@ const ProjectDetail: FC<ProjectDetailProps> = ({}) => {
               project={project}
               onSwitchFullscreen={() => setIsTaskFullScreen((val) => !val)}
               onClose={() => setActiveTask(undefined)}
+              onUpdate={(val) => {
+                setActiveTask(val)
+              }}
             />
           </Drawer.Items>
         </Drawer>

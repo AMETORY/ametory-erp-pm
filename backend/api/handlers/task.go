@@ -359,6 +359,14 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	var taskAttributeID, lastAttributeID string
+	if input.TaskAttributeID != nil {
+		taskAttributeID = *input.TaskAttributeID
+	}
+
+	tags := input.Tags
+
+	fmt.Println("UPDATE ATTRIBUTE #1", taskAttributeID)
 	_, err := h.pmService.ProjectService.GetProjectByID(projectId, nil)
 	if err != nil {
 		c.JSON(404, gin.H{"error": err.Error()})
@@ -369,7 +377,9 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		c.JSON(404, gin.H{"error": err.Error()})
 		return
 	}
-	lastAttributeID := task.TaskAttributeID
+	if task.TaskAttributeID != nil {
+		lastAttributeID = *task.TaskAttributeID
+	}
 	if task.AssigneeID != input.AssigneeID {
 		msg := gin.H{
 			"task_id":      taskId,
@@ -388,6 +398,8 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 
 	}
 
+	fmt.Println("UPDATE ATTRIBUTE #2", taskAttributeID)
+
 	if input.Completed {
 		now := time.Now()
 		input.CompletedDate = &now
@@ -399,23 +411,36 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 		return
 	}
 
-	if input.TaskAttributeID != lastAttributeID && input.TaskAttributeID != nil {
+	fmt.Println("UPDATE ATTRIBUTE #3", taskAttributeID)
+
+	if taskAttributeID != lastAttributeID && taskAttributeID != "" {
+		fmt.Println("UPDATE ATTRIBUTE", taskAttributeID)
 		var taskAttribute models.TaskAttributeModel
-		h.ctx.DB.Find(&taskAttribute, "id = ?", input.TaskAttributeID)
-		input.TaskAttibuteData = taskAttribute.Data
+		h.ctx.DB.Find(&taskAttribute, "id = ?", taskAttributeID)
+		b, _ := json.Marshal(taskAttribute)
+		attrStr := string(b)
+		utils.LogJson(taskAttribute)
+		input.TaskAttibuteData = &attrStr
 		err = h.ctx.DB.Save(&input).Error
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-	}
-
-	// fmt.Println("ATTRIBUTE", *input.TaskAttribute)
-	if input.TaskAttribute != nil {
+	} else if input.TaskAttribute != nil {
+		fmt.Println("NEW ATTRIBUTE")
 		b, _ := json.Marshal(*input.TaskAttribute)
 		attrStr := string(b)
 		input.TaskAttibuteData = &attrStr
 		err = h.ctx.DB.Updates(&input).Error
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	} else if taskAttributeID == "" {
+		fmt.Println("CLEAR ATTRIBUTE")
+		clearAttribute := "{}"
+		input.TaskAttibuteData = &clearAttribute
+		err = h.ctx.DB.Model(&input).Where("id = ?", input.ID).Updates(map[string]interface{}{"task_attibute_data": clearAttribute, "task_attribute_id": nil}).Error
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -445,6 +470,11 @@ func (h *TaskHandler) UpdateTaskHandler(c *gin.Context) {
 	}
 	h.ctx.DB.Find(&watchers, "id in (?)", ids)
 	h.ctx.DB.Model(&task).Association("Watchers").Append(watchers)
+
+	h.ctx.DB.Model(&task).Association("Tags").Clear()
+	if len(tags) > 0 {
+		h.ctx.DB.Model(&task).Association("Tags").Append(tags)
+	}
 	// utils.LogJson(input.Watchers)
 	msg := gin.H{
 		"task_id":    taskId,

@@ -3,6 +3,7 @@ import { FileModel } from "./file";
 import { FormSection } from "./form";
 import { MemberModel } from "./member";
 import { ProjectActivityModel, ProjectModel } from "./project";
+import { TagModel } from "./tag";
 import { TaskAttributeModel } from "./task_attribute";
 
 export interface TaskModel {
@@ -42,6 +43,7 @@ export interface TaskModel {
   }
   ref_id?: string
   ref_type?: string
+  tags?: TagModel[];
 }
 
 export interface TaskCommentModel {
