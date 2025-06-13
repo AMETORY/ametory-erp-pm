@@ -43,7 +43,7 @@ import {
   updateContact,
 } from "../services/api/contactApi";
 import { ContactModel } from "../models/contact";
-import { FaDownload, FaMagnifyingGlass } from "react-icons/fa6";
+import { FaDownload, FaMagnifyingGlass, FaXmark } from "react-icons/fa6";
 import { ConnectionModel } from "../models/connection";
 import { getConnections } from "../services/api/connectionApi";
 import Select, { InputActionMeta } from "react-select";
@@ -141,6 +141,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     useState<ConnectionModel[]>([]);
   const [selectedConnection, setSelectedConnection] =
     useState<ConnectionModel>();
+  const [selectedFilterConnection, setSelectedFilterConnection] =
+    useState<ConnectionModel>();
   const [drawerFilter, setDrawerFilter] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -160,6 +162,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     search,
     selectedTags,
     selectedFilters,
+    selectedFilterConnection,
     sessionTypeSelected,
   ]);
 
@@ -255,6 +258,10 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
       if (sessionTypeSelected != "") {
         params["type"] = sessionTypeSelected;
       }
+      if (selectedFilterConnection) {
+        params["connection_session"] = selectedFilterConnection.session;
+      }
+
       const resp: any = await getWhatsappSessions(sessionId ?? "", params);
       setSessions(p ? [...sessions, ...resp.data.items] : resp.data.items);
       setPagination(getPagination(resp.data));
@@ -589,6 +596,47 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   setSelectedFilters(
                     e.map((e) => e.value).includes("all") ? [] : e.map((e) => e)
                   );
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="connection" value="Connection" />
+              <Select
+                formatOptionLabel={(option) => (
+                  <div className=" flex flex-row justify-between">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {option.label}
+                    </p>
+                    {option.value == "all" ? (
+                      <FaXmark />
+                    ) : (
+                      <small> {option.session}</small>
+                    )}
+                  </div>
+                )}
+                options={[
+                  ...connections.filter(
+                    (e) => e.type === "whatsapp" && e.status === "ACTIVE"
+                  ),
+                  { id: "all", name: "Clear", session: "" },
+                ].map((e) => ({
+                  value: e.id!,
+                  label: e.name!,
+                  session: e.session_name!,
+                }))}
+                value={{
+                  value: selectedFilterConnection?.id!,
+                  label: selectedFilterConnection?.name!,
+                  session: selectedFilterConnection?.session_name!,
+                }}
+                onChange={(e) => {
+                  if (e!.value === "all") {
+                    setSelectedFilterConnection(undefined);
+                  } else {
+                    setSelectedFilterConnection(
+                      connections.find((c) => c.id === e!.value!)
+                    );
+                  }
                 }}
               />
             </div>

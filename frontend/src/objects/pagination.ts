@@ -6,6 +6,7 @@ export interface PaginationRequest {
     type?: string;
     project_id?: string;
     team_id?: string;
+    connection_session?: string;
     order?: string;
     tag_ids?: string
     is_unread?: boolean | null
