@@ -3,12 +3,14 @@ package handlers
 import (
 	"ametory-pm/config"
 	"ametory-pm/models/connection"
+	"ametory-pm/services"
 	"ametory-pm/services/app"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	tiktok "tiktokshop/open/sdk_golang/service"
 
@@ -25,6 +27,7 @@ type ConnectionHandler struct {
 	appService         *app.AppService
 	whatsappWebService *whatsmeow_client.WhatsmeowService
 	tiktokService      *tiktok.TiktokService
+	shopeeService      *services.ShopeeService
 }
 
 func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
@@ -41,11 +44,16 @@ func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
 	if !ok {
 		panic("ThirdPartyServices is not instance of tiktok.TiktokService")
 	}
+	shopeeService, ok := ctx.ThirdPartyServices["Shopee"].(*services.ShopeeService)
+	if !ok {
+		panic("ThirdPartyServices is not instance of services.ShopeeService")
+	}
 	return &ConnectionHandler{
 		ctx:                ctx,
 		appService:         appService,
 		whatsappWebService: whatsappWebService,
 		tiktokService:      tiktokService,
+		shopeeService:      shopeeService,
 	}
 }
 
@@ -109,6 +117,9 @@ func (h *ConnectionHandler) GetConnectionHandler(c *gin.Context) {
 			connection.Connected = respJson.IsConnected
 		}
 	}
+	if connection.Type == "shopee" && connection.Status == "ACTIVE" {
+
+	}
 
 	// if connection.Type == "tiktok" && connection.Status == "ACTIVE" {
 	// 	authData := map[string]interface{}{}
@@ -136,8 +147,18 @@ func (h *ConnectionHandler) CreateConnectionHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	companyID := c.GetHeader("ID-Company")
+
+	ok, err := h.appService.ConnectionService.CheckConnectionBySession(connection.Session, companyID, string(connection.Type))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if ok {
+		c.JSON(http.StatusOK, gin.H{"data": connection, "message": "Connection already exists"})
+		return
+	}
 	connection.APIKey = utils.RandString(32, true)
 	connection.Status = "PENDING"
 	connection.CompanyID = &companyID
@@ -201,6 +222,48 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 		return
 	}
 
+	if requestBody["type"] == "shopee" {
+
+		resp, err := h.shopeeService.GetAuthToken(requestBody["shopee_code"].(string), requestBody["shop_id"].(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		utils.LogJson(resp)
+
+		expAt := time.Now().Add(time.Duration(resp.ExpireIn) * time.Second)
+		conn.Username = requestBody["shop_id"].(string)
+		conn.Password = requestBody["shopee_code"].(string)
+		conn.AccessToken = resp.AccessToken
+		conn.RefreshToken = resp.RefreshToken
+		conn.AccessTokenExpiredAt = &expAt
+		err = h.ctx.DB.Save(&conn).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		info, err := h.shopeeService.GetShopInfo(resp.AccessToken, conn.Username)
+		if err == nil {
+			// fmt.Println("INFO")
+			// utils.LogJson(info)
+			b, err := json.Marshal(info)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			conn.SessionName = info.ShopName
+			jsonInfo := json.RawMessage(b)
+			conn.AuthData = &jsonInfo
+			err = h.ctx.DB.Save(&conn).Error
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully"})
+		return
+	}
 	if requestBody["type"] == "tiktok" {
 		resp, err := h.tiktokService.AuthorizeConnection(id, requestBody["tiktok_code"].(string))
 		if err != nil {
@@ -321,4 +384,13 @@ func (h *ConnectionHandler) DeleteConnectionHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Connection delete successfully"})
+}
+
+func (h *ConnectionHandler) GetShopeeAuthURLHandler(c *gin.Context) {
+	resp, err := h.shopeeService.AuthShop()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Get Shopee Auth URL successfully", "data": resp})
 }

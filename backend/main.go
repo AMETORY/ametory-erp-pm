@@ -157,6 +157,9 @@ func main() {
 	tiktokService := tiktok.NewTiktokService(erpContext, appService, csrService, cfg.Tiktok.AppKey, cfg.Tiktok.AppSecret, cfg.Tiktok.ServiceID)
 	erpContext.AddThirdPartyService("Tiktok", tiktokService)
 
+	shopeeService := services.NewShopeeService(erpContext, cfg.Shopee.APISecret, cfg.Shopee.PartnerID, cfg.Shopee.Host, cfg.Shopee.RedireclURL)
+	erpContext.AddThirdPartyService("Shopee", shopeeService)
+
 	emailSender := thirdparty.NewSMTPSender(cfg.Email.Server, cfg.Email.Port, cfg.Email.Username, cfg.Email.Password, mail.Address{Name: cfg.Email.From, Address: cfg.Email.From})
 	emailSender.SetTemplate("../templates/email/layout.html", "../templates/email/body.html")
 

@@ -14,6 +14,7 @@ func SetupConnectionRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	connectionGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
 		connectionGroup.GET("/list", connectionHandler.GetConnectionsHandler)
+		connectionGroup.GET("/auth-url/shopee", connectionHandler.GetShopeeAuthURLHandler)
 		connectionGroup.GET("/:id", connectionHandler.GetConnectionHandler)
 		connectionGroup.POST("/create", connectionHandler.CreateConnectionHandler)
 		connectionGroup.PUT("/:id", connectionHandler.UpdateConnectionHandler)

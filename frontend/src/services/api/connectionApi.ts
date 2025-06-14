@@ -28,6 +28,11 @@ export const updateConnection = async (id: string, connection: any) => {
         body: JSON.stringify(connection),
     });
 };
+export const getShopeeAuthURL = async () => {
+    return await customFetch(`api/v1/connection/auth-url/shopee`, {
+        method: "GET",
+    });
+};
 export const authorizeConnection = async (id: string, data: any) => {
     console.log(`api/v1/connection/${id}/authorize`)
     return await customFetch(`api/v1/connection/${id}/authorize`, {

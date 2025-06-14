@@ -896,6 +896,9 @@ func (h *WhatsappHandler) ExportHandler(c *gin.Context) {
 
 	for _, msg := range messages {
 		var tags = []string{}
+		if msg.Contact == nil {
+			continue
+		}
 		for _, tag := range msg.Contact.Tags {
 			tags = append(tags, tag.Name)
 		}

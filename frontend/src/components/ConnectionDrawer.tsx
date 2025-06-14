@@ -18,6 +18,7 @@ import {
   connectDevice,
   getConnection,
   getQr,
+  getShopeeAuthURL,
   syncContactConnection,
 } from "../services/api/connectionApi";
 import toast from "react-hot-toast";
@@ -196,6 +197,48 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             </div>
           </>
         )}
+
+      {connection.type == "shopee" && (
+        <>
+          <div className="flex gap-2 flex-row">
+            <Button
+              className="mt-4 bg-yellow-400"
+              onClick={async () => {
+                asyncStorage
+                  .setItem("shopee-connection-id", connection.id)
+                  .then(() => {
+                    getShopeeAuthURL().then((res: any) => {
+                      window.location.href = res.data;
+                    });
+                  });
+              }}
+            >
+              {connection?.status == "ACTIVE" ? "Re-Authorize" : "Authorize"}
+            </Button>
+            {/* <Button
+                className="mt-4"
+                onClick={async () => {
+                  onSave();
+                }}
+              >
+                SAVE
+              </Button> */}
+          </div>
+        </>
+      )}
+
+      {connection.type == "shopee" &&
+        connection?.status == "ACTIVE" &&
+        connection.session_name && (
+          <>
+            <div className="mt-4">
+              <Label className="font-bold">Connected To</Label>
+              <p>{connection?.session_name}</p>
+            </div>
+           
+          </>
+        )}
+
 
       {connection.type == "instagram" && (
         <div className="mt-4">

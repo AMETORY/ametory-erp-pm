@@ -62,6 +62,16 @@ func (c *ConnectionService) GetConnectionBySession(session string) (*connection.
 	return &con, nil
 }
 
+func (c *ConnectionService) CheckConnectionBySession(session, companyId, connType string) (bool, error) {
+	var count int64
+	if err := c.ctx.DB.Model(&connection.ConnectionModel{}).
+		Where("session_name = ? AND company_id = ? AND type = ?", session, companyId, connType).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (c *ConnectionService) CreateConnection(con *connection.ConnectionModel) error {
 	if err := c.ctx.DB.Create(con).Error; err != nil {
 		return err

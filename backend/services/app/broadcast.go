@@ -119,7 +119,7 @@ func (s *BroadcastService) AddConnection(broadcastID string, connections []conne
 
 func (s *BroadcastService) GetBroadcastByID(id string) (*models.BroadcastModel, error) {
 	var broadcast models.BroadcastModel
-	if err := s.ctx.DB.Preload("Products").Preload("Connections").Where("id = ?", id).First(&broadcast).Error; err != nil {
+	if err := s.ctx.DB.Preload("Products").Preload("Connections").Preload("Member.User").Where("id = ?", id).First(&broadcast).Error; err != nil {
 		return nil, err
 	}
 
@@ -741,6 +741,8 @@ func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg str
 	// Replace
 	result := re.ReplaceAllStringFunc(msg, func(s string) string {
 		matches := re.FindStringSubmatch(s)
+
+		fmt.Println("MATCHES", matches)
 		re2 := regexp.MustCompile(`@\[([^\]]+)\]`)
 		if re2.MatchString(s) {
 			return ""
@@ -756,7 +758,7 @@ func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg str
 		if matches[0] == "({{agent}})" && member != nil {
 			return member.User.FullName
 		}
-		if matches[0] == "({{product}})" && member != nil {
+		if matches[0] == "({{product}})" {
 			var customData map[string]string
 			json.Unmarshal([]byte(contact.CustomData), &customData)
 			return customData["product"]

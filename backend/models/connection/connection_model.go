@@ -2,6 +2,7 @@ package connection
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
@@ -28,6 +29,7 @@ type ConnectionModel struct {
 	APIKey                string               `json:"api_key" gorm:"column:api_key;type:varchar(255)"`
 	APISecret             string               `json:"api_secret" gorm:"column:api_secret;type:varchar(255)"`
 	AccessToken           string               `json:"access_token" gorm:"column:access_token;type:varchar(255)"`
+	AccessTokenExpiredAt  *time.Time           `json:"access_token_expired_at" gorm:"column:access_token_expired_at"`
 	RefreshToken          string               `json:"refresh_token" gorm:"column:refresh_token;type:varchar(255)"`
 	Status                string               `json:"status" gorm:"column:status;type:varchar(255)"`
 	GeminiAgentID         *string              `json:"gemini_agent_id" gorm:"column:gemini_agent_id;type:varchar(255)"`

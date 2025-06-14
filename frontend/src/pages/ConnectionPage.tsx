@@ -59,6 +59,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     // { label: "TELEGRAM", value: "telegram" },
     { label: "INSTAGRAM", value: "instagram" },
     // { label: "TIKTOK", value: "tiktok" },
+    { label: "SHOPEE", value: "shopee" },
   ];
 
   useEffect(() => {

@@ -15,6 +15,7 @@ type Config struct {
 	Whatsapp WhatsappConfig `mapstructure:"whatsapp"`
 	Facebook FacebookConfig `mapstructure:"facebook"`
 	Tiktok   TiktokConfig   `mapstructure:"tiktok"`
+	Shopee   ShopeeConfig   `mapstructure:"shopee"`
 }
 
 var App = &Config{}
