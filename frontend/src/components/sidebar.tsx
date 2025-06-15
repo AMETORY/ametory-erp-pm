@@ -170,7 +170,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             )}
           </span>
         </li>
-        {checkPermission("inventory:product:read") && (
+        {/* {checkPermission("inventory:product:read") && (
           <li className=" cursor-pointer" style={{}}>
             <span
               className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
@@ -184,7 +184,7 @@ const Sidebar: FC<SidebarProps> = ({}) => {
               )}
             </span>
           </li>
-        )}
+        )} */}
         <HR />
         <li className="text-xs text-gray-300" style={{}}>
           Omni Channel

@@ -48,24 +48,34 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   const [description, setDescription] = useState("");
   const [sessionName, setSessionName] = useState("");
   const [activeConnection, setActiveConnection] = useState<ConnectionModel>();
-  
+
   const [selectedConnection, setSelectedConnection] = useState<{
     label: string;
     value: string;
   }>({ label: "WHATSAPP", value: "whatsapp" });
   const nav = useNavigate();
-  var connectionType = [
+  const [connectionType, setConnectionType] = useState([
     { label: "WHATSAPP", value: "whatsapp" },
     // { label: "TELEGRAM", value: "telegram" },
     { label: "INSTAGRAM", value: "instagram" },
     // { label: "TIKTOK", value: "tiktok" },
     { label: "SHOPEE", value: "shopee" },
-  ];
+  ]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (process.env.REACT_APP_TELEGRAM_ENABLED) {
+      if (!connectionType.find((c) => c.value === "telegram")) {
+        setConnectionType((prev) => [
+          ...prev,
+          { label: "TELEGRAM", value: "telegram" },
+        ]);
+      }
+    }
+  }, []);
 
   const createNewConnection = async () => {
     try {
@@ -135,7 +145,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
             + Create new Connection
           </Button>
         </div>
-        <Table>
+        <Table striped>
           <Table.Head>
             <Table.HeadCell>Name</Table.HeadCell>
             <Table.HeadCell>Description</Table.HeadCell>
@@ -179,13 +189,19 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
                   </div>
                 </Table.Cell>
                 <Table.Cell>
-                  {connection?.connected ? (
-                    <div className="flex gap-2 items-center">
-                      <BsCheck2Circle className="text-green-500" /> Connected
-                    </div>
-                  ) : (
-                    <div className="flex gap-2 items-center">
-                      <FaCircleXmark className="text-red-500" /> Disconnected
+                  {connection.type == "whatsapp" && (
+                    <div>
+                      {connection?.connected ? (
+                        <div className="flex gap-2 items-center">
+                          <BsCheck2Circle className="text-green-500" />{" "}
+                          Connected
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 items-center">
+                          <FaCircleXmark className="text-red-500" />{" "}
+                          Disconnected
+                        </div>
+                      )}
                     </div>
                   )}
                 </Table.Cell>
@@ -323,13 +339,14 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
               getAllConnections();
               setActiveConnection(undefined);
             }}
-            onAuthorize={async() => {
-                 
-            }}
+            onAuthorize={async () => {}}
             onSave={async () => {
               try {
                 await updateConnection(activeConnection.id!, activeConnection);
-                if (activeConnection.type == "telegram" && activeConnection.status == "PENDING") {
+                if (
+                  activeConnection.type == "telegram" &&
+                  activeConnection.status == "PENDING"
+                ) {
                   await setUpWebhook(activeConnection.id!);
                   await updateConnection(activeConnection.id!, {
                     ...activeConnection,

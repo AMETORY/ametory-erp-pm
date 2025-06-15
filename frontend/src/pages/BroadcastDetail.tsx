@@ -52,6 +52,7 @@ import { getProducts } from "../services/api/productApi";
 import { getContrastColor, money } from "../utils/helper";
 import { parseMentions } from "../utils/helper-ui";
 import { IoDocumentsOutline } from "react-icons/io5";
+import { GoClock } from "react-icons/go";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -83,6 +84,26 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     ContactModel[]
   >([]);
 
+  const [countdown, setCountdown] = useState("");
+
+  const countdownToScheduledAt = (scheduledAt: string) => {
+    const targetDate = new Date(scheduledAt).getTime();
+    const now = new Date().getTime();
+    const distance = targetDate - now;
+
+    if (distance < 0) {
+      return "Scheduled time has passed";
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(
+      (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  };
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -172,6 +193,12 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
         setisEditable(res.data.status === "DRAFT");
         setFiles(res.data.files ?? []);
         setSelectedProducts(res.data.products ?? []);
+        if (res.data.scheduled_at) {
+          const intervalId = setInterval(() => {
+            setCountdown(countdownToScheduledAt(res.data.scheduled_at));
+          }, 1000);
+          return () => clearInterval(intervalId);
+        }
       })
       .catch((error) => {
         toast.error(`${error}`);
@@ -213,8 +240,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                         {parseMentions(msg.body, () => {})}
                       </div>
                       <div className="mb-4">
-                        {(msg.files ??[]).length > 0 && (<h3 className="text-lg font-semibold">Files</h3>)}
-                        {(msg.files ??[]).length > 0 && (
+                        {(msg.files ?? []).length > 0 && (
+                          <h3 className="text-lg font-semibold">Files</h3>
+                        )}
+                        {(msg.files ?? []).length > 0 && (
                           <div className="grid grid-cols-2 gap-2">
                             {msg.files
                               .filter((f: any) => f.mime_type.includes("image"))
@@ -245,8 +274,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                         )}
                       </div>
                       <div className="mb-4">
-                        {(msg.products??[]).length > 0 && (<h3 className="text-lg font-semibold">Product</h3> )}
-                        {(msg.products??[]).length > 0 && (
+                        {(msg.products ?? []).length > 0 && (
+                          <h3 className="text-lg font-semibold">Product</h3>
+                        )}
+                        {(msg.products ?? []).length > 0 && (
                           <div className="flex items-center flex-col  px-8">
                             {(msg.products[0].product_images ?? []).length >
                               0 && (
@@ -573,6 +604,11 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               {broadcast?.status === "DRAFT" && (
                 <Button onClick={() => update()}>Save</Button>
               )}
+              {broadcast?.status === "SCHEDULED" && (
+                <Button color="purple" onClick={() => {
+
+                }}><GoClock className="mr-2" /> {countdown}</Button>
+              )}
             </div>
           </div>
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -583,6 +619,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   color={
                     broadcast?.status === "DRAFT"
                       ? "warning"
+                      : broadcast?.status === "PROCESSING"
+                      ? "blue"
+                      : broadcast?.status === "SCHEDULED"
+                      ? "purple"
                       : broadcast?.status === "FAILED"
                       ? "danger"
                       : "success"

@@ -199,8 +199,8 @@ func (s *BroadcastService) Send(b *models.BroadcastModel) {
 		data, _ := json.Marshal(b)
 		s.appService.Redis.Publish(*s.ctx.Ctx, "BROADCAST:SCHEDULED", data)
 		// s.appService.Redis.Set(*s.ctx.Ctx, key, data, time.Until(*b.ScheduledAt))
-		// b.Status = "SCHEDULED"
-		// s.ctx.DB.Save(b)
+		b.Status = "SCHEDULED"
+		s.ctx.DB.Save(b)
 		// go func() {
 		// 	time.Sleep(time.Until(*b.ScheduledAt))
 		// 	b.Status = "PROCESSING"
@@ -335,6 +335,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 	broadcast, err := b.GetBroadcastByID(broadcastID)
 	if err != nil {
+		fmt.Println("ERROR GET BROADCAST", err)
 		return
 	}
 	time.Sleep(delay)
@@ -361,8 +362,11 @@ func (b *BroadcastService) sendWithRetryHandling(
 		}
 	} else {
 
+		fmt.Println("PREPARE TO SEND BROADCAST", contact.Name)
+
 		// USE REAL API
 		if contact.Phone != nil {
+			fmt.Println("WITH PHONE NUMBER", *contact.Phone)
 			resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
 			if err != nil {
 				log.Println("ERROR CHECK NUMBER", resp)
@@ -381,7 +385,6 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 			if isNotOnWhatsapp {
 				log.Println("NUMBER IS NOT REGISTERED ON WHATSAPP")
-				return
 			}
 			msgData := mdl.WhatsappMessageModel{
 				JID:     sender.Session,

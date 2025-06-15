@@ -15,6 +15,7 @@ import (
 	tiktok "tiktokshop/open/sdk_golang/service"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
@@ -23,11 +24,12 @@ import (
 )
 
 type ConnectionHandler struct {
-	ctx                *context.ERPContext
-	appService         *app.AppService
-	whatsappWebService *whatsmeow_client.WhatsmeowService
-	tiktokService      *tiktok.TiktokService
-	shopeeService      *services.ShopeeService
+	ctx                         *context.ERPContext
+	appService                  *app.AppService
+	whatsappWebService          *whatsmeow_client.WhatsmeowService
+	tiktokService               *tiktok.TiktokService
+	shopeeService               *services.ShopeeService
+	customerRelationshipService *customer_relationship.CustomerRelationshipService
 }
 
 func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
@@ -48,12 +50,18 @@ func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
 	if !ok {
 		panic("ThirdPartyServices is not instance of services.ShopeeService")
 	}
+	var customerRelationshipService *customer_relationship.CustomerRelationshipService
+	customerRelationshipSrv, ok := ctx.CustomerRelationshipService.(*customer_relationship.CustomerRelationshipService)
+	if ok {
+		customerRelationshipService = customerRelationshipSrv
+	}
 	return &ConnectionHandler{
-		ctx:                ctx,
-		appService:         appService,
-		whatsappWebService: whatsappWebService,
-		tiktokService:      tiktokService,
-		shopeeService:      shopeeService,
+		ctx:                         ctx,
+		appService:                  appService,
+		whatsappWebService:          whatsappWebService,
+		tiktokService:               tiktokService,
+		shopeeService:               shopeeService,
+		customerRelationshipService: customerRelationshipService,
 	}
 }
 
@@ -81,6 +89,40 @@ func (h *ConnectionHandler) GetConnectionsHandler(c *gin.Context) {
 	}
 
 	for i, v := range connections {
+		if v.Type == "telegram" {
+			if v.Status == "PENDING" {
+				h.customerRelationshipService.TelegramService.SetToken(&v.SessionName, &v.AccessToken)
+				resp, err := h.customerRelationshipService.TelegramService.GetMe()
+				if err == nil {
+					if resp["ok"].(bool) {
+						v.Status = "ACTIVE"
+						h.appService.ConnectionService.UpdateConnection(v.ID, &v)
+					}
+				}
+			} else {
+
+				if v.AuthData != nil {
+					authData := map[string]any{}
+					if err := json.Unmarshal([]byte(*v.AuthData), &authData); err == nil {
+						_, ok := authData["webhook"].(string)
+						if !ok {
+							h.customerRelationshipService.TelegramService.SetToken(&v.SessionName, &v.AccessToken)
+							info, err := h.customerRelationshipService.TelegramService.GetWebhookInfo()
+							if err == nil {
+								fmt.Println("WEBHOOK INFO", info)
+							}
+							authData["webhook"] = info["result"].(map[string]any)["url"].(string)
+							b, _ := json.Marshal(authData)
+							jsonData := json.RawMessage(b)
+							v.AuthData = &jsonData
+							h.appService.ConnectionService.UpdateConnection(v.ID, &v)
+						}
+					}
+
+				}
+			}
+
+		}
 		if v.Type == "whatsapp" {
 			resp, err := h.whatsappWebService.CheckConnected(v.Session)
 			if err == nil {

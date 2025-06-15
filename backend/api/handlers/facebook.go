@@ -682,8 +682,29 @@ func saveFileContenFromUrl(url string) (string, string, error) {
 		filename = filename + ".jpg"
 	case "image/png":
 		filename = filename + ".png"
+	case "video/mp4":
+		filename = filename + ".mp4"
+	case "video/quicktime":
+		filename = filename + ".mov"
+	case "video/x-msvideo":
+		filename = filename + ".avi"
+	case "video/x-ms-wmv":
+		filename = filename + ".wmv"
+	case "video/3gpp":
+		filename = filename + ".3gp"
+	case "audio/mpeg":
+		filename = filename + ".mp3"
+	case "audio/ogg":
+		filename = filename + ".ogg"
+	case "audio/wav":
+		filename = filename + ".wav"
+	case "audio/flac":
+		filename = filename + ".flac"
+
+	default:
+		filename = filename + ".jpg"
 	}
-	path := filepath.Join("assets/static", filename)
+	path := filepath.Join("assets/files", filename)
 	os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	if err := os.WriteFile(path, byteValue, 0644); err != nil {
 		log.Println(err)

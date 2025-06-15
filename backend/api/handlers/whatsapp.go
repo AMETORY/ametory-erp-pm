@@ -109,13 +109,19 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 		}
 
 		if matches[0] == "({{user}})" {
-			return contact.Name
+			return "*" + contact.Name + "*"
 		}
 		if matches[0] == "({{phone}})" {
-			return *contact.Phone
+			return "*" + *contact.Phone + "*"
 		}
 		if matches[0] == "({{agent}})" && member != nil {
-			return member.User.FullName
+			return "*" + member.User.FullName + "*"
+		}
+
+		if matches[0] == "({{product}})" {
+			var customData map[string]string
+			json.Unmarshal([]byte(contact.CustomData), &customData)
+			return "*" + customData["product"] + "*"
 		}
 		return s // Kalau tidak ada datanya, biarkan
 	})
@@ -132,6 +138,10 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if input.Message == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Message is required"})
 		return
 	}
 	sessionId := c.Params.ByName("session_id")

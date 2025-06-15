@@ -19,6 +19,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
@@ -171,8 +172,10 @@ func (h *TelegramHandler) SetUpWebHookHandler(c *gin.Context) {
 
 func (h *TelegramHandler) SendMessage(c *gin.Context) {
 	input := struct {
-		Message string             `json:"message"`
-		Files   []models.FileModel `json:"files"`
+		Message     string             `json:"message"`
+		FileURL     string             `json:"file_url"`
+		FileCaption string             `json:"file_caption"`
+		Files       []models.FileModel `json:"files"`
 	}{}
 	if err := c.ShouldBindBodyWithJSON(&input); err != nil {
 		log.Println(err)
@@ -207,19 +210,13 @@ func (h *TelegramHandler) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	telegramMsg := telegram.TelegramMsg{
-		ChatID:  int64(chatID),
-		Message: input.Message,
-	}
-	err = h.customerRelationshipService.TelegramService.SendTelegramMessage(&telegramMsg)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	mimeType := ""
+	if input.FileURL != "" {
+		mimeType = utils.GetMimeType(input.FileURL)
 	}
 	userID := c.MustGet("userID").(string)
 	memberID := c.MustGet("memberID").(string)
+
 	dataReply := models.TelegramMessage{
 		ContactID:                session.ContactID,
 		Message:                  input.Message,
@@ -229,8 +226,25 @@ func (h *TelegramHandler) SendMessage(c *gin.Context) {
 		TelegramMessageSessionID: &session.ID,
 		UserID:                   &userID,
 		MemberID:                 &memberID,
+		MediaURL:                 input.FileURL,
+		MimeType:                 mimeType,
 	}
-	err = h.customerRelationshipService.TelegramService.SaveMessage(&dataReply)
+	if input.FileCaption != "" {
+		dataReply.Message = input.FileCaption
+	}
+
+	telegramMsg := telegram.TelegramMsg{
+		ChatID:      int64(chatID),
+		Message:     input.Message,
+		FileURL:     input.FileURL,
+		FileCaption: input.FileCaption,
+		MimeType:    mimeType,
+		Data:        &dataReply,
+		Save:        true,
+	}
+
+	h.customerRelationshipService.TelegramService.SetInput(&telegramMsg)
+	_, err = customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.TelegramService)
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -272,7 +286,7 @@ func (h *TelegramHandler) WebhookHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// log.Printf("Telegram request body: %s", string(reqBody))
+	fmt.Printf("Telegram request body: %s", string(reqBody))
 
 	tgResponse := models.TGResponse{}
 	if err := json.Unmarshal(reqBody, &tgResponse); err != nil {
@@ -330,6 +344,61 @@ func (h *TelegramHandler) WebhookHandler(c *gin.Context) {
 		Session:                  session.Session,
 		TelegramMessageSessionID: &session.ID,
 	}
+	if len(tgResponse.Message.Photos) > 0 {
+		photo := tgResponse.Message.Photos[len(tgResponse.Message.Photos)-1]
+		telegramData.Message = tgResponse.Message.Caption
+
+		h.customerRelationshipService.TelegramService.SetToken(&connection.SessionName, &connection.AccessToken)
+		resp, err := h.customerRelationshipService.TelegramService.GetFile(photo.FileID)
+		if err == nil {
+
+			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
+			path, mimeType, err := saveFileContenFromUrl(fileUrl)
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			telegramData.MediaURL = fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
+			telegramData.MimeType = mimeType
+		}
+
+	}
+
+	if tgResponse.Message.Video != nil {
+		telegramData.Message = tgResponse.Message.Caption
+		resp, err := h.customerRelationshipService.TelegramService.GetFile(tgResponse.Message.Video.FileID)
+		if err == nil {
+			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
+			path, mimeType, err := saveFileContenFromUrl(fileUrl)
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			telegramData.MediaURL = fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
+			telegramData.MimeType = mimeType
+		}
+	}
+	if tgResponse.Message.Voice != nil {
+		telegramData.Message = tgResponse.Message.Caption
+		resp, err := h.customerRelationshipService.TelegramService.GetFile(tgResponse.Message.Voice.FileID)
+		if err == nil {
+			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
+			path, mimeType, err := saveFileContenFromUrl(fileUrl)
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			telegramData.MediaURL = fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
+			telegramData.MimeType = mimeType
+		}
+	}
+
 	err = h.customerRelationshipService.TelegramService.SaveMessage(&telegramData)
 	if err != nil {
 		log.Println(err)

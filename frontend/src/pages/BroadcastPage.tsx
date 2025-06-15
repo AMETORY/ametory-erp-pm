@@ -34,6 +34,7 @@ import { ProductModel } from "../models/product";
 import { FileModel } from "../models/file";
 import { uploadFile } from "../services/api/commonApi";
 import MessageMention from "../components/MessageMention";
+import { TbTemplate } from "react-icons/tb";
 
 interface BroadcastPageProps {}
 const neverMatchingRegex = /($a)/;
@@ -61,6 +62,9 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+
+
 
   useEffect(() => {
     if (mounted) {
@@ -136,11 +140,12 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
           </Button>
         </div>
         <div className="h-[calc(100vh-240px)] overflow-y-auto">
-          <Table>
+          <Table striped>
             <Table.Head>
               <Table.HeadCell>ID</Table.HeadCell>
               <Table.HeadCell>Description</Table.HeadCell>
               <Table.HeadCell>Message</Table.HeadCell>
+              <Table.HeadCell>Status</Table.HeadCell>
               <Table.HeadCell>Actions</Table.HeadCell>
             </Table.Head>
             <Table.Body>
@@ -156,7 +161,34 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                   <Table.Cell>{index + 1}</Table.Cell>
                   <Table.Cell>{broadcast.description}</Table.Cell>
                   <Table.Cell>
-                    {parseMentions(broadcast.message, () => {})}
+                    {broadcast?.template_id ? (
+                      <div className="flex flex-row gap-2">
+                        {" "}
+                        <TbTemplate />
+                        {broadcast?.template?.description}
+                      </div>
+                    ) : (
+                      parseMentions(broadcast.message, () => {})
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="w-fit">
+                      <Badge
+                        color={
+                          broadcast?.status === "DRAFT"
+                            ? "warning"
+                            : broadcast?.status === "PROCESSING"
+                            ? "blue"
+                            : broadcast?.status === "SCHEDULED"
+                            ? "purple"
+                            : broadcast?.status === "FAILED"
+                            ? "danger"
+                            : "success"
+                        }
+                      >
+                        {broadcast?.status}
+                      </Badge>
+                    </div>
                   </Table.Cell>
                   <Table.Cell className="flex items-center justify-center gap-2">
                     <a
@@ -223,7 +255,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
               {!useTemplate && (
                 <div className="mb-2 block position">
                   <Label htmlFor="message" value="Message" />
-                 <MessageMention
+                  <MessageMention
                     msg={message}
                     onChange={(val: any) => {
                       setMessage(val.target.value);
@@ -235,7 +267,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                       setMessage(message + emoji);
                     }}
                   />
-                  
+
                   {/* <div className="absolute bottom-2 right-2 z-50">
                     <Dropdown
                       label={<BsPlusCircle />}

@@ -13,9 +13,16 @@ import {
   getTelegramMessages,
   getTelegramSessionDetail,
 } from "../services/api/telegramApi";
-import { Button, Modal, Popover } from "flowbite-react";
+import {
+  Button,
+  Label,
+  Modal,
+  Popover,
+  Textarea,
+  TextInput,
+} from "flowbite-react";
 import Markdown from "react-markdown";
-import { IoCheckmarkDone } from "react-icons/io5";
+import { IoAttachOutline, IoCheckmarkDone } from "react-icons/io5";
 import Moment from "react-moment";
 import remarkGfm from "remark-gfm";
 import { Mention, MentionsInput } from "react-mentions";
@@ -50,6 +57,9 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
   const [modalEmojis, setModalEmojis] = useState(false);
   const [templates, setTemplates] = useState<TemplateModel[]>([]);
   const [modalTemplates, setModalTemplates] = useState(false);
+  const [modalAttach, setModalAttach] = useState(false);
+  const [url, setUrl] = useState("");
+  const [caption, setCaption] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -104,9 +114,14 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
       await createTelegramMessage(sessionId!, {
         message: content,
         files: files,
+        file_url: url,
+        file_caption: caption,
       });
       setOpenAttachment(false);
       setFiles([]);
+      setUrl("");
+      setCaption("");
+      setModalAttach(false);
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -205,7 +220,6 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
       },
     },
   };
-
 
   const groupBy = (emojis: any[], category: string): { [s: string]: any[] } => {
     return emojis.reduce((acc, curr) => {
@@ -392,6 +406,7 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
           {files.length} Attachments
         </div>
       )}
+
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
         <div className="relative w-full">
           <MentionsInput
@@ -460,15 +475,55 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
         <Button
           color="gray"
           onClick={() => {
-            setModalTemplates(true);
+            // setModalTemplates(true);
+            setModalAttach(true);
           }}
         >
-          <TbTemplate />
+          <IoAttachOutline />
         </Button>
         <Button color="gray" onClick={sendMessage}>
           <BsSend />
         </Button>
       </div>
+      <Modal
+        dismissible
+        show={modalAttach}
+        onClose={() => setModalAttach(false)}
+      >
+        <Modal.Header>Attachments</Modal.Header>
+        <Modal.Body className="space-y-4">
+          {/* <FileUpload
+            onFileUpload={(file: any) => {
+              setFiles((prev) => [...prev, file]);
+            }}
+          /> */}
+          <div>
+            <Label value="URL" className="cursor-pointer" />
+            <TextInput
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+          <div>
+            <Label value="Caption" className="cursor-pointer" />
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Add a caption"
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="flex flex-row justify-end w-full">
+            <Button onClick={() => {
+              sendMessage();
+              setModalAttach(false);
+            }}>Send</Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
       <Modal
         dismissible
         show={modalEmojis}

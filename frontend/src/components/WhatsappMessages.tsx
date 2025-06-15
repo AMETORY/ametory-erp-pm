@@ -396,6 +396,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
   const sendMessage = async () => {
     try {
+      if (content === "") return;
       if (!content) return;
       setContent("");
       setOpenAttachment(false);
@@ -678,6 +679,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 { id: "{{user}}", display: "Full Name" },
                 { id: "{{phone}}", display: "Phone Number" },
                 { id: "{{agent}}", display: "Agent Name" },
+                { id: "{{product}}", display: "Product" },
               ]}
               style={{
                 backgroundColor: "#cee4e5",

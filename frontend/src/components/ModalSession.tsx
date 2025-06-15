@@ -29,6 +29,12 @@ const ModalSession: FC<ModalSessionProps> = ({
   const [tags, setTags] = useState<TagModel[]>([]);
   const [selectedContact, setSelectedContact] = useState<ContactModel>();
 
+    const contactAttributes = [
+    {
+      value: "",
+      key: "product",
+    },
+  ];
   useEffect(() => {
     if (!session) return;
     getConnections({ page: 1, size: 50 }).then((resp: any) => {
@@ -146,6 +152,25 @@ const ModalSession: FC<ModalSessionProps> = ({
               )}
             />
           </div>
+          {contactAttributes.map((attr) => (
+                          <div>
+                            <Label htmlFor="" value={attr.key} />
+                            <TextInput
+                              type="text"
+                              placeholder={attr.key}
+                              value={selectedContact?.custom_data[attr.key] ?? attr.value}
+                              onChange={(e) => {
+                                setSelectedContact({
+                                  ...selectedContact!,
+                                  custom_data: {
+                                    ...selectedContact!.custom_data,
+                                    [attr.key]: e.target.value,
+                                  },
+                                });
+                              }}
+                            />
+                          </div>
+                        ))}
         </div>
       </Modal.Body>
       <Modal.Footer>

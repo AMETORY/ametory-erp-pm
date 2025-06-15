@@ -59,6 +59,13 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
   const [tags, setTags] = useState<TagModel[]>([]);
   const [selectedTags, setSelectedTags] = useState<TagModel[]>([]);
 
+  const contactAttributes = [
+    {
+      value: "",
+      key: "product",
+    },
+  ];
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -260,7 +267,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                 <Table.Cell>{contact.address}</Table.Cell>
                 <Table.Cell>
                   <div className="flex flex-wrap gap-2">
-                    {(contact.products ?? []).map((product) => (
+                    {/* {(contact.products ?? []).map((product) => (
                       <div
                         className="px-2 mb-2 text-[10pt] flex items-center  text-gray-900 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-100 w-fit gap-1"
                         key={product.id}
@@ -268,7 +275,8 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                         <BsTag />
                         <span>{product?.display_name}</span>
                       </div>
-                    ))}
+                    ))} */}
+                    {contact.custom_data["product"]??""}
                   </div>
                 </Table.Cell>
                 <Table.Cell>
@@ -459,7 +467,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   )}
                 />
               </div>
-              <div>
+              {/* <div>
                 <Label htmlFor="product" value="Products" />
                 <Select
                   id="product"
@@ -483,7 +491,26 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                     });
                   }}
                 />
-              </div>
+              </div> */}
+              {contactAttributes.map((attr) => (
+                <div>
+                  <Label htmlFor="" value={attr.key} />
+                  <TextInput
+                    type="text"
+                    placeholder={attr.key}
+                    value={selectedContact?.custom_data[attr.key] ?? attr.value}
+                    onChange={(e) => {
+                      setSelectedContact({
+                        ...selectedContact!,
+                        custom_data: {
+                          ...selectedContact!.custom_data,
+                          [attr.key]: e.target.value,
+                        },
+                      });
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           </Modal.Body>
           <Modal.Footer>
