@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -87,7 +88,27 @@ func (h *TelegramHandler) GetSessionsHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	telegramSessions := sessions.Items.(*[]models.TelegramMessageSession)
+	newTelegramSessions := []models.TelegramMessageSession{}
+	for _, v := range *telegramSessions {
+		if v.Session != "" {
+			var conn connection.ConnectionModel
+			err = h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "id = ?", v.Session).Error
+			if err == nil {
+				v.Ref = &conn
+				v.RefID = &conn.ID
+			}
+		}
 
+		profile, err := v.Contact.GetProfilePicture(h.erpContext.DB)
+		if err == nil {
+			v.Contact.ProfilePicture = profile
+
+		}
+
+		newTelegramSessions = append(newTelegramSessions, v)
+	}
+	sessions.Items = newTelegramSessions
 	c.JSON(200, gin.H{"data": sessions})
 }
 
@@ -139,7 +160,83 @@ func (h *TelegramHandler) GetSessionDetailHandler(c *gin.Context) {
 		return
 	}
 
+	session.Contact.ProfilePicture, _ = session.Contact.GetProfilePicture(h.erpContext.DB)
+
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session, "connection": connection})
+}
+
+func (h *TelegramHandler) TelegramClearSessionHandler(c *gin.Context) {
+	sessionId := c.Param("session_id")
+	if sessionId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+		return
+	}
+
+	var session models.TelegramMessageSession
+	err := h.erpContext.DB.First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.erpContext.DB.Unscoped().Where("session = ?", session.Session).Delete(&models.TelegramMessage{}).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	session.LastMessage = ""
+	session.LastOnlineAt = nil
+
+	if err := h.erpContext.DB.Save(&session).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	msg := gin.H{
+		"command":    "TELEGRAM_CLEAR_MESSAGE",
+		"session_id": sessionId,
+	}
+	b, _ := json.Marshal(msg)
+	h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+	})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Session cleared successfully"})
+}
+
+func (h *TelegramHandler) TelegramDeleteSessionHandler(c *gin.Context) {
+	sessionId := c.Param("session_id")
+	if sessionId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+		return
+	}
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	var session models.TelegramMessageSession
+	err := h.erpContext.DB.First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.erpContext.DB.Unscoped().Where("session = ?", session.Session).Delete(&models.TelegramMessage{}).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.erpContext.DB.Unscoped().Delete(&models.TelegramMessageSession{}, "id = ?", sessionId).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Session deleted successfully"})
 }
 
 func (h *TelegramHandler) SetUpWebHookHandler(c *gin.Context) {
@@ -403,6 +500,31 @@ func (h *TelegramHandler) WebhookHandler(c *gin.Context) {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// GET PROFILE PICTURE
+	profilePic, _ := contact.GetProfilePicture(h.erpContext.DB)
+	if profilePic == nil {
+		resp, err := h.customerRelationshipService.TelegramService.GetUserProfilePhotos(tgResponse.Message.Chat.ID)
+		if err == nil {
+			utils.LogJson(resp)
+			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
+			path, mimeType, err := saveFileContenFromUrl(fileUrl)
+			if err == nil {
+				fileName := filepath.Base(path)
+				mediaURL := fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
+				h.erpContext.DB.Create(&models.FileModel{
+					FileName: fileName,
+					Path:     path,
+					URL:      mediaURL,
+					MimeType: mimeType,
+					RefID:    contact.ID,
+					RefType:  "contact",
+				})
+			}
+
+		}
+
 	}
 
 	telegramData.Contact = &contact

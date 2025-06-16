@@ -38,8 +38,9 @@ import { ProductModel } from "../models/product";
 import { getProducts } from "../services/api/productApi";
 import { PiFileXls } from "react-icons/pi";
 import { uploadFile } from "../services/api/commonApi";
-import { BsFilter, BsTag } from "react-icons/bs";
+import { BsFilter, BsTag, BsTelegram, BsWhatsapp } from "react-icons/bs";
 import { LuFilter } from "react-icons/lu";
+import { ConnectionModel } from "../models/connection";
 
 interface ContactPageProps {}
 
@@ -149,6 +150,16 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
     }
   };
 
+  const renderIcon = (contact : ContactModel) => {
+    if (contact.connection_type === "email") {
+      return <BsTag />;
+    }
+    if (contact.connection_type === "telegram") {
+      return <BsTelegram />;
+    }
+    return <BsWhatsapp />
+  }
+
   const handleCreateContact = async () => {
     try {
       if (!selectedContact) return;
@@ -241,7 +252,11 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                         // onClick={() => nav("/profile")}
                       />
                       <div>
+                        <div className="flex flex-row gap-2 justify-between  items-center w-full"> 
                         {contact.name}
+                        {renderIcon(contact)}
+
+                        </div>
                         {(contact.tags ?? []).length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {contact.tags?.map((tag) => (

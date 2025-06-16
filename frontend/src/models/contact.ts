@@ -15,6 +15,7 @@ export interface ContactModel {
   avatar?: FileModel;
   avatar_id?: string;
   contact_person?: string;
+  connection_type?: string;
   contact_person_position?: string;
   is_customer: boolean;
   is_vendor: boolean;

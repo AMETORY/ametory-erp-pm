@@ -71,8 +71,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const { profile, setProfile } = useContext(ProfileContext);
   const [messages, setMessages] = useState<WhatsappMessageModel[]>([]);
   const [sessions, setSessions] = useState<WhatsappMessageSessionModel[]>([]);
-  const [page, setPage] = useState(1);
-  const [size, setSize] = useState(20);
+    const [page, setPage] = useState(1);
+    const [size, setSize] = useState(20);
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [mounted, setMounted] = useState(false);
   const { sessionId } = useParams();
@@ -441,6 +441,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                           <Dropdown.Item
                             className="flex gap-2"
                             onClick={() => {
+                              console.log(e)
                               setSelectedSession(e);
                               setModalInfo(true);
                             }}
@@ -706,6 +707,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         </Drawer.Items>
       </Drawer>
       <ModalSession
+        type="whatsapp"
         show={modalInfo}
         onClose={() => setModalInfo(false)}
         onSave={async (val) => {

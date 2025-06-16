@@ -125,16 +125,17 @@ func ImportContact(erpContext *context.ERPContext) {
 						}
 					}
 				}
-
+				connectionType := "whatsapp"
 				newContact := models.ContactModel{
-					Name:       rows[i][0],
-					Email:      rows[i][1],
-					Phone:      phone,
-					UserID:     &userID,
-					CompanyID:  &companyID,
-					Tags:       tags,
-					Products:   products,
-					IsCustomer: true,
+					Name:           rows[i][0],
+					Email:          rows[i][1],
+					Phone:          phone,
+					UserID:         &userID,
+					CompanyID:      &companyID,
+					Tags:           tags,
+					Products:       products,
+					ConnectionType: &connectionType,
+					IsCustomer:     true,
 				}
 
 				err := erpContext.ContactService.(*contact.ContactService).CreateContact(&newContact)

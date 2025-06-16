@@ -14,6 +14,7 @@ import {
   getTelegramSessionDetail,
 } from "../services/api/telegramApi";
 import {
+  Avatar,
   Button,
   FileInput,
   Label,
@@ -32,6 +33,7 @@ import { BsChevronDown, BsSend } from "react-icons/bs";
 import toast from "react-hot-toast";
 import { ScrollContext } from "../contexts/ScrollContext";
 import { uploadFile } from "../services/api/commonApi";
+import { initial } from "../utils/helper";
 interface TelegramMessagesProps {
   sessionId: string;
 }
@@ -217,7 +219,7 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
     }
     if (
       wsMsg?.session_id == sessionId &&
-      wsMsg?.command == "WHATSAPP_CLEAR_MESSAGE"
+      wsMsg?.command == "TELEGRAM_CLEAR_MESSAGE"
     ) {
       // console.log(wsMsg.message_ids);
       setMessages([]);
@@ -451,14 +453,19 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
     <div className="flex flex-col h-full ">
       <div className="shoutbox border-b py-2 min-h-[40px] flex justify-between items-center">
         <div className="flex gap-2 items-center px-4">
-          {session?.contact?.avatar && (
-            <img
-              src={session?.contact?.avatar.url}
-              className=" aspect-square rounded-full object-cover w-8 h-8"
-            />
-          )}
+          <Avatar
+            size="md"
+            img={session?.contact?.profile_picture?.url}
+            rounded
+            stacked
+            placeholderInitials={initial(session?.contact?.name)}
+            className="cursor-pointer mt-2"
+            // onClick={() => nav("/profile")}
+          />
           <div className="flex flex-col">
-            <span className="font-semibold">{session?.contact?.name}</span>
+            <span className="font-semibold">
+              {session?.contact?.name}
+            </span>
             <div className="flex justify-between">
               <Moment className="text-xs" fromNow>
                 {session?.last_online_at}

@@ -15,8 +15,10 @@ import { updateContact } from "../services/api/contactApi";
 interface ModalSessionProps {
   show: boolean;
   onClose: () => void;
-  onSave: (val: WhatsappMessageSessionModel) => void;
-  session?: WhatsappMessageSessionModel;
+  onSave: (val: any) => void;
+  session?: any;
+  type?: string;
+  connection?: ConnectionModel;
 }
 
 const ModalSession: FC<ModalSessionProps> = ({
@@ -24,12 +26,13 @@ const ModalSession: FC<ModalSessionProps> = ({
   onClose,
   session,
   onSave,
+  type,
 }) => {
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
   const [tags, setTags] = useState<TagModel[]>([]);
   const [selectedContact, setSelectedContact] = useState<ContactModel>();
 
-    const contactAttributes = [
+  const contactAttributes = [
     {
       value: "",
       key: "product",
@@ -76,7 +79,7 @@ const ModalSession: FC<ModalSessionProps> = ({
           <div>
             <Label htmlFor="name" value="Connection" />
             <Select
-              options={connections.map((c) => ({
+              options={connections.filter((c) => c.type === type).map((c) => ({
                 value: c.id,
                 label: c.name,
               }))}
@@ -153,24 +156,24 @@ const ModalSession: FC<ModalSessionProps> = ({
             />
           </div>
           {contactAttributes.map((attr) => (
-                          <div>
-                            <Label htmlFor="" value={attr.key} />
-                            <TextInput
-                              type="text"
-                              placeholder={attr.key}
-                              value={selectedContact?.custom_data[attr.key] ?? attr.value}
-                              onChange={(e) => {
-                                setSelectedContact({
-                                  ...selectedContact!,
-                                  custom_data: {
-                                    ...selectedContact!.custom_data,
-                                    [attr.key]: e.target.value,
-                                  },
-                                });
-                              }}
-                            />
-                          </div>
-                        ))}
+            <div>
+              <Label htmlFor="" value={attr.key} />
+              <TextInput
+                type="text"
+                placeholder={attr.key}
+                value={selectedContact?.custom_data[attr.key] ?? attr.value}
+                onChange={(e) => {
+                  setSelectedContact({
+                    ...selectedContact!,
+                    custom_data: {
+                      ...selectedContact!.custom_data,
+                      [attr.key]: e.target.value,
+                    },
+                  });
+                }}
+              />
+            </div>
+          ))}
         </div>
       </Modal.Body>
       <Modal.Footer>
