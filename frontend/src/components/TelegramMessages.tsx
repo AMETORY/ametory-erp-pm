@@ -15,6 +15,7 @@ import {
 } from "../services/api/telegramApi";
 import {
   Button,
+  FileInput,
   Label,
   Modal,
   Popover,
@@ -27,8 +28,10 @@ import Moment from "react-moment";
 import remarkGfm from "remark-gfm";
 import { Mention, MentionsInput } from "react-mentions";
 import { TbTemplate } from "react-icons/tb";
-import { BsSend } from "react-icons/bs";
+import { BsChevronDown, BsSend } from "react-icons/bs";
 import toast from "react-hot-toast";
+import { ScrollContext } from "../contexts/ScrollContext";
+import { uploadFile } from "../services/api/commonApi";
 interface TelegramMessagesProps {
   sessionId: string;
 }
@@ -60,6 +63,8 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
   const [modalAttach, setModalAttach] = useState(false);
   const [url, setUrl] = useState("");
   const [caption, setCaption] = useState("");
+  const [showScrollBottom, setShowScrollButton] = useState(false);
+  const { scrollPositions, setScrollPositions } = useContext(ScrollContext);
 
   useEffect(() => {
     setMounted(true);
@@ -74,6 +79,44 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
         setEmojis(jsonData.emojis);
       });
   }, []);
+
+  const markAllAsRead = () => {};
+
+  useEffect(() => {
+    const container = chatContainerRef.current;
+
+    if (container && container.scrollHeight <= container.clientHeight) {
+      markAllAsRead();
+    }
+
+    const handleScrollPosition = () => {
+      if (sessionId) {
+        setScrollPositions({
+          ...scrollPositions,
+          [sessionId]: container?.scrollTop ?? 0,
+        });
+        // const scrollHeight = chatContainerRef.current?.scrollHeight ?? 0;
+        // setScrollHeight(scrollHeight);
+      }
+    };
+
+    container?.addEventListener("scroll", handleScrollPosition);
+
+    // Cleanup on unmount
+    return () => {
+      container?.removeEventListener("scroll", handleScrollPosition);
+    };
+  }, [messages, sessionId]); // atau [chatList], tergantung state kamu
+  useEffect(() => {
+    setShowScrollButton(
+      (chatContainerRef.current?.scrollHeight ?? 0) -
+        (chatContainerRef.current?.scrollTop ?? 0) -
+        (chatContainerRef.current?.clientHeight ?? 0) >
+        50
+    );
+
+    return () => {};
+  }, [scrollPositions]);
 
   useEffect(() => {
     if (mounted) {
@@ -109,8 +152,8 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
 
   const sendMessage = async () => {
     try {
-      if (!content) return;
       setContent("");
+      if (!content) return;
       await createTelegramMessage(sessionId!, {
         message: content,
         files: files,
@@ -288,6 +331,69 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
     });
   };
 
+  const renderAttachment = (msg: any) => {
+    if (msg.media_url) {
+      if (msg.mime_type?.includes("image")) {
+        return (
+          <Popover
+            placement="bottom"
+            content={
+              <div className="bg-white p-4 rounded-md w-[600px]">
+                <img
+                  src={msg.media_url}
+                  alt=""
+                  className="w-full h-full object-cover rounded-md"
+                />
+              </div>
+            }
+          >
+            <img
+              src={msg.media_url}
+              alt=""
+              className={` rounded-md mb-2 ${
+                msg.is_from_me ? "ml-auto" : "mr-auto"
+              } w-[300px] h-[300px] object-cover`}
+            />
+          </Popover>
+        );
+      } else if (msg.mime_type?.includes("audio")) {
+        return (
+          <audio
+            controls
+            src={msg.media_url}
+            className={`rounded-md mb-2 ${
+              msg.is_from_me ? "ml-auto" : "mr-auto"
+            } w-[300px]`}
+          />
+        );
+      } else if (msg.mime_type?.includes("video")) {
+        return (
+          <video
+            controls
+            src={msg.media_url}
+            className={`rounded-md mb-2 ${
+              msg.is_from_me ? "ml-auto" : "mr-auto"
+            } w-[300px] h-[300px] object-cover`}
+          />
+        );
+      } else {
+        return (
+          <div className="p-4 bg-[rgba(0,0,0,0.3)] rounded-lg">
+            <a
+              href={msg.media_url}
+              target="_blank"
+              className={`flex flex-row gap-1 items-center rounded-md mb-2 ${
+                msg.is_from_me ? "ml-auto" : "mr-auto"
+              }`}
+            >
+              <IoAttachOutline /> {msg.media_url.split("/").pop()}
+            </a>
+          </div>
+        );
+      }
+    }
+  };
+
   const renderMessages = () => (
     <div
       id="channel-messages"
@@ -309,47 +415,7 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
             } p-2 rounded-md`}
             data-id={msg.id}
           >
-            {msg.media_url && msg.mime_type?.includes("video") && (
-              <video
-                controls
-                src={msg.media_url}
-                className={`rounded-md mb-2 ${
-                  msg.is_from_me ? "ml-auto" : "mr-auto"
-                } w-[300px] h-[300px] object-cover`}
-              />
-            )}
-            {msg.media_url && msg.mime_type?.includes("audio") && (
-              <audio
-                controls
-                src={msg.media_url}
-                className={`rounded-md mb-2 ${
-                  msg.is_from_me ? "ml-auto" : "mr-auto"
-                } w-[300px]`}
-              />
-            )}
-
-            {msg.media_url && msg.mime_type?.includes("image") && (
-              <Popover
-                placement="bottom"
-                content={
-                  <div className="bg-white p-4 rounded-md w-[600px]">
-                    <img
-                      src={msg.media_url}
-                      alt=""
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  </div>
-                }
-              >
-                <img
-                  src={msg.media_url}
-                  alt=""
-                  className={` rounded-md mb-2 ${
-                    msg.is_from_me ? "ml-auto" : "mr-auto"
-                  } w-[300px] h-[300px] object-cover`}
-                />
-              </Popover>
-            )}
+            {renderAttachment(msg)}
             {!msg.is_from_me && (
               <small className="font-semibold">{msg.contact?.name}</small>
             )}
@@ -358,14 +424,15 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
                 {msg.member?.user?.full_name}
               </small>
             )}
-            {/* {msg.is_group && !msg.is_from_me && (
-                <small className="font-semibold">
-                  {msg.message_info?.PushName}
-                </small>
-              )} */}
+            {msg.quoted_message && (
+              <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
+                {msg.quoted_message}
+              </div>
+            )}
             <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
+
             <div className="text-[10px] justify-between flex items-center">
-              {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
+              {msg.created_at && <Moment fromNow>{msg.created_at}</Moment>}
               {msg.is_read && (
                 <IoCheckmarkDone
                   size={16}
@@ -401,6 +468,19 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
         </div>
       </div>
       {renderMessages()}
+      {showScrollBottom && (
+        <button
+          className="fixed bottom-[60px] right-6 p-2 rounded-full bg-gray-700 hover:bg-gray-300 z-50 text-white transition-colors"
+          onClick={() => {
+            chatContainerRef.current?.scrollTo({
+              top: chatContainerRef?.current?.scrollHeight ?? 0,
+              behavior: "smooth",
+            });
+          }}
+        >
+          <BsChevronDown />
+        </button>
+      )}
       {files.length > 0 && (
         <div className="absolute bottom-[100px] flex w-full bg-red-50 p-4 z-50">
           {files.length} Attachments
@@ -498,6 +578,24 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
             }}
           /> */}
           <div>
+            <Label value="File" className="cursor-pointer" />
+            <FileInput
+              accept="image/*,video/*,audio/*,.pdf,.xlsx,.docx,.pptx"
+              id="file-upload"
+              onChange={(el) => {
+                if (el.target.files) {
+                  let f = el.target.files[0];
+                  if (!f) return;
+                  uploadFile(f, {}, (val) => {
+                    console.log(val);
+                  }).then((v: any) => {
+                    setUrl(v.data.url);
+                  });
+                }
+              }}
+            />
+          </div>
+          <div>
             <Label value="URL" className="cursor-pointer" />
             <TextInput
               type="text"
@@ -517,10 +615,14 @@ const TelegramMessages: FC<TelegramMessagesProps> = ({ sessionId }) => {
         </Modal.Body>
         <Modal.Footer>
           <div className="flex flex-row justify-end w-full">
-            <Button onClick={() => {
-              sendMessage();
-              setModalAttach(false);
-            }}>Send</Button>
+            <Button
+              onClick={() => {
+                sendMessage();
+                setModalAttach(false);
+              }}
+            >
+              Send
+            </Button>
           </div>
         </Modal.Footer>
       </Modal>

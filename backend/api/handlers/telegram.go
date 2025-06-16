@@ -335,7 +335,7 @@ func (h *TelegramHandler) WebhookHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	msgID := strconv.Itoa(int(tgResponse.Message.Chat.ID))
+	msgID := strconv.Itoa(int(tgResponse.Message.MessageID))
 	telegramData := models.TelegramMessage{
 		ContactID:                session.ContactID,
 		Message:                  tgResponse.Message.Text,
@@ -347,56 +347,55 @@ func (h *TelegramHandler) WebhookHandler(c *gin.Context) {
 	if len(tgResponse.Message.Photos) > 0 {
 		photo := tgResponse.Message.Photos[len(tgResponse.Message.Photos)-1]
 		telegramData.Message = tgResponse.Message.Caption
-
-		h.customerRelationshipService.TelegramService.SetToken(&connection.SessionName, &connection.AccessToken)
-		resp, err := h.customerRelationshipService.TelegramService.GetFile(photo.FileID)
-		if err == nil {
-
-			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
-			path, mimeType, err := saveFileContenFromUrl(fileUrl)
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			telegramData.MediaURL = fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
-			telegramData.MimeType = mimeType
+		mediaUrl, mimeType, err := h.saveFile(connection, photo.FileID)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
+		telegramData.MediaURL = mediaUrl
+		telegramData.MimeType = mimeType
 
 	}
 
 	if tgResponse.Message.Video != nil {
 		telegramData.Message = tgResponse.Message.Caption
-		resp, err := h.customerRelationshipService.TelegramService.GetFile(tgResponse.Message.Video.FileID)
-		if err == nil {
-			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
-			path, mimeType, err := saveFileContenFromUrl(fileUrl)
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			telegramData.MediaURL = fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
-			telegramData.MimeType = mimeType
+		mediaUrl, mimeType, err := h.saveFile(connection, tgResponse.Message.Video.FileID)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
+		telegramData.MediaURL = mediaUrl
+		telegramData.MimeType = mimeType
 	}
 	if tgResponse.Message.Voice != nil {
 		telegramData.Message = tgResponse.Message.Caption
-		resp, err := h.customerRelationshipService.TelegramService.GetFile(tgResponse.Message.Voice.FileID)
-		if err == nil {
-			fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
-			path, mimeType, err := saveFileContenFromUrl(fileUrl)
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			telegramData.MediaURL = fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
-			telegramData.MimeType = mimeType
+		mediaUrl, mimeType, err := h.saveFile(connection, tgResponse.Message.Voice.FileID)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
+		telegramData.MediaURL = mediaUrl
+		telegramData.MimeType = mimeType
+	}
+	if tgResponse.Message.Document != nil {
+		telegramData.Message = tgResponse.Message.Caption
+		mediaUrl, mimeType, err := h.saveFile(connection, tgResponse.Message.Document.FileID)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		telegramData.MediaURL = mediaUrl
+		telegramData.MimeType = mimeType
+	}
+
+	if tgResponse.Message.ReplyToMessage != nil {
+		telegramData.QuotedMessage = &tgResponse.Message.ReplyToMessage.Text
+		msgID := fmt.Sprintf("%d", tgResponse.Message.ReplyToMessage.MessageID)
+		telegramData.QuotedMessageID = &msgID
 	}
 
 	err = h.customerRelationshipService.TelegramService.SaveMessage(&telegramData)
@@ -426,6 +425,22 @@ func (h *TelegramHandler) WebhookHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "ok"})
 }
 
+func (h *TelegramHandler) saveFile(connection connection.ConnectionModel, fileID string) (string, string, error) {
+	resp, err := h.customerRelationshipService.TelegramService.GetFile(fileID)
+	if err != nil {
+		return "", "", err
+
+	}
+	fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", connection.AccessToken, resp["result"].(map[string]any)["file_path"].(string))
+	path, mimeType, err := saveFileContenFromUrl(fileUrl)
+	if err != nil {
+		log.Println(err)
+		return "", "", err
+	}
+
+	mediaURL := fmt.Sprintf("%s/%s", h.appService.Config.Server.BaseURL, path)
+	return mediaURL, mimeType, nil
+}
 func reverseTelegram(messages []models.TelegramMessage) []models.TelegramMessage {
 	for i, j := 0, len(messages)-1; i < len(messages)/2; i, j = i+1, j-1 {
 		messages[i], messages[j] = messages[j], messages[i]

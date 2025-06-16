@@ -49,4 +49,7 @@ export interface TelegramMessage {
     is_auto_pilot: boolean;
     telegram_message_session_id: string | null;
     telegram_message_session: TelegramMessageSessionModel | null;
+    quoted_message?:string;
+    quoted_message_id?:string;
+    created_at?:Date;
 }

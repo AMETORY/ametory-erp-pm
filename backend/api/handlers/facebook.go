@@ -700,6 +700,18 @@ func saveFileContenFromUrl(url string) (string, string, error) {
 		filename = filename + ".wav"
 	case "audio/flac":
 		filename = filename + ".flac"
+	case "application/pdf":
+		filename = filename + ".pdf"
+	case "application/msword":
+		filename = filename + ".doc"
+	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		filename = filename + ".docx"
+	case "application/vnd.ms-excel":
+		filename = filename + ".xls"
+	case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+		filename = filename + ".xlsx"
+	case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+		filename = filename + ".pptx"
 
 	default:
 		filename = filename + ".jpg"
