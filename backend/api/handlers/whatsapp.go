@@ -1398,6 +1398,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		fmt.Println("CREATE SESSION")
 
 		h.erpContext.DB.Create(&sessionData)
+		whatsappSession = &sessionData
 		if conn.NewSessionColumnID != nil {
 			// CREATE NEW TASK
 			senderName := sessionAuth.Name
