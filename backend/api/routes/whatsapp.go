@@ -14,6 +14,7 @@ func NewWhatsappRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	waGroup := r.Group("/whatsapp")
 	waGroup.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
+		// http://localhost:8081/api/v1/whatsapp/sessions?session_id=f220706b-5f07-423b-8f3a-4793e4937fd5&page=1&size=20&connection_session=6283899133519%3A65%40s.whatsapp.net
 		waGroup.GET("/sessions", waHandler.GetSessionsHandler)
 		waGroup.GET("/sessions/:session_id", waHandler.GetSessionDetailHandler)
 		waGroup.DELETE("/sessions/:session_id", waHandler.DeleteSessionHandler)

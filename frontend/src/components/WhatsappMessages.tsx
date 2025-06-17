@@ -273,6 +273,22 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       // console.log(wsMsg.message_ids);
       setMessages([]);
     }
+    if (
+      wsMsg?.session_id == sessionId &&
+      wsMsg?.command == "WHATSAPP_MESSAGE_REACTIONS"
+    ) {
+      setMessages((prevMessages) =>
+        prevMessages.map((message) => {
+          if (message.id === wsMsg.message_id) {
+            return {
+              ...message,
+              whatsapp_message_reactions: wsMsg.data,
+            };
+          }
+          return message;
+        })
+      );
+    }
   }, [wsMsg, profile, sessionId]);
   useEffect(() => {
     fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
@@ -479,13 +495,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`message flex flex-row items-end mb-2  ${
+            className={` message flex flex-row items-end mb-2  ${
               msg.is_from_me ? "justify-end" : "justify-start"
             }`}
             id={msg.id}
           >
             <div
-              className={`min-w-[300px] max-w-[600px] ${
+              className={`relative min-w-[300px] max-w-[600px] ${
                 !msg.is_from_me ? "bg-green-500 text-white" : "bg-gray-200"
               } p-2 rounded-md`}
               data-id={msg.id}
@@ -564,8 +580,17 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 </div>
               )}
               <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
+              {(msg.whatsapp_message_reactions ?? []).length > 0 && (
+                <div className="flex mt-2 absolute -bottom-3 right-2 flex-row gap-1">
+                  {(msg.whatsapp_message_reactions ?? []).map((reaction) => (
+                    <span key={reaction.id} className=" cursor-pointer ">
+                      {reaction.reaction}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="text-[10px] justify-between flex items-center">
-                {msg.sent_at && <Moment fromNow>{msg.sent_at}</Moment>}
+                {msg.created_at && <Moment fromNow>{msg.created_at}</Moment>}
                 {msg.is_read && (
                   <IoCheckmarkDone
                     size={16}
@@ -662,6 +687,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 return;
               }
               if (val.key === "Enter") {
+                val.preventDefault();
                 sendMessage();
                 return;
               }

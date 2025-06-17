@@ -15,13 +15,16 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/AMETORY/ametory-erp-modules/contact"
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
+	"github.com/AMETORY/ametory-erp-modules/shared"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/shared/objects"
@@ -42,6 +45,7 @@ type WhatsappHandler struct {
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
 	geminiService               *google.GeminiService
 	pmService                   *project_management.ProjectManagementService
+	contactService              *contact.ContactService
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -73,6 +77,11 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		panic("ProjectManagementService is not instance of project_management.ProjectManagementService")
 	}
 
+	contactService, ok := erpContext.ContactService.(*contact.ContactService)
+	if !ok {
+		panic("ContactService is not instance of contact.ContactService")
+	}
+
 	return &WhatsappHandler{
 		erpContext:                  erpContext,
 		waService:                   waService,
@@ -80,6 +89,7 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		customerRelationshipService: customerRelationshipService,
 		geminiService:               geminiService,
 		pmService:                   pmService,
+		contactService:              contactService,
 	}
 }
 
@@ -236,7 +246,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	}
 	if templateID == nil {
 		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true)
-		_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+		resp, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 		if err != nil {
 			log.Println(err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -248,6 +258,14 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 			"session_id": session.ID,
 			"data":       waDataReply,
 		}
+		fmt.Println("RESPONSE SEND MESSAGE", reflect.TypeOf(resp))
+		utils.LogJson(resp)
+		// msgID, ok := resp.(*models.WhatsappMessageModel).MessageInfo["ID"].(string)
+		// if ok {
+		// 	waDataReply.MessageID = &msgID
+		// 	h.erpContext.DB.Save(&waDataReply)
+		// }
+
 		msgNotifStr, _ := json.Marshal(msgNotif)
 		h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
 			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
@@ -1117,8 +1135,8 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
-	// fmt.Println("RECEIPT MESSAGE")
-	// utils.LogJson(body)
+	fmt.Println("RECEIPT MESSAGE")
+	utils.LogJson(body)
 	// GET CONNECTION
 	conn, err := h.appService.ConnectionService.GetConnectionBySession(body.SessionName)
 	if err != nil {
@@ -1484,7 +1502,52 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			}
 		}
 	}
+	if ok && msgType == "reaction" {
+		if body.Message.ReactionMessage != nil {
+			// sender
+			sender, ok := body.Info["Chat"].(string)
+			if ok {
+				splitSender := strings.SplitN(sender, "@", 2)
+				if len(splitSender) > 1 {
+					sender = splitSender[0]
 
+					contact, err := h.contactService.GetContactByPhone(sender, *conn.CompanyID)
+					if err == nil {
+
+						msg, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageByMessageID(body.Message.ReactionMessage.Key.ID)
+						if err == nil {
+							reactionData := models.WhatsappMessageReaction{
+								BaseModel: shared.BaseModel{
+									ID: utils.Uuid(),
+								},
+								ContactID: &contact.ID,
+								Reaction:  body.Message.ReactionMessage.Text,
+							}
+							h.customerRelationshipService.WhatsappService.AddMessageReaction(*msg, reactionData)
+							reactions, _ := h.customerRelationshipService.WhatsappService.GetWhatsappMessageReactions(msg.ID)
+							msg := gin.H{
+								"message":    "",
+								"command":    "WHATSAPP_MESSAGE_REACTIONS",
+								"session_id": whatsappSession.ID,
+								"message_id": msg.ID,
+								"data":       reactions,
+							}
+							b, _ := json.Marshal(msg)
+							h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+								url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+								return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+							})
+						}
+					}
+				}
+			}
+
+			// fmt.Println("RECEIPT REACTION MESSAGE", body.Message.ReactionMessage
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+		return
+	}
 	whatsappSession.IsGroup = waData.IsGroup
 	fmt.Println("UPDATE SESSION")
 	err = h.erpContext.DB.Omit(clause.Associations).Save(&whatsappSession).Error
@@ -1944,7 +2007,7 @@ func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 		return
 	}
 
-	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, session.JID, session.ContactID, *c.Request)
+	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, "", session.ContactID, *c.Request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

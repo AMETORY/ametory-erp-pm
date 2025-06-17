@@ -18,6 +18,17 @@ type WhatsAppMessage struct {
 		MessageSecret             string `json:"messageSecret"`
 	} `json:"messageContextInfo"`
 	ExtendedTextMessage *ExtendedTextMessage `json:"extendedTextMessage,omitempty"`
+	ReactionMessage     *ReactionMessage     `json:"reactionMessage,omitempty"`
+}
+
+type ReactionMessage struct {
+	Key struct {
+		RemoteJID string `json:"remoteJid"`
+		FromMe    bool   `json:"fromMe"`
+		ID        string `json:"id"`
+	} `json:"key"`
+	Text              string `json:"text"`
+	SenderTimestampMS int64  `json:"senderTimestampMS"`
 }
 
 type ExtendedTextMessage struct {

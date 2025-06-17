@@ -45,8 +45,9 @@ var BuildMachineID string
 func main() {
 	fmt.Println("START AMETORY ERP")
 
-	if BuildMachineID != "" {
-		currentID := getCurrentMachineID()
+	currentID := getCurrentMachineID()
+	if BuildMachineID != "" && currentID != "" {
+
 		fmt.Println("Current Machine ID", currentID)
 		fmt.Println("BuildMachineID", BuildMachineID)
 		if currentID != BuildMachineID {

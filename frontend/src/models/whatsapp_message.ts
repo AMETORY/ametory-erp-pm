@@ -25,11 +25,13 @@ export interface WhatsappMessageModel {
   is_from_me?: boolean;
   is_group?: boolean;
   sent_at?: Date;
+  created_at?: Date;
   is_read?: boolean;
   member_id?: string;
   member?: MemberModel;
   user?: UserModel;
   response_time?: number;
+  whatsapp_message_reactions?: WhatsappReactionModel[];
 }
 
 export interface WhatsappMessageSessionModel {
@@ -47,3 +49,13 @@ export interface WhatsappMessageSessionModel {
   count_unread?: number;
   ref?: ConnectionModel;
 }
+
+
+export interface WhatsappReactionModel {
+  id: string;
+  created_at: Date;
+  reaction: string;
+  whatsapp_message_id: string;
+  contact_id: string;
+}
+

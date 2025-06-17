@@ -259,7 +259,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         params["type"] = sessionTypeSelected;
       }
       if (selectedFilterConnection) {
-        params["connection_session"] = selectedFilterConnection.session;
+        params["connection_session"] = selectedFilterConnection.session_name;
       }
 
       const resp: any = await getWhatsappSessions(sessionId ?? "", params);
