@@ -54,27 +54,29 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     value: string;
   }>({ label: "WHATSAPP", value: "whatsapp" });
   const nav = useNavigate();
-  const [connectionType, setConnectionType] = useState([
-    { label: "WHATSAPP", value: "whatsapp" },
-    // { label: "TELEGRAM", value: "telegram" },
-    { label: "INSTAGRAM", value: "instagram" },
-    // { label: "TIKTOK", value: "tiktok" },
-    { label: "SHOPEE", value: "shopee" },
-  ]);
+  const [connectionType, setConnectionType] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
+    let connType = [{ label: "WHATSAPP", value: "whatsapp" }];
     if (process.env.REACT_APP_TELEGRAM_ENABLED) {
-      if (!connectionType.find((c) => c.value === "telegram")) {
-        setConnectionType((prev) => [
-          ...prev,
-          { label: "TELEGRAM", value: "telegram" },
-        ]);
-      }
+      connType.push({ label: "TELEGRAM", value: "telegram" });
     }
+    if (process.env.REACT_APP_INSTAGRAM_ENABLED) {
+      connType.push({ label: "INSTAGRAM", value: "instagram" });
+    }
+    if (process.env.REACT_APP_TIKTOK_ENABLED) {
+      connType.push({ label: "TIKTOK", value: "tiktok" });
+    }
+    if (process.env.REACT_APP_SHOPEE_ENABLED) {
+      connType.push({ label: "SHOPEE", value: "shopee" });
+    }
+    setConnectionType(connType);
   }, []);
 
   const createNewConnection = async () => {
