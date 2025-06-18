@@ -141,10 +141,11 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	var input struct {
-		Message   string                `json:"message"`
-		Files     []models.FileModel    `json:"files"`
-		Products  []models.ProductModel `json:products`
-		IsCaption bool                  `json:"is_caption"`
+		Message   string                       `json:"message"`
+		Files     []models.FileModel           `json:"files"`
+		Products  []models.ProductModel        `json:"products"`
+		IsCaption bool                         `json:"is_caption"`
+		RefMsg    *models.WhatsappMessageModel `json:"ref_msg"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -221,6 +222,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	// 	mediaURL = thumbnail.URL
 	// 	mimeType = thumbnail.MimeType
 	// }
+
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
 		Sender:   splitSep[0],
 		Receiver: *session.Contact.Phone,
@@ -240,12 +242,17 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		MemberID:     &memberID,
 		RefID:        refID,
 	}
+
+	if input.RefMsg != nil {
+		waDataReply.QuotedMessageID = &input.RefMsg.ID
+		waDataReply.QuotedMessage = &input.RefMsg.Message
+	}
 	to := waDataReply.Receiver
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
 	}
 	if templateID == nil {
-		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true)
+		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true, input.RefMsg)
 		resp, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 		if err != nil {
 			log.Println(err)
@@ -280,7 +287,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		for _, msg := range template.Messages {
 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
 
-			h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, msg.Files, msg.Products, true)
+			h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, msg.Files, msg.Products, true, nil)
 			_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 			if err != nil {
 				log.Println(err)

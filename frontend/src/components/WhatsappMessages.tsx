@@ -8,11 +8,19 @@ import {
   Tabs,
   ToggleSwitch,
 } from "flowbite-react";
-import { useContext, useEffect, useRef, useState, type FC } from "react";
+import {
+  Component,
+  LegacyRef,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type FC,
+} from "react";
 import toast from "react-hot-toast";
-import { RiAttachment2 } from "react-icons/ri";
+import { RiAttachment2, RiReplyFill } from "react-icons/ri";
 import Markdown from "react-markdown";
-import { Mention, MentionsInput } from "react-mentions";
+import { Mention, MentionsInput, MentionsInputProps } from "react-mentions";
 import Moment from "react-moment";
 import remarkGfm from "remark-gfm";
 import { ProfileContext } from "../contexts/ProfileContext";
@@ -49,7 +57,7 @@ import { FaXmark } from "react-icons/fa6";
 import { ProductModel } from "../models/product";
 import ModalProduct from "./ModalProduct";
 import { getProducts } from "../services/api/productApi";
-import { HiMagnifyingGlass } from "react-icons/hi2";
+import { HiMagnifyingGlass, HiXMark } from "react-icons/hi2";
 import { SearchContext } from "../contexts/SearchContext";
 import { ScrollContext } from "../contexts/ScrollContext";
 
@@ -88,6 +96,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const [isCaption, setIsCaption] = useState(false);
   const { scrollPositions, setScrollPositions } = useContext(ScrollContext);
   const [showScrollBottom, setShowScrollButton] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState<WhatsappMessageModel>();
+  const msgRef = useRef<any>();
+  const msgInputRef = useRef<any>();
   // const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
@@ -113,6 +124,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       });
     }
   }, [mounted, sessionId]);
+
+  useEffect(() => {
+
+  }, [msgRef]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -424,8 +439,10 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         files: files,
         products: selectedProducts,
         is_caption: isCaption,
+        ref_msg: selectedMsg,
       });
       setIsCaption(false);
+      setSelectedMsg(undefined);
       // chatContainerRef.current?.scrollTo({
       //   top: chatContainerRef?.current?.scrollHeight ?? 0,
       //   behavior: "smooth",
@@ -495,7 +512,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={` message flex flex-row items-end mb-2  ${
+            className={`group/item message flex flex-row items-end mb-2  ${
               msg.is_from_me ? "justify-end" : "justify-start"
             }`}
             id={msg.id}
@@ -600,6 +617,24 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                   />
                 )}
               </div>
+              <div className="group/edit invisible group-hover/item:visible absolute top-2 right-2">
+                <Dropdown label="" inline className="context-menu">
+                  <Dropdown.Item
+                    className="flex flex-row gap-1"
+                    icon={RiReplyFill}
+                    onClick={() => {
+                      setSelectedMsg(msg);
+                      if (msgInputRef.current) {
+                        // console.log(msgInputRef.current);
+                        msgInputRef.current.focus();
+                        // msgRef.current?.focus();
+                      }
+                    }}
+                  >
+                    Reply
+                  </Dropdown.Item>
+                </Dropdown>
+              </div>
             </div>
           </div>
         ))}
@@ -636,6 +671,17 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           </button>
         </div>
       )}
+      {selectedMsg && (
+        <div className="absolute bottom-[50px] flex flex-row w-full bg-green-50 p-4 justify-between z-0">
+          {selectedMsg.message}
+          <div
+            className="text-gray-400 hover:text-gray-600 cursor-pointer"
+            onClick={() => setSelectedMsg(undefined)}
+          >
+            <HiXMark />
+          </div>
+        </div>
+      )}
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
         <Dropdown
           label={<BsPlusCircle />}
@@ -668,6 +714,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
 
         <div className="relative w-full">
           <MentionsInput
+            ref={msgRef}
+            inputRef={msgInputRef}
+            
             disabled={!session?.is_human_agent && connection?.is_auto_pilot}
             value={content}
             onChange={(val: any) => {
@@ -679,7 +728,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 ? "Input disabled for auto pilot mode"
                 : "Press ':' for emojis, '/' for templates and shift+enter for new line"
             }
-            className="w-full pl-8"
+            className="w-full pl-8 mentions-input"
             autoFocus
             onKeyDown={async (val: any) => {
               if (val.key === "Enter" && val.shiftKey) {

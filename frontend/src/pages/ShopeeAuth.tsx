@@ -14,6 +14,7 @@ const ShopeeAuth: FC<ShopeeAuthProps> = ({}) => {
   const shopID = urlParams.get("shop_id");
   const [mounted, setMounted] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
+  const [succeed, setSucceed] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -31,20 +32,24 @@ const ShopeeAuth: FC<ShopeeAuthProps> = ({}) => {
   }, [shopeeCode, mounted]);
 
   useEffect(() => {
-    if (shopeeCode && shopID) {
+    
+  }, [shopeeCode, connectionID]);
 
-       authorizeConnection("83f47480-ea4e-4112-8171-ae73e047cb91", {
+  const authorize = async () => {
+    if (shopeeCode && shopID) {
+      authorizeConnection(connectionID, {
         shop_id: shopID,
         shopee_code: shopeeCode,
         type: "shopee",
       })
         .then((resp: any) => {
           // console.log("Authorized", resp.data);
+          setSucceed(true);
           window.location.href = "/connection";
         })
         .catch(console.error);
     }
-  }, [shopeeCode, connectionID]);
+  };
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">
@@ -52,9 +57,18 @@ const ShopeeAuth: FC<ShopeeAuthProps> = ({}) => {
       <p className="text-center text-2xl">
         Please wait for the next step in authorization...
       </p>
-      <p>Connection ID : {connectionID}</p>
-      <p>Code : {shopeeCode}</p>
+      {/* <p>Connection ID : {connectionID}</p>
+      <p>Code : {shopeeCode}</p> */}
       <p>SHOP ID : {shopID}</p>
+
+      {shopeeCode && shopID && (
+        <button
+          className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded w-64"
+          onClick={authorize}
+        >
+          Authorize Now
+        </button>
+      )}
     </div>
   );
 };

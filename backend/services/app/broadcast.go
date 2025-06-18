@@ -396,7 +396,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 			// USE REGULAR MESSAGE
 			if broadcast.TemplateID == nil {
 				success = true
-				b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, broadcast.Files, broadcast.Products, false)
+				b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, broadcast.Files, broadcast.Products, false, nil)
 				_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
 				if err != nil {
 					log.Println("ERROR SEND MESSAGE REGULAR", err)
@@ -420,7 +420,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 							JID:     sender.Session,
 							Message: parseMsgTemplate(contact, broadcast.Member, v.Body),
 						}
-						b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false)
+						b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false, nil)
 						_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
 						if err != nil {
 							log.Println("ERROR SEND MESSAGE REGULAR", err)

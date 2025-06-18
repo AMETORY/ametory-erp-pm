@@ -216,7 +216,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 						JID:     waSession.JID,
 						Message: msg,
 					}
-					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, *waSession.Contact.Phone, act.Files, []models.ProductModel{}, false)
+					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, *waSession.Contact.Phone, act.Files, []models.ProductModel{}, false, nil)
 					_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 					if err != nil {
 						log.Println("ERROR", err)
@@ -254,7 +254,7 @@ func (h *TaskHandler) MoveTaskHandler(c *gin.Context) {
 						JID:     waSession.JID,
 						Message: msg,
 					}
-					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, *waSession.Contact.Phone, act.Files, []models.ProductModel{}, false)
+					h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &msgData, *waSession.Contact.Phone, act.Files, []models.ProductModel{}, false, nil)
 					_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
 					if err != nil {
 						log.Println("ERROR", err)

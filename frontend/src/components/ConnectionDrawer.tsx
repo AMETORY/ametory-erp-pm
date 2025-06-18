@@ -17,6 +17,7 @@ import { LoadingContext } from "../contexts/LoadingContext";
 import {
   connectDevice,
   getConnection,
+  getLazadaAuthURL,
   getQr,
   getShopeeAuthURL,
   syncContactConnection,
@@ -226,6 +227,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           </div>
         </>
       )}
+     
 
       {connection.type == "shopee" &&
         connection?.status == "ACTIVE" &&
@@ -260,6 +262,37 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             <BsInstagram className="mr-2 w-4" /> Hubungkan ke Instagram
           </Button>
         </div>
+      )}
+
+
+       {connection.type == "lazada" && (
+        <>
+          <div className="flex gap-2 flex-row">
+            <Button
+              className="mt-4 bg-yellow-400"
+              onClick={async () => {
+                asyncStorage
+                  .setItem("lazada-connection-id", connection.id)
+                  .then(() => {
+                    getLazadaAuthURL().then((res: any) => {
+                      // console.log("Lazada Auth URL", res.data);
+                      window.location.href = res.data;
+                    });
+                  });
+              }}
+            >
+              {connection?.status == "ACTIVE" ? "Re-Authorize" : "Authorize"}
+            </Button>
+            {/* <Button
+                className="mt-4"
+                onClick={async () => {
+                  onSave();
+                }}
+              >
+                SAVE
+              </Button> */}
+          </div>
+        </>
       )}
 
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (

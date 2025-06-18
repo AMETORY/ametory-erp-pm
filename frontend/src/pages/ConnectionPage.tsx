@@ -76,6 +76,9 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     if (process.env.REACT_APP_SHOPEE_ENABLED) {
       connType.push({ label: "SHOPEE", value: "shopee" });
     }
+    if (process.env.REACT_APP_LAZADA_ENABLED) {
+      connType.push({ label: "LAZADA", value: "lazada" });
+    }
     setConnectionType(connType);
   }, []);
 

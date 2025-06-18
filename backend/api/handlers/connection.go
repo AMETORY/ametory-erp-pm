@@ -29,6 +29,7 @@ type ConnectionHandler struct {
 	whatsappWebService          *whatsmeow_client.WhatsmeowService
 	tiktokService               *tiktok.TiktokService
 	shopeeService               *services.ShopeeService
+	lazadaService               *services.LazadaService
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
 }
 
@@ -50,6 +51,10 @@ func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
 	if !ok {
 		panic("ThirdPartyServices is not instance of services.ShopeeService")
 	}
+	lazadaService, ok := ctx.ThirdPartyServices["Lazada"].(*services.LazadaService)
+	if !ok {
+		panic("ThirdPartyServices is not instance of services.ShopeeService")
+	}
 	var customerRelationshipService *customer_relationship.CustomerRelationshipService
 	customerRelationshipSrv, ok := ctx.CustomerRelationshipService.(*customer_relationship.CustomerRelationshipService)
 	if ok {
@@ -61,6 +66,7 @@ func NewConnectionHandler(ctx *context.ERPContext) *ConnectionHandler {
 		whatsappWebService:          whatsappWebService,
 		tiktokService:               tiktokService,
 		shopeeService:               shopeeService,
+		lazadaService:               lazadaService,
 		customerRelationshipService: customerRelationshipService,
 	}
 }
@@ -160,7 +166,7 @@ func (h *ConnectionHandler) GetConnectionHandler(c *gin.Context) {
 		}
 	}
 	if connection.Type == "shopee" && connection.Status == "ACTIVE" {
-
+		// h.shopeeService.GetShopProfile(connection.AccessToken, connection.Username)
 	}
 
 	// if connection.Type == "tiktok" && connection.Status == "ACTIVE" {
@@ -287,8 +293,8 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 
 		info, err := h.shopeeService.GetShopInfo(resp.AccessToken, conn.Username)
 		if err == nil {
-			// fmt.Println("INFO")
-			// utils.LogJson(info)
+			fmt.Println("INFO")
+			utils.LogJson(info)
 			b, err := json.Marshal(info)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -297,6 +303,7 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 			conn.SessionName = info.ShopName
 			jsonInfo := json.RawMessage(b)
 			conn.AuthData = &jsonInfo
+			conn.Status = "ACTIVE"
 			err = h.ctx.DB.Save(&conn).Error
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -305,7 +312,10 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully"})
 		return
+	} else {
+		fmt.Println("ERROR SHOPEE", err)
 	}
+
 	if requestBody["type"] == "tiktok" {
 		resp, err := h.tiktokService.AuthorizeConnection(id, requestBody["tiktok_code"].(string))
 		if err != nil {
@@ -338,6 +348,8 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully", "data": shops})
 		return
+	} else {
+		fmt.Println("ERROR TIKTOK", err)
 	}
 
 	// You can now use requestBody to access all JSON request data
@@ -435,4 +447,12 @@ func (h *ConnectionHandler) GetShopeeAuthURLHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Get Shopee Auth URL successfully", "data": resp})
+}
+func (h *ConnectionHandler) GetLazadaAuthURLHandler(c *gin.Context) {
+	resp, err := h.lazadaService.GetAuthURL()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Get Lazada Auth URL successfully", "data": resp})
 }

@@ -190,3 +190,9 @@ label {
 [data-testid="flowbite-dropdown-target"] {
   @apply line-clamp-2 max-h-[40px] truncate
 }
+
+
+
+.context-menu ul {
+  @apply !list-none !ml-0
+}

@@ -33,6 +33,11 @@ export const getShopeeAuthURL = async () => {
         method: "GET",
     });
 };
+export const getLazadaAuthURL = async () => {
+    return await customFetch(`api/v1/connection/auth-url/lazada`, {
+        method: "GET",
+    });
+};
 export const authorizeConnection = async (id: string, data: any) => {
     console.log(`api/v1/connection/${id}/authorize`)
     return await customFetch(`api/v1/connection/${id}/authorize`, {

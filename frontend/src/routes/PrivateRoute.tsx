@@ -34,6 +34,7 @@ import InstagramPage from "../pages/InstagramPage";
 import TermUsePage from "../pages/TermUsePage";
 import TiktokAuth from "../pages/TiktokAuth";
 import ShopeeAuth from "../pages/ShopeeAuth";
+import LazadaAuth from "../pages/LazadaAuth";
 
 interface PrivateRouteProps {}
 
@@ -78,6 +79,7 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/broadcast/:broadcastId" element={<BroadcastDetail/>} />
       <Route path="/auth/tiktok/callback" element={<TiktokAuth/>} />
       <Route path="/auth/shopee/callback" element={<ShopeeAuth/>} />
+      <Route path="/auth/lazada/callback" element={<LazadaAuth/>} />
       <Route path="/whatsapp/:sessionId" element={<WhatsappPage />} />
       <Route
         path="/task-attribute/:attributeId"

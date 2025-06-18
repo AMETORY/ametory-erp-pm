@@ -12,6 +12,7 @@ require (
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/driver/sqlserver v1.5.4
 	gorm.io/gorm v1.25.12
+	iop-go-sdk v0.0.0-00010101000000-000000000000
 	tiktokshop/open/sdk_golang v0.0.0-00010101000000-000000000000
 )
 
@@ -155,3 +156,5 @@ require (
 replace github.com/AMETORY/ametory-erp-modules => ../../ametory-erp-modules
 
 replace tiktokshop/open/sdk_golang => ../tiktok
+
+replace iop-go-sdk => ../lazada

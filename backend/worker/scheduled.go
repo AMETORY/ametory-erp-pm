@@ -79,7 +79,7 @@ func ScheduledMessageWorker(erpContext *context.ERPContext) {
 				log.Println("ThirdPartyServices is not instance of whatsmeow_client.WhatsmeowService")
 				continue
 			}
-			customerRelationshipService.WhatsappService.SetMsgData(whatsmeowService, &msgData.Data, msgData.To, msgData.Files, []mdl.ProductModel{}, false)
+			customerRelationshipService.WhatsappService.SetMsgData(whatsmeowService, &msgData.Data, msgData.To, msgData.Files, []mdl.ProductModel{}, false, nil)
 			_, err = customer_relationship.SendCustomerServiceMessage(customerRelationshipService.WhatsappService)
 			if err != nil {
 				log.Println("ERROR", err)

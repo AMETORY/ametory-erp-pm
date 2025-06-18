@@ -161,6 +161,9 @@ func main() {
 	shopeeService := services.NewShopeeService(erpContext, cfg.Shopee.APISecret, cfg.Shopee.PartnerID, cfg.Shopee.Host, cfg.Shopee.RedireclURL)
 	erpContext.AddThirdPartyService("Shopee", shopeeService)
 
+	lazadaService := services.NewLazadaService(erpContext, cfg.Lazada.APIKey, cfg.Lazada.APISecret, cfg.Lazada.Region, cfg.Lazada.CallbackURL)
+	erpContext.AddThirdPartyService("Lazada", lazadaService)
+
 	emailSender := thirdparty.NewSMTPSender(cfg.Email.Server, cfg.Email.Port, cfg.Email.Username, cfg.Email.Password, mail.Address{Name: cfg.Email.From, Address: cfg.Email.From})
 	emailSender.SetTemplate("../templates/email/layout.html", "../templates/email/body.html")
 
