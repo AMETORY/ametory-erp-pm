@@ -558,36 +558,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           />
         </div>
       )}
-      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
-        <div className="mt-4">
-          <ButtonGroup>
-            <Button
-              className="mt-4"
-              color="warning"
-              onClick={async () => {
-                syncContactConnection(connection.id!)
-                  .then((res: any) => {
-                    toast.success("Sync Success");
-                  })
-                  .catch((err: any) => {
-                    toast.error("Sync Failed");
-                  });
-              }}
-            >
-              Sync Contact
-            </Button>
-            <Button
-              className="mt-4"
-              onClick={async () => {
-                onSave();
-              }}
-            >
-              SAVE
-            </Button>
-          </ButtonGroup>
-        </div>
-      )}
-      {connection?.status == "PENDING" && connection.type == "whatsapp" && (
+      {(connection?.status == "PENDING" || (!connection?.connected && connection?.status == "ACTIVE")) && connection.type == "whatsapp" && (
         <div className="mt-4 p-4 border rounded-lg">
           <h1 className="text-2xl font-bold">Connect to WhatsApp</h1>
           <table style={{}}>
@@ -712,6 +683,36 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           </Button>
         </div>
       )}
+      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+        <div className="mt-4">
+          <ButtonGroup>
+            <Button
+              className="mt-4"
+              color="warning"
+              onClick={async () => {
+                syncContactConnection(connection.id!)
+                  .then((res: any) => {
+                    toast.success("Sync Success");
+                  })
+                  .catch((err: any) => {
+                    toast.error("Sync Failed");
+                  });
+              }}
+            >
+              Sync Contact
+            </Button>
+            <Button
+              className="mt-4"
+              onClick={async () => {
+                onSave();
+              }}
+            >
+              SAVE
+            </Button>
+          </ButtonGroup>
+        </div>
+      )}
+      
       {connection?.status == "PENDING" && connection.type == "telegram" && (
         <TelegramIntegrationGuide />
       )}

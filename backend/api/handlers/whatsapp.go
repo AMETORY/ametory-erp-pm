@@ -215,6 +215,22 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	parsedMessage := parseMsgTemplate(*session.Contact, &member, input.Message)
 	now := time.Now()
 	templateID := parseTemplateID(input.Message)
+	var connection connection.ConnectionModel
+	err = h.erpContext.DB.Select("id, session, company_id").First(&connection, "session ilike ? and company_id = ?", splitSep[0]+"%", session.CompanyID).Error
+	if err == nil {
+		fmt.Println("MESSAGE CONNECTION", session.JID)
+		fmt.Println("ACTIVE CONNECTION", connection.Session)
+		if session.JID != connection.Session {
+			// UPDATE SESSION JID
+			session.JID = connection.Session
+			err = h.erpContext.DB.Save(&session).Error
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	}
 
 	// thumbnail, attachments := getThumbnail(input.Files)
 	// var mediaURL, mimeType string
@@ -251,6 +267,8 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
 	}
+	fmt.Println("WA DATA", fmt.Sprintf("%s@%s", splitSep[0], splitJID[1]))
+	utils.LogJson(waDataReply)
 	if templateID == nil {
 		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true, input.RefMsg)
 		resp, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
@@ -1254,7 +1272,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	} else {
 		// CHECK IS PHONE NUMBER REGISTERED
 		var contact models.ContactModel
-		err := h.erpContext.DB.Where("phone = ?", body.Sender).First(&contact).Error
+		err := h.erpContext.DB.Where("phone = ? AND company_id = ?", body.Sender, *conn.CompanyID).First(&contact).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			contact.Phone = &body.Sender
 			pushName, ok := body.Info["PushName"].(string)

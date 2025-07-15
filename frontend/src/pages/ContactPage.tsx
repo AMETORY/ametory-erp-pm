@@ -203,6 +203,9 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   is_customer: true,
                   is_supplier: false,
                   is_vendor: false,
+                  custom_data: {
+                    product: "",
+                  },
                 });
               }}
             >
@@ -513,7 +516,7 @@ const ContactPage: FC<ContactPageProps> = ({}) => {
                   <TextInput
                     type="text"
                     placeholder={attr.key}
-                    value={selectedContact?.custom_data[attr.key] ?? attr.value}
+                    value={selectedContact ? selectedContact?.custom_data[attr.key] : attr.value}
                     onChange={(e) => {
                       setSelectedContact({
                         ...selectedContact!,
