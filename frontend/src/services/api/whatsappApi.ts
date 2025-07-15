@@ -66,6 +66,11 @@ export const createWAMessage = async (sessionId: string, message: any) => {
     body: JSON.stringify(message),
   });
 };
+export const markAllMsgAsRead = async (sessionId: string) => {
+  return customFetch(`api/v1/whatsapp/${sessionId}/read-all`, {
+    method: "POST",
+  });
+};
 export const exportXls = async (data: any) => {
 
   return  await customFetch(`api/v1/whatsapp/export`, {

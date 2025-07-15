@@ -27,12 +27,14 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/inventory"
 	"github.com/AMETORY/ametory-erp-modules/message"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
+	"github.com/AMETORY/ametory-erp-modules/shared/cache"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/tag"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/gin-contrib/cors"
+	"github.com/morkid/paginate"
 	"github.com/robfig/cron"
 
 	tiktok "tiktokshop/open/sdk_golang/service"
@@ -172,6 +174,7 @@ func main() {
 	rapidApiService := services.NewRapidAdpiService(erpContext)
 
 	erpContext.AddThirdPartyService("RapidAPI", rapidApiService)
+	erpContext.AddThirdPartyService("Cache", cache.NewCacheManager[paginate.Page]())
 
 	tagSrv := tag.NewTagService(erpContext)
 	erpContext.TagService = tagSrv

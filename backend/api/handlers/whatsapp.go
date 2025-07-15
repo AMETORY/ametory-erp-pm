@@ -25,6 +25,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/project_management"
 	"github.com/AMETORY/ametory-erp-modules/shared"
+	"github.com/AMETORY/ametory-erp-modules/shared/cache"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/shared/objects"
@@ -32,6 +33,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/morkid/paginate"
 	"github.com/xuri/excelize/v2"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
@@ -46,6 +48,7 @@ type WhatsappHandler struct {
 	geminiService               *google.GeminiService
 	pmService                   *project_management.ProjectManagementService
 	contactService              *contact.ContactService
+	cacheService                *cache.CacheManager[paginate.Page]
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -82,6 +85,10 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		panic("ContactService is not instance of contact.ContactService")
 	}
 
+	cacheService, ok := erpContext.ThirdPartyServices["Cache"].(*cache.CacheManager[paginate.Page])
+	if !ok {
+		panic("CacheService is not instance of cache.CacheManager")
+	}
 	return &WhatsappHandler{
 		erpContext:                  erpContext,
 		waService:                   waService,
@@ -90,6 +97,7 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		geminiService:               geminiService,
 		pmService:                   pmService,
 		contactService:              contactService,
+		cacheService:                cacheService,
 	}
 }
 
@@ -137,6 +145,27 @@ func parseMsgTemplate(contact mdl.ContactModel, member *models.MemberModel, msg 
 	})
 
 	return result
+}
+
+func (h *WhatsappHandler) ReadAllMessage(c *gin.Context) {
+	sessionId := c.Params.ByName("session_id")
+	var session *models.WhatsappMessageSession
+	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if h.waService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+	err = h.customerRelationshipService.WhatsappService.ReadAllMessages(session.Session)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Read all message success"})
 }
 
 func (h *WhatsappHandler) SendMessage(c *gin.Context) {
@@ -2032,7 +2061,10 @@ func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 		return
 	}
 
-	messages, err := h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, "", session.ContactID, *c.Request)
+	messages, err := h.cacheService.Remember("wa-msg-"+sessionId, 10*time.Second, func() (paginate.Page, error) {
+		return h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, "", session.ContactID, *c.Request)
+	})
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

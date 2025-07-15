@@ -398,7 +398,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                           className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"
                           color="red"
                         >
-                          {e.count_unread}
+                          {e.count_unread?? 0 > 99 ? "99+" : e.count_unread}
                         </div>
                       )}
                       <div className="group/edit invisible group-hover/item:visible">

@@ -1,30 +1,22 @@
+import { Button, Label, Textarea } from "flowbite-react";
 import { useContext, useEffect, useState, type FC } from "react";
+import toast from "react-hot-toast";
+import { useParams } from "react-router-dom";
+import Select from "react-select";
 import AdminLayout from "../components/layouts/admin";
+import MessageTemplateField from "../components/MessageTemplateField";
+import ModalProductList from "../components/ModalProductList";
+import { MemberContext } from "../contexts/ProfileContext";
+import { FileModel } from "../models/file";
+import { MemberModel } from "../models/member";
+import { MessageTemplate, TemplateModel } from "../models/template";
+import { getMembers } from "../services/api/commonApi";
 import {
   addMessageTemplate,
   addProductTemplate,
-  deleteMessageTemplate,
   getTemplateDetail,
-  updateTemplate,
+  updateTemplate
 } from "../services/api/templateApi";
-import { useParams } from "react-router-dom";
-import { MessageTemplate, TemplateModel } from "../models/template";
-import { Mention, MentionsInput } from "react-mentions";
-import { Button, Label, Modal, Textarea } from "flowbite-react";
-import toast from "react-hot-toast";
-import { BsCamera, BsCart } from "react-icons/bs";
-import { getMembers, uploadFile } from "../services/api/commonApi";
-import { HiDocumentAdd, HiOutlineDocumentAdd } from "react-icons/hi";
-import { RiAttachmentLine } from "react-icons/ri";
-import { IoAttach, IoDocumentsOutline } from "react-icons/io5";
-import ModalProductList from "../components/ModalProductList";
-import { money } from "../utils/helper";
-import { MemberContext } from "../contexts/ProfileContext";
-import { MemberModel } from "../models/member";
-import Select from "react-select";
-import MessageMention from "../components/MessageMention";
-import MessageTemplateField from "../components/MessageTemplateField";
-import { FileModel } from "../models/file";
 
 interface TemplateDetailProps {}
 

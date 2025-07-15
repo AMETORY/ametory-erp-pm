@@ -31,10 +31,15 @@ func (h *TemplateHandler) CreateTemplateHandler(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	var memberIDStr = c.MustGet("memberID").(string)
 	companyID := c.GetHeader("ID-Company")
 	input.CompanyID = &companyID
 	userID := c.MustGet("userID").(string)
 	input.UserID = &userID
+	var IsSuperAdmin bool = IsSuperAdmin(h.ctx, c)
+	if !IsSuperAdmin {
+		input.MemberID = &memberIDStr
+	}
 	err := h.customerRelationshipService.WhatsappService.CreateWhatsappMessageTemplate(&input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

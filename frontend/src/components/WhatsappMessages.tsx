@@ -36,6 +36,7 @@ import {
   createWAMessage,
   getWhatsappMessages,
   getWhatsappSessionDetail,
+  markAllMsgAsRead,
   markAsRead,
   updateWhatsappSession,
 } from "../services/api/whatsappApi";
@@ -125,15 +126,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     }
   }, [mounted, sessionId]);
 
-  useEffect(() => {
-
-  }, [msgRef]);
+  useEffect(() => {}, [msgRef]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
 
     if (container && container.scrollHeight <= container.clientHeight) {
-      markAllAsRead();
+      markAllMsgAsRead(sessionId);
     }
 
     const handleScrollPosition = () => {
@@ -144,6 +143,14 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         });
         // const scrollHeight = chatContainerRef.current?.scrollHeight ?? 0;
         // setScrollHeight(scrollHeight);
+        if (container) {
+          const isAtBottom =
+            container.scrollHeight - container.scrollTop ===
+            container.clientHeight;
+          if (isAtBottom) {
+            markAllMsgAsRead(sessionId);
+          }
+        }
       }
     };
 
@@ -447,6 +454,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       //   top: chatContainerRef?.current?.scrollHeight ?? 0,
       //   behavior: "smooth",
       // });
+      if (fileRef.current) fileRef.current.value = "";
     } catch (error) {
       toast.error(`${error}`);
     } finally {
@@ -646,6 +654,8 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
                 top: chatContainerRef?.current?.scrollHeight ?? 0,
                 behavior: "smooth",
               });
+
+              // markAllMsgAsRead(sessionId);
             }}
           >
             <BsChevronDown />
@@ -716,7 +726,6 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           <MentionsInput
             ref={msgRef}
             inputRef={msgInputRef}
-            
             disabled={!session?.is_human_agent && connection?.is_auto_pilot}
             value={content}
             onChange={(val: any) => {

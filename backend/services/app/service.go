@@ -29,6 +29,11 @@ func NewAppService(erpContext *context.ERPContext, config *config.Config, redis 
 			&company.CompanySetting{},
 			&con.ConnectionModel{},
 		)
+
+		// fmt.Println("UPDATE INDEX")
+		// erpContext.DB.Migrator().CreateIndex(&models.WhatsappMessageSession{}, "jid")
+		// erpContext.DB.Migrator().CreateIndex(&models.WhatsappMessageSession{}, "session")
+		// erpContext.DB.Migrator().CreateIndex(&models.WhatsappMessageSession{}, "ref_id")
 	}
 	return &AppService{
 		ctx:               erpContext,
