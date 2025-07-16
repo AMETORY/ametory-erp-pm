@@ -199,12 +199,10 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
     timeout.current = window.setTimeout(() => {
       if (
-        wsMsg?.command === "WHATSAPP_RECEIVED" ||
-        wsMsg?.command === "WHATSAPP_MESSAGE_READ" ||
         wsMsg?.command === "WHATSAPP_CLEAR_MESSAGE"
       ) {
         getAllSessions();
-      } else if (wsMsg?.command === "UPDATE_SESSION") {
+      } else if (wsMsg?.command === "WHATSAPP_RECEIVED" || wsMsg?.command === "WHATSAPP_MESSAGE_READ" || wsMsg?.command === "UPDATE_SESSION") {
         if (wsMsg?.session_id) {
           getWhatsappSessionDetail(wsMsg?.session_id).then((resp: any) => {
             // console.log("SESSION DATA", resp.data);

@@ -692,7 +692,8 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           </div>
         </div>
       )}
-      <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2">
+      <div className="shoutbox border-t pt-2 min-h-[20px] max-h-[150px] px-2  flex justify-between items-start gap-2 absolute bottom-0 left-0 right-0 bg-white ">
+        <div className="h-[40px] pt-2  justify-center items-center flex-col">
         <Dropdown
           label={<BsPlusCircle />}
           inline
@@ -721,6 +722,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             Product
           </Dropdown.Item>
         </Dropdown>
+        </div>
 
         <div className="relative w-full">
           <MentionsInput

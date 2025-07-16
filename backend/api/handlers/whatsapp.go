@@ -296,8 +296,8 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
 	}
-	fmt.Println("WA DATA", fmt.Sprintf("%s@%s", splitSep[0], splitJID[1]))
-	utils.LogJson(waDataReply)
+	// fmt.Println("WA DATA", fmt.Sprintf("%s@%s", splitSep[0], splitJID[1]))
+	// utils.LogJson(waDataReply)
 	if templateID == nil {
 		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true, input.RefMsg)
 		resp, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
@@ -813,7 +813,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 
 	// 		h.waService.SendMessage(productMsg)
 	// 	}
-
+	h.cacheService.Forget("wa-msg-" + sessionId)
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": waDataReply})
 }
 
@@ -1919,6 +1919,8 @@ func (h *WhatsappHandler) UpdateSessionHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
+	h.cacheService.Forget("wa-msg-" + sessionId)
 	c.JSON(http.StatusOK, gin.H{"message": "Session updated successfully"})
 }
 
@@ -1981,7 +1983,7 @@ func (h *WhatsappHandler) ClearSessionHandler(c *gin.Context) {
 		url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
 		return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
 	})
-
+	h.cacheService.Forget("wa-msg-" + sessionId)
 	c.JSON(http.StatusOK, gin.H{"message": "Session Cleared successfully"})
 }
 func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
@@ -1993,7 +1995,11 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 	}
 
 	var session models.WhatsappMessageSession
-	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+	err := h.erpContext.DB.Preload("Contact", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id", "name", "phone").Preload("Tags", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "color")
+		})
+	}).First(&session, "id = ?", sessionId).Error
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -2007,6 +2013,9 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+	var totalUnread int64
+	h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ? and is_from_me = ?", session.Session, false, false).Count(&totalUnread)
+	session.CountUnread = int(totalUnread)
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session, "connection": connection})
 }

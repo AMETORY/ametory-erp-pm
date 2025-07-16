@@ -102,84 +102,88 @@ const TemplatePage: FC<TemplatePageProps> = ({}) => {
             + Create new template
           </Button>
         </div>
-        <Table striped>
-          <Table.Head>
-            <Table.HeadCell>Title</Table.HeadCell>
-            <Table.HeadCell>Description</Table.HeadCell>
-            <Table.HeadCell></Table.HeadCell>
-          </Table.Head>
-          <Table.Body className="bg-white">
-            {templates.length === 0 && (
-              <Table.Row>
-                <Table.Cell colSpan={3} className="text-center">
-                  No template found.
-                </Table.Cell>
-              </Table.Row>
-            )}
-            {templates.map((template) => (
-              <Table.Row
-                key={template.id}
-                className="bg-white dark:border-gray-700 dark:bg-gray-800"
-              >
-                <Table.Cell>
-                  <span className="font-medium">{template.title}</span>
-                </Table.Cell>
-                <Table.Cell>
-                  <div className="flex flex-row gap-4">
-                    {(template.messages ?? []).length > 0 &&
-                      (template?.messages?.[0]?.files ?? []).filter((file) =>
-                        file.mime_type.includes("image")
-                      ).length > 0 && (
-                        <div className="w-16 h-16 aspect-square border rounded-lg">
-                          <img
-                            src={
-                              template?.messages?.[0]?.files?.find((file) =>
-                                file.mime_type.includes("image")
-                              )?.url
-                            }
-                            alt=""
-                            className="object-cover w-full h-full rounded-lg"
-                          />
-                        </div>
-                      )}
+        <div className="h-[calc(100vh-240px)] overflow-y-auto">
+          <Table striped>
+            <Table.Head>
+              <Table.HeadCell>Title</Table.HeadCell>
+              <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell></Table.HeadCell>
+            </Table.Head>
+            <Table.Body className="bg-white">
+              {templates.length === 0 && (
+                <Table.Row>
+                  <Table.Cell colSpan={3} className="text-center">
+                    No template found.
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {templates.map((template) => (
+                <Table.Row
+                  key={template.id}
+                  className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <Table.Cell>
+                    <span className="font-medium">{template.title}</span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex flex-row gap-4">
+                      {(template.messages ?? []).length > 0 &&
+                        (template?.messages?.[0]?.files ?? []).filter((file) =>
+                          file.mime_type.includes("image")
+                        ).length > 0 && (
+                          <div className="w-16 h-16 aspect-square border rounded-lg">
+                            <img
+                              src={
+                                template?.messages?.[0]?.files?.find((file) =>
+                                  file.mime_type.includes("image")
+                                )?.url
+                              }
+                              alt=""
+                              className="object-cover w-full h-full rounded-lg"
+                            />
+                          </div>
+                        )}
 
-                    <span className="font-medium">{template.description}</span>
-                  </div>
-                </Table.Cell>
+                      <span className="font-medium">
+                        {template.description}
+                      </span>
+                    </div>
+                  </Table.Cell>
 
-                <Table.Cell>
-                  <a
-                    href="#"
-                    className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
-                    onClick={() => {
-                      nav(`/template/${template.id}`);
-                    }}
-                  >
-                    View
-                  </a>
-                  <a
-                    href="#"
-                    className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (
-                        window.confirm(
-                          `Are you sure you want to delete  ${template.title}?`
-                        )
-                      ) {
-                        deleteTemplate(template?.id!).then(() => {
-                          getAllTemplates();
-                        });
-                      }
-                    }}
-                  >
-                    Delete
-                  </a>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+                  <Table.Cell>
+                    <a
+                      href="#"
+                      className="font-medium text-cyan-600 hover:underline dark:text-cyan-500"
+                      onClick={() => {
+                        nav(`/template/${template.id}`);
+                      }}
+                    >
+                      View
+                    </a>
+                    <a
+                      href="#"
+                      className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (
+                          window.confirm(
+                            `Are you sure you want to delete  ${template.title}?`
+                          )
+                        ) {
+                          deleteTemplate(template?.id!).then(() => {
+                            getAllTemplates();
+                          });
+                        }
+                      }}
+                    >
+                      Delete
+                    </a>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </div>
         <Pagination
           className="mt-4"
           currentPage={page}
