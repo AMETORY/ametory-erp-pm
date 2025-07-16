@@ -28,5 +28,7 @@ export interface TiktokMessage {
         nickname: string;
         role: 'SYSTEM' | 'SHOP' | 'BUYER';
     };
-    type: 'NOTIFICATION';
+    type: string;
 }
+
+

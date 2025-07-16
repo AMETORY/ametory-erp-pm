@@ -83,7 +83,7 @@ func (h *TiktokHandler) GetSessionsHandler(c *gin.Context) {
 func (h *TiktokHandler) GetSessionMessagesHandler(c *gin.Context) {
 	connectionID := c.Query("connection_id")
 	nextPageToken := c.Query("next_page_token")
-	conversationID := c.Query("conversation_id")
+	conversationID := c.Param("sessionId")
 
 	connection, err := h.appService.ConnectionService.GetConnection(connectionID)
 	if err != nil {

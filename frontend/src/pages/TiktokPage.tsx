@@ -42,7 +42,7 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
 
   useEffect(() => {
     if (!selectedConnection) return;
-    getTiktokSessions(sessionId || "", {
+    getTiktokSessions({
       page: page,
       size: size,
       search: search,
@@ -63,7 +63,7 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
         <div
           className="flex gap-2 items-center"
           onClick={() => {
-            nav(`/tikrok/${e.id}`);
+            nav(`/tiktok/${e.id}`);
             asyncStorage.setItem(LOCAL_STORAGE_DEFAULT_TIKTOK_SESSION, e.id);
           }}
         >
@@ -215,7 +215,7 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
             </ul>
           </div>
           <div className="w-full border-l relative">
-            {sessionId && <TiktokMessages sessionId={sessionId} />}
+            {sessionId && selectedConnection && <TiktokMessages sessionId={sessionId} connection={selectedConnection} />}
           </div>
         </div>
       </div>

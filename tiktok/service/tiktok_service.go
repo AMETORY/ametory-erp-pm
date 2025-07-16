@@ -140,6 +140,8 @@ func (s *TiktokService) CustomerService202309GetConversationMessagesGet(accessTo
 	if s.appKey == "" || s.appSecret == "" || s.serviceID == "" {
 		return nil, errors.New("tiktok credentials not set")
 	}
+
+	fmt.Println("CONVERSATION ID", conversationId)
 	configuration := apis.NewConfiguration()
 	configuration.AddAppInfo(s.appKey, s.appSecret)
 	apiClient := apis.NewAPIClient(configuration)
