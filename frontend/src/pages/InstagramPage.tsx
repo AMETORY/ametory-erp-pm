@@ -9,10 +9,11 @@ import { asyncStorage } from "../utils/async_storage";
 import { getContrastColor, getPagination } from "../utils/helper";
 import Moment from "react-moment";
 import { PaginationResponse } from "../objects/pagination";
-import { getInstagramSessions } from "../services/api/instagramApi";
+import { deleteInstagramSession, getInstagramSessions } from "../services/api/instagramApi";
 import { WebsocketContext } from "../contexts/WebsocketContext";
 import { ProfileContext } from "../contexts/ProfileContext";
 import InstagramMessages from "../components/InstagramMessages";
+import toast from "react-hot-toast";
 
 interface InstagramPageProps {}
 
@@ -185,7 +186,7 @@ const InstagramPage: FC<InstagramPageProps> = ({}) => {
                       )}
                       <div className="group/edit invisible group-hover/item:visible">
                         <Dropdown label="" inline>
-                          <Dropdown.Item
+                          {/* <Dropdown.Item
                             className="flex gap-2"
                             onClick={() => {
                               if (
@@ -201,7 +202,7 @@ const InstagramPage: FC<InstagramPageProps> = ({}) => {
                             }}
                           >
                             Clear Chat
-                          </Dropdown.Item>
+                          </Dropdown.Item> */}
                           <Dropdown.Item
                             className="flex gap-2"
                             onClick={() => {
@@ -210,11 +211,11 @@ const InstagramPage: FC<InstagramPageProps> = ({}) => {
                                   "Are you sure you want to delete this session?"
                                 )
                               ) {
-                                // deleteWhatsappSession(e.id!).then(() => {
-                                //   toast.success("Chat deleted");
-                                //   getAllSessions();
-                                //   window.location.href = "/whatsapp";
-                                // });
+                                deleteInstagramSession(e.id!).then(() => {
+                                  toast.success("Instagram session deleted");
+                                  getAllSessions();
+                                  window.location.href = "/instagram";
+                                });
                               }
                             }}
                           >

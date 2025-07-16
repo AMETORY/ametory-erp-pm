@@ -106,6 +106,33 @@ func (h *FacebookHandler) GetSessionMessagesHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": messages})
 }
+
+func (h *FacebookHandler) DeleteInstagramSessionHandler(c *gin.Context) {
+	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
+
+	if h.customerRelationshipService == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
+		return
+	}
+
+	var session models.InstagramMessageSession
+	err := h.ctx.DB.First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.ctx.DB.Unscoped().Where("instagram_message_session_id = ?", session.ID).Delete(&models.InstagramMessage{}).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.ctx.DB.Unscoped().Delete(&models.InstagramMessageSession{}, "id = ?", sessionId).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Session deleted successfully"})
+}
 func (h *FacebookHandler) GetInstagramSessionDetailHandler(c *gin.Context) {
 	sessionId := c.Params.ByName("session_id") // c.Params.ByName("sessionId")
 

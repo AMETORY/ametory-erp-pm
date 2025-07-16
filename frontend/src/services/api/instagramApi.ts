@@ -27,6 +27,11 @@ export const getInstagramSessionDetail = async (session_id: string) => {
   });
 };
 
+export const deleteInstagramSession = async (session_id: string) => {
+  return customFetch(`api/v1/facebook/instagram/sessions/${session_id}`, {
+    method: "DELETE",
+  });
+};
 
 
 export const getInstagramMessages = async (session_id: string, req: PaginationRequest) => {
@@ -47,3 +52,6 @@ export const createInstagramMessage = async (sessionId: string, message: any) =>
     body: JSON.stringify(message),
   });
 };
+
+
+

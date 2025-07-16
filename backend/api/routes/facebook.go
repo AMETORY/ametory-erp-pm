@@ -18,7 +18,9 @@ func SetupFacebookRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 		facebook.POST("/instagram/:sessionId/message", handler.SendInstagramMessageHandler)
 		facebook.GET("/instagram/sessions", handler.GetInstagramSessionsHandler)
 		facebook.GET("/instagram/sessions/:session_id", handler.GetInstagramSessionDetailHandler)
+		facebook.DELETE("/instagram/sessions/:session_id", handler.DeleteInstagramSessionHandler)
 		facebook.GET("/instagram/messages", handler.GetSessionMessagesHandler)
+
 	}
 
 	r.GET("/facebook/callback", handler.FacebookCallbackHandler)
