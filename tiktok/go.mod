@@ -4,10 +4,7 @@ go 1.22.8
 
 toolchain go1.24.1
 
-require (
-	ametory-pm v0.0.0-00010101000000-000000000000
-	github.com/AMETORY/ametory-erp-modules v0.0.0-20250603050350-99b356832e0a
-)
+
 
 require (
 	cel.dev/expr v0.18.0 // indirect

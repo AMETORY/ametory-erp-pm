@@ -35,6 +35,7 @@ import TermUsePage from "../pages/TermUsePage";
 import TiktokAuth from "../pages/TiktokAuth";
 import ShopeeAuth from "../pages/ShopeeAuth";
 import LazadaAuth from "../pages/LazadaAuth";
+import TiktokPage from "../pages/TiktokPage";
 
 interface PrivateRouteProps {}
 
@@ -71,6 +72,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/whatsapp" element={<WhatsappPage />} />
       <Route path="/telegram" element={<TelegramPage />} />
       <Route path="/telegram/:sessionId" element={<TelegramPage />} />
+      <Route path="/tiktok" element={<TiktokPage />} />
+      <Route path="/tiktok/:sessionId" element={<TiktokPage />} />
       <Route path="/instagram" element={<InstagramPage />} />
       <Route path="/instagram/:sessionId" element={<InstagramPage />} />
       <Route path="/broadcast" element={<BroadcastPage />} />

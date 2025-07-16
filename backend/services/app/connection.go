@@ -27,12 +27,16 @@ func NewConnectionService(erpContext *context.ERPContext) *ConnectionService {
 
 func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest http.Request, search string) ([]connection.ConnectionModel, error) {
 	var connections []connection.ConnectionModel
-
-	if err := c.ctx.DB.Scopes(paginate(connections, pagination, c.ctx.DB)).
+	stmt := c.ctx.DB.Scopes(paginate(connections, pagination, c.ctx.DB)).
 		Preload("Project").
 		Preload("NewSessionColumn").
 		Preload("IdleColumn").
-		Preload("GeminiAgent").Where("company_id = ?", httpRequest.Header.Get("ID-Company")).Find(&connections).Error; err != nil {
+		Preload("GeminiAgent").Where("company_id = ?", httpRequest.Header.Get("ID-Company"))
+
+	if httpRequest.URL.Query().Get("type") != "" {
+		stmt = stmt.Where("type = ?", httpRequest.URL.Query().Get("type"))
+	}
+	if err := stmt.Find(&connections).Error; err != nil {
 		return nil, err
 	}
 	return connections, nil

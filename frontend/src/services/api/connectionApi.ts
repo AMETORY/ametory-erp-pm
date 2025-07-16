@@ -6,6 +6,7 @@ export const getConnections = async (req: PaginationRequest) => {
     queryParams.set("page", String(req.page));
     queryParams.set("size", String(req.size));
     if (req.search) queryParams.set("search", req.search);
+    if (req.type) queryParams.set("type", req.type);
     return await customFetch(`api/v1/connection/list?${queryParams}`, {
         method: "GET",
     });
