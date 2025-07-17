@@ -14,6 +14,8 @@ func SetupTiktokRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	group.Use(middlewares.AuthMiddleware(erpContext, true))
 	{
 		group.GET("/sessions", handler.GetSessionsHandler)
+		group.GET("/sessions/:sessionId", handler.GetSessionDetailHandler)
+		group.POST("/sessions/:sessionId/message", handler.SendMessageHandler)
 		group.GET("/sessions/:sessionId/messages", handler.GetSessionMessagesHandler)
 	}
 	r.GET("/tiktok/webhook", handler.WebhookHandler)

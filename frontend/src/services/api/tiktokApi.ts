@@ -1,3 +1,4 @@
+import { data } from "react-router-dom";
 import { PaginationRequest } from "../../objects/pagination";
 import { customFetch } from "./baseApi";
 
@@ -32,3 +33,21 @@ export const getTiktokSessionMessages = async (
     method: "GET",
   });
 };
+
+export const getTiktokSessionDetail = async (
+  session_id: string
+) => {
+  return customFetch(`api/v1/tiktok/sessions/${session_id}`, {
+    method: "GET",
+  });
+};
+export const sendTiktokSessionMessage = async (
+  session_id: string,
+  data: any
+) => {
+  return customFetch(`api/v1/tiktok/sessions/${session_id}/message`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+

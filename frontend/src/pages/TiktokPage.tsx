@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC } from "react";
+import { useContext, useEffect, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import { useNavigate, useParams } from "react-router-dom";
 import TiktokMessages from "../components/TiktokMessages";
@@ -14,9 +14,12 @@ import { getContrastColor, initial } from "../utils/helper";
 import { Avatar } from "flowbite-react";
 import Moment from "react-moment";
 import moment from "moment";
+import { WebsocketContext } from "../contexts/WebsocketContext";
 interface TiktokPageProps {}
 
 const TiktokPage: FC<TiktokPageProps> = ({}) => {
+  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+    useContext(WebsocketContext);
   const { sessionId } = useParams();
   const [sessions, setSessions] = useState<TiktokMessageSession[]>([]);
   const [page, setPage] = useState(1);
@@ -24,11 +27,14 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [mounted, setMounted] = useState(false);
+  
   const [selectedConnection, setSelectedConnection] =
     useState<ConnectionModel>();
   const [selectedFilterConnection, setSelectedFilterConnection] =
     useState<ConnectionModel>();
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
+  const [selectedSession, setSelectedSession] =
+    useState<TiktokMessageSession>();
   const nav = useNavigate();
   useEffect(() => {
     setMounted(true);
@@ -42,6 +48,11 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
 
   useEffect(() => {
     if (!selectedConnection) return;
+    getAllSessions()
+    return () => {};
+  }, [selectedConnection]);
+
+  const getAllSessions = () => {
     getTiktokSessions({
       page: page,
       size: size,
@@ -52,12 +63,22 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
       setSessions(resp.data.conversations);
       setPagination(resp.data);
     });
-    return () => {};
-  }, [selectedConnection]);
+  };
+
+  useEffect(() => {
+    if (
+      wsMsg?.command == "TIKTOK_RECEIVED" ||
+      wsMsg?.command == "UPDATE_SESSION" ||
+      wsMsg?.command == "TIKTOK_MESSAGE_READ" ||
+      wsMsg?.command == "TIKTOK_CLEAR_MESSAGE"
+    ) {
+      getAllSessions();
+    }
+  }, [wsMsg, sessionId]);
 
   const sessionCard = (e: TiktokMessageSession) => {
     let contact = e.participants.find((p) => p.role == "BUYER");
-    let content = JSON.parse(e.latest_message.content)
+    let content = JSON.parse(e.latest_message.content);
     return (
       <div className="flex justify-between w-full items-start">
         <div
@@ -98,7 +119,9 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
                   </small>
                   <small className="line-clamp-2 overflow-hidden text-ellipsis text-[8pt]">
                     {/* {moment(e.latest_message.create_time * 1000).format("DD/MM/YYYY")} */}
-                    <Moment fromNow>{e.latest_message.create_time * 1000}</Moment>
+                    <Moment fromNow>
+                      {e.latest_message.create_time * 1000}
+                    </Moment>
                   </small>
                   {/* <div className="flex flex-wrap gap-2">
                   {(e.contact?.tags ?? []).map((el) => (
@@ -215,7 +238,13 @@ const TiktokPage: FC<TiktokPageProps> = ({}) => {
             </ul>
           </div>
           <div className="w-full border-l relative">
-            {sessionId && selectedConnection && <TiktokMessages sessionId={sessionId} connection={selectedConnection} />}
+            {sessionId && selectedConnection && (
+              <TiktokMessages
+                sessionId={sessionId}
+                connection={selectedConnection}
+                session={selectedSession}
+              />
+            )}
           </div>
         </div>
       </div>

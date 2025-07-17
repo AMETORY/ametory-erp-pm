@@ -9,6 +9,7 @@ import (
 	golangCtx "context"
 	"tiktokshop/open/sdk_golang/apis"
 	customer_service_v202309 "tiktokshop/open/sdk_golang/models/customer_service/v202309"
+
 	"tiktokshop/open/sdk_golang/objects"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
@@ -169,6 +170,41 @@ func (s *TiktokService) CustomerService202309GetConversationMessagesGet(accessTo
 	}
 	// respDataJson, _ := json.MarshalIndent(resp.GetData(), "", "  ")
 	// fmt.Println("response data:", string(respDataJson))
+	respData := resp.GetData()
+	return &respData, nil
+}
+
+// For more details about the SDK, refer to the documentation:
+// https://partner.tiktokshop.com/docv2/page/67c83e0799a75104986ae498
+func (s *TiktokService) CustomerService202309SendMessagePost(accessToken, shopChiper, conversationId, typeContent, content string) (*customer_service_v202309.CustomerService202309SendMessageResponseData, error) {
+	configuration := apis.NewConfiguration()
+	configuration.AddAppInfo(s.appKey, s.appSecret)
+	apiClient := apis.NewAPIClient(configuration)
+	request := apiClient.CustomerServiceV202309API.CustomerService202309ConversationsConversationIdMessagesPost(golangCtx.Background(), conversationId)
+	request = request.XTtsAccessToken(accessToken)
+	request = request.ContentType("application/json")
+	request = request.ShopCipher(shopChiper)
+	customerService202309SendMessageRequestBody := customer_service_v202309.NewCustomerService202309SendMessageRequestBody()
+	customerService202309SendMessageRequestBody.SetType(typeContent)
+	customerService202309SendMessageRequestBody.SetContent(content)
+	request = request.CustomerService202309SendMessageRequestBody(*customerService202309SendMessageRequestBody)
+	resp, httpResp, err := request.Execute()
+	if err != nil || httpResp.StatusCode != 200 {
+
+		return nil, fmt.Errorf("productsRequest err:%v resbody:%s", err, httpResp.Body)
+	}
+	if resp == nil {
+		fmt.Printf("response is nil")
+		return nil, errors.New("response is nil")
+	}
+	if resp.GetCode() != 0 {
+		fmt.Printf("response business is error, errorCode:%d errorMessage:%s", resp.GetCode(), resp.GetMessage())
+		return nil, fmt.Errorf("response business is error, errorCode:%d errorMessage:%s", resp.GetCode(), resp.GetMessage())
+	}
+	// respDataJson, _ := json.MarshalIndent(resp.GetData(), "", "  ")
+
+	// fmt.Println("response data:", string(respDataJson))
+
 	respData := resp.GetData()
 	return &respData, nil
 }
