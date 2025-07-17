@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	customer_service_v202309 "tiktokshop/open/sdk_golang/models/customer_service/v202309"
 	tiktok "tiktokshop/open/sdk_golang/service"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
 	"gorm.io/gorm"
 )
@@ -214,6 +217,68 @@ func (h *TiktokHandler) GetSessionsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": resp})
 }
 
+func (h *TiktokHandler) SendFileHandler(c *gin.Context) {
+	conversationID := c.Param("sessionId")
+	connectionId := c.Query("connection_id")
+
+	if conversationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Session Id is required"})
+		return
+	}
+	if connectionId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Connection Id is required"})
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Save file to temporary directory
+	filePath := fmt.Sprintf("%s/%s%s", os.TempDir(), uuid.New(), filepath.Ext(file.Filename))
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fileData, err := os.Open(filePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer fileData.Close()
+	defer os.Remove(filePath)
+
+	connection, err := h.appService.ConnectionService.GetConnection(connectionId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if connection.Type != "tiktok" || connection.Status != "ACTIVE" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Connection is not active"})
+		return
+	}
+
+	if connection.AuthData == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Connection is not authorized"})
+		return
+	}
+
+	authData := map[string]any{}
+	if err := json.Unmarshal([]byte(*connection.AuthData), &authData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	resp, err := h.tiktokService.CustomerService202309UploadBuyerMessagesImagePost(authData["access_token"].(string), connection.Password, conversationID, fileData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": resp})
+}
 func (h *TiktokHandler) SendMessageHandler(c *gin.Context) {
 	conversationID := c.Param("sessionId")
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 
 	golangCtx "context"
 	"tiktokshop/open/sdk_golang/apis"
@@ -205,6 +206,36 @@ func (s *TiktokService) CustomerService202309SendMessagePost(accessToken, shopCh
 
 	// fmt.Println("response data:", string(respDataJson))
 
+	respData := resp.GetData()
+	return &respData, nil
+}
+
+// For more details about the SDK, refer to the documentation:
+// https://partner.tiktokshop.com/docv2/page/67c83e0799a75104986ae498
+func (s *TiktokService) CustomerService202309UploadBuyerMessagesImagePost(accessToken, shopChiper, conversationId string, data *os.File) (*customer_service_v202309.CustomerService202309UploadBuyerMessagesImageResponseData, error) {
+	configuration := apis.NewConfiguration()
+	configuration.AddAppInfo(s.appKey, s.appSecret)
+	apiClient := apis.NewAPIClient(configuration)
+	request := apiClient.CustomerServiceV202309API.CustomerService202309ImagesUploadPost(golangCtx.Background())
+	request = request.XTtsAccessToken(accessToken)
+	request = request.ContentType("application/json")
+	request = request.ShopCipher(shopChiper)
+	// customerService202309UploadBuyerMessagesImageRequestBody := customer_service_v202309.NewCustomerService202309UploadBuyerMessagesImageRequestBody()
+	// customerService202309UploadBuyerMessagesImageRequestBody.SetData(nil)
+	request = request.Data(data)
+	resp, httpResp, err := request.Execute()
+	if err != nil || httpResp.StatusCode != 200 {
+		fmt.Printf("productsRequest err:%v resbody:%s", err, httpResp.Body)
+		return nil, fmt.Errorf("productsRequest err:%v resbody:%s", err, httpResp.Body)
+	}
+	if resp == nil {
+		return nil, errors.New("response is nil")
+	}
+	if resp.GetCode() != 0 {
+		return nil, fmt.Errorf("response business is error, errorCode:%d errorMessage:%s", resp.GetCode(), resp.GetMessage())
+	}
+	respDataJson, _ := json.MarshalIndent(resp.GetData(), "", "  ")
+	fmt.Println("response data:", string(respDataJson))
 	respData := resp.GetData()
 	return &respData, nil
 }

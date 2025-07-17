@@ -2,9 +2,7 @@ import { data } from "react-router-dom";
 import { PaginationRequest } from "../../objects/pagination";
 import { customFetch } from "./baseApi";
 
-export const getTiktokSessions = async (
-  req: PaginationRequest
-) => {
+export const getTiktokSessions = async (req: PaginationRequest) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", String(req.page));
   queryParams.set("size", String(req.size));
@@ -29,14 +27,15 @@ export const getTiktokSessionMessages = async (
   if (req.connection_session)
     queryParams.set("connection_id", req.connection_session);
   if (req.search) queryParams.set("search", req.search);
-  return customFetch(`api/v1/tiktok/sessions/${session_id}/messages?${queryParams}`, {
-    method: "GET",
-  });
+  return customFetch(
+    `api/v1/tiktok/sessions/${session_id}/messages?${queryParams}`,
+    {
+      method: "GET",
+    }
+  );
 };
 
-export const getTiktokSessionDetail = async (
-  session_id: string
-) => {
+export const getTiktokSessionDetail = async (session_id: string) => {
   return customFetch(`api/v1/tiktok/sessions/${session_id}`, {
     method: "GET",
   });
@@ -51,3 +50,20 @@ export const sendTiktokSessionMessage = async (
   });
 };
 
+export const sendTiktokSessionFile = async (
+  session_id: string,
+  connectionId: string,
+  file: File
+) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return customFetch(
+    `api/v1/tiktok/sessions/${session_id}/file?connection_id=${connectionId}`,
+    {
+      method: "POST",
+      body: formData,
+      isMultipart: true,
+    }
+  );
+};

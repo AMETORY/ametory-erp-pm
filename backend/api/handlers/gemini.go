@@ -59,7 +59,9 @@ func (h *GeminiHandler) GenerateContentHandler(c *gin.Context) {
 		}
 	}
 
-	h.geminiService.SetupAPIKey(companySetting.GeminiAPIKey, c.Query("skip_history") == "true")
+	if companySetting.GeminiAPIKey != "" {
+		h.geminiService.SetupAPIKey(companySetting.GeminiAPIKey, c.Query("skip_history") == "true")
+	}
 
 	if agentId != "" {
 		var agent models.GeminiAgent
@@ -67,6 +69,10 @@ func (h *GeminiHandler) GenerateContentHandler(c *gin.Context) {
 		if err != nil {
 			c.JSON(404, gin.H{"error": "Agent is not found"})
 			return
+		}
+
+		if agent.ApiKey != "" {
+			h.geminiService.SetupAPIKey(agent.ApiKey, c.Query("skip_history") == "true")
 		}
 		h.geminiService.SetupModel(agent.SetTemperature, agent.SetTopK, agent.SetTopP, agent.SetMaxOutputTokens, agent.ResponseMimetype, agent.Model)
 		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
@@ -256,6 +262,10 @@ func (h *GeminiHandler) CreateAgentHandler(c *gin.Context) {
 	if input.ApiKey == "" {
 		input.ApiKey = companySetting.GeminiAPIKey
 	}
+
+	companyID := c.GetHeader("ID-Company")
+	input.CompanyID = &companyID
+
 	err = h.geminiService.CreateAgent(&input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

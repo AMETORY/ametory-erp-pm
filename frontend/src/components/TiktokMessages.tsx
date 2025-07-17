@@ -5,6 +5,7 @@ import { connect } from "http2";
 import {
   getTiktokSessionDetail,
   getTiktokSessionMessages,
+  sendTiktokSessionFile,
   sendTiktokSessionMessage,
 } from "../services/api/tiktokApi";
 import {
@@ -13,7 +14,7 @@ import {
   TiktokParticipant,
   TiktokSessionDetail,
 } from "../models/tiktok";
-import { Avatar, Button } from "flowbite-react";
+import { Avatar, Button, Popover } from "flowbite-react";
 import { initial } from "../utils/helper";
 import Moment from "react-moment";
 import { ScrollContext } from "../contexts/ScrollContext";
@@ -48,17 +49,13 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
   const [modalAttach, setModalAttach] = useState(false);
   const [modalEmojis, setModalEmojis] = useState(false);
   const [selectedCS, setSelectedCS] = useState<TiktokParticipant>();
-  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } = useContext(
-    WebsocketContext
-  )
-
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
+    useContext(WebsocketContext);
 
   useEffect(() => {
     if (!sessionId) return;
-    if (
-      wsMsg?.session_id == sessionId &&
-      wsMsg?.command == "TIKTOK_RECEIVED"
-    ) {
+    if (wsMsg?.session_id == sessionId && wsMsg?.command == "TIKTOK_RECEIVED") {
       // setMessages([...messages, wsMsg.data]);
       if (wsMsg.data) {
         setMessages([wsMsg.data, ...messages]);
@@ -66,11 +63,8 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
           scrollToBottom();
         }, 300);
       }
-     
     }
-
-    
-  }, [wsMsg,  sessionId]);
+  }, [wsMsg, sessionId]);
 
   useEffect(() => {
     setShowScrollButton(
@@ -172,7 +166,6 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
     }
   };
 
-  
   useEffect(() => {
     const container = chatContainerRef.current;
 
@@ -258,7 +251,8 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
         color="gray"
         onClick={() => {
           // setModalTemplates(true);
-          setModalAttach(true);
+          // setModalAttach(true);
+          fileRef.current?.click();
         }}
       >
         <IoAttachOutline />
@@ -357,6 +351,30 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
                   } p-2 rounded-md`}
                   data-id={msg.id}
                 >
+                  {msg.type == "IMAGE" && (
+                    <Popover
+                      placement="bottom"
+                      content={
+                        <div className="bg-white p-4 rounded-md w-[600px]">
+                          <img
+                            src={content.url}
+                            alt=""
+                            className="w-full h-full object-cover rounded-md"
+                          />
+                        </div>
+                      }
+                    >
+                      <img
+                        src={content.url}
+                        alt=""
+                        className={` rounded-md mb-2 ${
+                          msg?.sender?.role != "CUSTOMER_SERVICE"
+                            ? "ml-auto"
+                            : "mr-auto"
+                        } w-[300px] h-[300px] object-cover`}
+                      />
+                    </Popover>
+                  )}
                   <small className="font-semibold">
                     {msg.sender?.nickname}
                   </small>
@@ -414,6 +432,40 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
         </button>
       )}
       {renderShoutBox()}
+      <input
+        accept=".png, .jpg, .jpeg, .doc"
+        type="file"
+        name="file"
+        id=""
+        ref={fileRef}
+        className="hidden"
+        onChange={async (e) => {
+          if ((e.target.files ?? []).length > 0) {
+            try {
+              const resp: any = await sendTiktokSessionFile(
+                sessionId!,
+                connection.id!,
+                e.target.files![0]
+              );
+              // console.log(resp);
+              let data = {
+                type: "IMAGE",
+                content: JSON.stringify(resp.data),
+                nickname: selectedCS?.nickname,
+                role: selectedCS?.role,
+                connection_id: connection.id,
+              };
+              await sendTiktokSessionMessage(sessionId!, data);
+            } catch (err) {
+              console.log(err);
+            } finally {
+              if (fileRef.current) {
+                fileRef.current.value = "";
+              }
+            }
+          }
+        }}
+      />
     </div>
   );
 };
