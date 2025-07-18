@@ -23,6 +23,7 @@ export interface BroadcastModel {
   template_id?: string;
   template?: TemplateModel;
   delay_time?: number;
+  sequence_delay_time?: number;
   products: ProductModel[];
   files: FileModel[];
 }

@@ -657,6 +657,24 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               )}
             </div>
             <div>
+              <Label>Sequence Delay Time (ms)</Label>
+              {isEditable ? (
+                <TextInput
+                  type="number"
+                  disabled={!isEditable}
+                  value={broadcast?.sequence_delay_time ?? 0}
+                  onChange={(val) => {
+                    setBroadcast({
+                      ...broadcast!,
+                      sequence_delay_time: Number(val.target.value),
+                    });
+                  }}
+                />
+              ) : (
+                <div>{broadcast?.sequence_delay_time ?? 0}ms</div>
+              )}
+            </div>
+            <div>
               <Label>Delay Time (ms)</Label>
               {isEditable ? (
                 <TextInput

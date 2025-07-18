@@ -241,6 +241,9 @@ func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel) {
 				"connection_model_id":   sender.ID,
 			})
 		}
+		if (b.SequenceDelayTime > 0) && (i > 0) {
+			time.Sleep(time.Duration(b.SequenceDelayTime) * time.Millisecond)
+		}
 
 		s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Millisecond)
 	}
