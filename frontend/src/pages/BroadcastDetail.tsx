@@ -605,9 +605,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <Button onClick={() => update()}>Save</Button>
               )}
               {broadcast?.status === "SCHEDULED" && (
-                <Button color="purple" onClick={() => {
-
-                }}><GoClock className="mr-2" /> {countdown}</Button>
+                <Button color="purple" onClick={() => {}}>
+                  <GoClock className="mr-2" /> {countdown}
+                </Button>
               )}
             </div>
           </div>
@@ -819,8 +819,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               </p>
             </div>
 
-            {(broadcast?.status === "COMPLETED" ||
-              broadcast?.status === "PROCESSING") && (
+            {broadcast?.status === "COMPLETED" && (
               <Chart
                 chartType="PieChart"
                 width="100%"
@@ -829,6 +828,28 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   ["Status", "Count"],
                   ["Succeed", broadcast?.success_count ?? 0],
                   ["Failed", broadcast?.failed_count ?? 0],
+                ]}
+                options={{
+                  colors: ["#10b981", "#ef4444", "#f59e0b"],
+                  pieHole: 0.4,
+                  legend: { position: "bottom" },
+                  is3D: true,
+                }}
+              />
+            )}
+            {broadcast?.status === "PROCESSING" && (
+              <Chart
+                chartType="PieChart"
+                width="100%"
+                height="300px"
+                data={[
+                  ["Status", "Count"],
+                  ["Completed", broadcast?.completed_count ?? 0],
+                  [
+                    "Uncompleted",
+                    (broadcast?.contact_count ?? 0) -
+                      (broadcast?.completed_count ?? 0),
+                  ],
                 ]}
                 options={{
                   colors: ["#10b981", "#ef4444", "#f59e0b"],

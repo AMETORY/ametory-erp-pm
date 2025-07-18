@@ -16,6 +16,7 @@ import (
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
@@ -50,6 +51,9 @@ func (h *TiktokHandler) WebhookHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
 		return
 	}
+
+	fmt.Println("INCOMING TIKTOK WEBHOOK")
+	utils.LogJson(requestData)
 
 	shopId, ok := requestData["shop_id"].(string)
 	if !ok {

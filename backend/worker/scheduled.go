@@ -51,6 +51,41 @@ func ScheduledBroadcastWorker(erpContext *context.ERPContext) {
 	}
 
 }
+func BroadcastWorker(erpContext *context.ERPContext) {
+	fmt.Println("START BROADCAST WORKER NOW")
+
+	broadcastSrv, ok := erpContext.ThirdPartyServices["BROADCAST"].(*app.BroadcastService)
+	appService, ok2 := erpContext.AppService.(*app.AppService)
+	if ok && ok2 {
+		dataSub := appService.Redis.Subscribe(*erpContext.Ctx, "BROADCAST:NOW")
+		for {
+			msg, err := dataSub.ReceiveMessage(*erpContext.Ctx)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			var broadcastData models.BroadcastModel
+			err = json.Unmarshal([]byte(msg.Payload), &broadcastData)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			log.Println("BROADCAST NOW", broadcastData.Description, time.Now().Format("2006-01-02 15:04:05"))
+			go func() {
+				broadcastData.Status = "PROCESSING"
+				err := erpContext.DB.First(&broadcastData, "id = ?", broadcastData.ID).Error
+				if err != nil {
+					log.Println("ERROR", err)
+					return
+				}
+				erpContext.DB.Save(&broadcastData)
+				broadcastSrv.StartBroadcast(&broadcastData)
+			}()
+
+		}
+	}
+
+}
 
 func ScheduledMessageWorker(erpContext *context.ERPContext) {
 	fmt.Println("START SCHEDULED MESSAGE WORKER")

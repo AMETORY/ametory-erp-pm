@@ -197,10 +197,10 @@ func (s *BroadcastService) Send(b *models.BroadcastModel) {
 	if b.ScheduledAt != nil {
 		// key := fmt.Sprintf("broadcast:schedule:%v", b.ID)
 		data, _ := json.Marshal(b)
-		s.appService.Redis.Publish(*s.ctx.Ctx, "BROADCAST:SCHEDULED", data)
-		// s.appService.Redis.Set(*s.ctx.Ctx, key, data, time.Until(*b.ScheduledAt))
 		b.Status = "SCHEDULED"
 		s.ctx.DB.Save(b)
+		s.appService.Redis.Publish(*s.ctx.Ctx, "BROADCAST:SCHEDULED", data)
+		// s.appService.Redis.Set(*s.ctx.Ctx, key, data, time.Until(*b.ScheduledAt))
 		// go func() {
 		// 	time.Sleep(time.Until(*b.ScheduledAt))
 		// 	b.Status = "PROCESSING"
@@ -214,20 +214,21 @@ func (s *BroadcastService) Send(b *models.BroadcastModel) {
 		// }()
 	} else {
 		b.Status = "PROCESSING"
+		data, _ := json.Marshal(b)
 		s.ctx.DB.Save(b)
-		s.StartBroadcast(b)
+		s.appService.Redis.Publish(*s.ctx.Ctx, "BROADCAST:NOW", data)
+
 	}
 }
 
 func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel) {
-	fmt.Println("📢 Starting broadcast", b.ID)
+	log.Println("📢 Starting broadcast", b.ID)
 
 	batches := chunkContacts(b.Contacts, b.MaxContactsPerBatch)
-	fmt.Println("📢 Number of batches", len(batches), "<>", b.MaxContactsPerBatch)
-	utils.LogJson((batches))
+	log.Println("📢 Number of batches", len(batches), "<>", b.MaxContactsPerBatch)
+	// utils.LogJson((batches))
 	for i, batch := range batches {
 		sender := b.Connections[i%len(b.Connections)]
-		go s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Millisecond)
 		var group = models.BroadcastGrouping{
 			BaseModel:   shared.BaseModel{ID: uuid.New().String()},
 			BroadcastID: b.ID,
@@ -235,8 +236,13 @@ func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel) {
 		}
 		s.ctx.DB.Create(&group)
 		for _, v := range batch {
-			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Update("broadcast_grouping_id", group.ID)
+			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Updates(map[string]any{
+				"broadcast_grouping_id": group.ID,
+				"connection_model_id":   sender.ID,
+			})
 		}
+
+		s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Millisecond)
 	}
 	s.StartRetrySchedulers(*b)
 }
@@ -254,7 +260,7 @@ func (s *BroadcastService) sendBatchWithDelay(sender connection.ConnectionModel,
 				s.saveToRetryQueue(mr)
 			},
 		)
-		s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("connection_model_id", sender.ID)
+		// s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("connection_model_id", sender.ID)
 	}
 }
 

@@ -14,7 +14,7 @@ import {
   TiktokParticipant,
   TiktokSessionDetail,
 } from "../models/tiktok";
-import { Avatar, Button, Popover } from "flowbite-react";
+import { Avatar, Button, Modal, Popover } from "flowbite-react";
 import { initial } from "../utils/helper";
 import Moment from "react-moment";
 import { ScrollContext } from "../contexts/ScrollContext";
@@ -52,6 +52,20 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const { isWsConnected, setWsConnected, wsMsg, setWsMsg } =
     useContext(WebsocketContext);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
+      .then((response) => {
+        return response.json();
+      })
+      .then((jsonData) => {
+        setEmojis(jsonData.emojis);
+      });
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -394,6 +408,17 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
     );
   };
 
+  const groupBy = (emojis: any[], category: string): { [s: string]: any[] } => {
+    return emojis.reduce((acc, curr) => {
+      const key = curr[category];
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(curr);
+      return acc;
+    }, {});
+  };
+
   return (
     <div className="flex flex-col h-full ">
       <div className="shoutbox border-b py-2 min-h-[40px] flex justify-between items-center">
@@ -466,6 +491,35 @@ const TiktokMessages: FC<TiktokMessagesProps> = ({ sessionId, connection }) => {
           }
         }}
       />
+      <Modal
+        dismissible
+        show={modalEmojis}
+        onClose={() => setModalEmojis(false)}
+      >
+        <Modal.Header>Emojis</Modal.Header>
+        <Modal.Body>
+          <div>
+            {Object.entries(groupBy(emojis, "category")).map(
+              ([category, emojis], i) => (
+                <div className="mb-4 hover:bg-gray-100 rounded-lg p-2" key={i}>
+                  <h3 className="font-bold">{category}</h3>
+                  <div className=" flex flex-wrap gap-1">
+                    {emojis.map((e: any, index: number) => (
+                      <div
+                        key={index}
+                        className="cursor-pointer text-lg"
+                        onClick={() => setContent((prev) => prev + e.emoji)}
+                      >
+                        {e.emoji}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };

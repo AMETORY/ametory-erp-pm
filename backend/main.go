@@ -236,6 +236,7 @@ func main() {
 	routes.SetupAnalyticRoutes(v1, erpContext)
 	routes.NewTelegramRoutes(v1, erpContext)
 	routes.SetupFacebookRoutes(v1, erpContext)
+	routes.SetupLazadaRoutes(v1, erpContext)
 	routes.SetupTiktokRoutes(v1, erpContext)
 
 	// RUN WORKER
@@ -244,6 +245,9 @@ func main() {
 	}()
 	go func() {
 		worker.ScheduledBroadcastWorker(erpContext)
+	}()
+	go func() {
+		worker.BroadcastWorker(erpContext)
 	}()
 	go func() {
 		worker.ScheduledMessageWorker(erpContext)
