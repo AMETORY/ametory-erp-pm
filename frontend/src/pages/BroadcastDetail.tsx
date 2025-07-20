@@ -961,9 +961,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 />
                 Name
               </Table.HeadCell>
-              <Table.HeadCell>Email</Table.HeadCell>
+              {/* <Table.HeadCell>Email</Table.HeadCell> */}
               <Table.HeadCell>Phone</Table.HeadCell>
-              <Table.HeadCell>Address</Table.HeadCell>
+              {/* <Table.HeadCell>Address</Table.HeadCell> */}
               <Table.HeadCell>Tag</Table.HeadCell>
               <Table.HeadCell>Data</Table.HeadCell>
               <Table.HeadCell>Info</Table.HeadCell>
@@ -1029,9 +1029,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       </div>
                     </div>
                   </Table.Cell>
-                  <Table.Cell>{contact.email}</Table.Cell>
+                  {/* <Table.Cell>{contact.email}</Table.Cell> */}
                   <Table.Cell>{contact.phone}</Table.Cell>
-                  <Table.Cell>{contact.address}</Table.Cell>
+                  {/* <Table.Cell>{contact.address}</Table.Cell> */}
                   <Table.Cell>
                     {(contact.tags ?? []).map((tag) => tag.name).join(", ")}
                   </Table.Cell>
@@ -1041,7 +1041,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     )}
                   </Table.Cell>
                   <Table.Cell className="w-32">
-                    {broadcast?.status === "COMPLETED" && (
+                    {(broadcast?.status === "COMPLETED" || broadcast?.status === "PROCESSING") && (
                       <div className="flex gap-2">
                         <ul>
                           <li className="flex gap-2 w-full justify-between">

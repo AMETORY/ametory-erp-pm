@@ -68,6 +68,9 @@ var (
 			{"broadcast": append(cruds, "send")},
 			{"message": append(cruds, "send")},
 		},
+		"connection": {
+			{"connection": cruds},
+		},
 		"misc": {
 			{"tag": cruds},
 		},
@@ -112,6 +115,9 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 		"misc": {
 			{"tag": cruds},
 		},
+		"connection": {
+			{"connection": cruds},
+		},
 		"whatsapp": {
 			{"broadcast": append(cruds, "send")},
 			{"message": append(cruds, "send")},
@@ -155,7 +161,11 @@ func (a AppService) GenerateDefaultRoles(companyID string) []models.RoleModel {
 		"misc": {
 			{"tag": cruds},
 		},
+		"connection": {
+			{"connection": []string{"read", "create", "update"}},
+		},
 		"project_management": {
+
 			{"project": []string{"read"}},
 			{"member": append([]string{"read"}, "invite")},
 			{"task": cruds},

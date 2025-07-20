@@ -32,6 +32,7 @@ import { ProjectModel } from "../models/project";
 import { ColumnModel } from "../models/column";
 import { getProjects } from "../services/api/projectApi";
 import { setUpWebhook } from "../services/api/telegramApi";
+import { MemberContext } from "../contexts/ProfileContext";
 interface ConnectionPageProps {}
 
 const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
@@ -48,7 +49,7 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
   const [description, setDescription] = useState("");
   const [sessionName, setSessionName] = useState("");
   const [activeConnection, setActiveConnection] = useState<ConnectionModel>();
-
+  const { member } = useContext(MemberContext);
   const [selectedConnection, setSelectedConnection] = useState<{
     label: string;
     value: string;
@@ -62,6 +63,12 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     setMounted(true);
   }, []);
 
+  const checkPermission = (permission: string) => {
+    if (member?.role?.permission_names) {
+      return member.role.permission_names.includes(permission);
+    }
+    return false;
+  };
   useEffect(() => {
     let connType = [{ label: "WHATSAPP", value: "whatsapp" }];
     if (process.env.REACT_APP_TELEGRAM_ENABLED) {
@@ -225,24 +232,26 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
                   >
                     View
                   </a>
-                  <a
-                    href="#"
-                    className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (
-                        window.confirm(
-                          `Are you sure you want to delete connection ${connection.name}?`
-                        )
-                      ) {
-                        deleteConnection(connection?.id!).then(() => {
-                          getAllConnections();
-                        });
-                      }
-                    }}
-                  >
-                    Delete
-                  </a>
+                  {checkPermission("connection:connection:delete") && (
+                    <a
+                      href="#"
+                      className="font-medium text-red-600 hover:underline dark:text-red-500 ms-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (
+                          window.confirm(
+                            `Are you sure you want to delete connection ${connection.name}?`
+                          )
+                        ) {
+                          deleteConnection(connection?.id!).then(() => {
+                            getAllConnections();
+                          });
+                        }
+                      }}
+                    >
+                      Delete
+                    </a>
+                  )}
                 </Table.Cell>
               </Table.Row>
             ))}
