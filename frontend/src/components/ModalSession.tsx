@@ -79,6 +79,7 @@ const ModalSession: FC<ModalSessionProps> = ({
           <div>
             <Label htmlFor="name" value="Connection" />
             <Select
+            isDisabled
               options={connections.filter((c) => c.type === type).map((c) => ({
                 value: c.id,
                 label: c.name,
