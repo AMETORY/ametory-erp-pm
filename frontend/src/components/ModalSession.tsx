@@ -95,6 +95,7 @@ const ModalSession: FC<ModalSessionProps> = ({
                     id: e?.value,
                     name: e?.label,
                   },
+                  ref_id: e?.value,
                 });
               }}
             />
@@ -155,7 +156,7 @@ const ModalSession: FC<ModalSessionProps> = ({
               )}
             />
           </div>
-          {contactAttributes.map((attr) => (
+          {selectedContact?.custom_data && contactAttributes.map((attr) => (
             <div>
               <Label htmlFor="" value={attr.key} />
               <TextInput

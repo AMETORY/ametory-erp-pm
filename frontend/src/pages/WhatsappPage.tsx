@@ -336,7 +336,11 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                       }}
                     >
                       <div className="flex flex-col">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <div className="flex flex-row gap-2 items-center justify-center">
+                          <small>
+                          {e.ref?.connected ? "🟢" : "🔴"} 
+                          </small>
                           <div
                             className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
                             style={{
@@ -344,7 +348,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                               color: getContrastColor(e.ref?.color),
                             }}
                           >
-                            {e.ref?.name}
+                           {e.ref?.name}
+                          </div>
                           </div>
                         </div>
                         <div className="flex gap-1">

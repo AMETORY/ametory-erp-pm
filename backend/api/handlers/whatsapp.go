@@ -49,6 +49,7 @@ type WhatsappHandler struct {
 	pmService                   *project_management.ProjectManagementService
 	contactService              *contact.ContactService
 	cacheService                *cache.CacheManager[paginate.Page]
+	whatsappWebService          *whatsmeow_client.WhatsmeowService
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -59,7 +60,10 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 	if ok {
 		waService = waSrv
 	}
-
+	whatsappWebService, ok := erpContext.ThirdPartyServices["WA"].(*whatsmeow_client.WhatsmeowService)
+	if !ok {
+		panic("ThirdPartyServices is not instance of whatsmeow_client.WhatsmeowService")
+	}
 	var appService *app.AppService
 	appSrv, ok := erpContext.AppService.(*app.AppService)
 	if ok {
@@ -98,6 +102,7 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		pmService:                   pmService,
 		contactService:              contactService,
 		cacheService:                cacheService,
+		whatsappWebService:          whatsappWebService,
 	}
 }
 
@@ -1848,11 +1853,12 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	var connectionStatus = make(map[string]bool)
 
 	waSessions := sessions.Items.(*[]models.WhatsappMessageSession)
 	newWaSessions := []models.WhatsappMessageSession{}
 	for _, v := range *waSessions {
-		fmt.Println("SESSION", v)
+		// fmt.Println("SESSION", v)
 		var totalUnread int64
 		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ? and is_from_me = ?", v.Session, false, false).Count(&totalUnread)
 		v.CountUnread = int(totalUnread)
@@ -1860,7 +1866,24 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 			var refType = "connection"
 			if *v.RefType == refType {
 				var conn connection.ConnectionModel
-				err = h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "id = ?", v.RefID).Error
+				err = h.erpContext.DB.Select("id, session_name, session, name, color").First(&conn, "id = ?", v.RefID).Error
+				if _, ok := connectionStatus[conn.ID]; !ok {
+					fmt.Println("CHECK CONNECTION", conn.Session)
+					resp, err := h.whatsappWebService.CheckConnected(conn.Session)
+					if err == nil {
+						respJson := struct {
+							IsConnected bool   `json:"is_connected"`
+							Message     string `json:"message"`
+						}{}
+						if err := json.Unmarshal(resp, &respJson); err == nil {
+							// fmt.Println("respJson", respJson)
+							conn.Connected = respJson.IsConnected
+							connectionStatus[conn.ID] = respJson.IsConnected
+						}
+					}
+				} else {
+					conn.Connected = connectionStatus[conn.ID]
+				}
 				if err == nil {
 					v.Ref = &conn
 				} else {
@@ -1903,18 +1926,25 @@ func (h *WhatsappHandler) UpdateSessionHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
 		return
 	}
-	var session models.WhatsappMessageSession
-	err := h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
+
+	data := map[string]any{
+		"is_human_agent": input.IsHumanAgent,
+		"session":        input.Session,
+		"session_name":   input.SessionName,
+		"ref_id":         input.RefID,
+		"ref_type":       input.RefType,
+	}
+
+	// fmt.Println("DATA UPDATE SESSION")
+	// utils.LogJson(data)
+	err := h.erpContext.DB.Model(&models.WhatsappMessageSession{}).Where("id = ?", sessionId).Updates(data).Error
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.erpContext.DB.Model(&models.WhatsappMessageSession{}).Where("id = ?", sessionId).Updates(map[string]any{
-		"is_human_agent": input.IsHumanAgent,
-		"session":        input.Session,
-		"session_name":   input.SessionName,
-	}).Error
+	var session models.WhatsappMessageSession
+	err = h.erpContext.DB.Preload("Contact").First(&session, "id = ?", sessionId).Error
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
