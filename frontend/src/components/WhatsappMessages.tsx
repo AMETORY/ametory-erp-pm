@@ -249,7 +249,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
         console.error(err);
         // window.location.href = "/whatsapp";
       });
-  }, [session, sessionId]);
+  }, [ sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -259,6 +259,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
     ) {
       setMessages([...messages, wsMsg.data]);
       setTimeout(() => {
+        // console.log("wsMsg.data",wsMsg.data)
         // scrollToBottom();
         setSession({
           ...session,
@@ -270,7 +271,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
           top: chatContainerRef?.current?.scrollHeight ?? 0,
           behavior: "smooth",
         });
-      }, 700);
+      }, 1000);
     }
 
     if (

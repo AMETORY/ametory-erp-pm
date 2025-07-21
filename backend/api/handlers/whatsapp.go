@@ -1194,8 +1194,6 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("RECEIPT MESSAGE")
-	utils.LogJson(body)
 	// GET CONNECTION
 	conn, err := h.appService.ConnectionService.GetConnectionBySession(body.SessionName)
 	if err != nil {
@@ -1231,6 +1229,11 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 		return
+	}
+
+	fmt.Println("RECEIPT MESSAGE")
+	if ok && msgType != "read" {
+		utils.LogJson(body)
 	}
 
 	convMsg := ""
@@ -2046,6 +2049,21 @@ func (h *WhatsappHandler) GetSessionDetailHandler(c *gin.Context) {
 	var totalUnread int64
 	h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ? AND is_read = ? and is_from_me = ?", session.Session, false, false).Count(&totalUnread)
 	session.CountUnread = int(totalUnread)
+	fmt.Println("CHECK CONNECTION", session.Session)
+	resp, err := h.whatsappWebService.CheckConnected(connection.Session)
+	if err == nil {
+		respJson := struct {
+			IsConnected bool   `json:"is_connected"`
+			Message     string `json:"message"`
+		}{}
+		if err := json.Unmarshal(resp, &respJson); err == nil {
+			// fmt.Println("respJson", respJson)
+			connection.Connected = respJson.IsConnected
+		}
+
+		fmt.Println(" CONNECTION IS CONNECTED", connection.Connected)
+	}
+	session.Ref = connection
 
 	c.JSON(http.StatusOK, gin.H{"message": "ok", "data": session, "connection": connection})
 }

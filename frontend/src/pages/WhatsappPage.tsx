@@ -11,6 +11,7 @@ import {
   Modal,
   Textarea,
   TextInput,
+  Tooltip,
 } from "flowbite-react";
 import {
   WhatsappMessageModel,
@@ -206,6 +207,10 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
         if (wsMsg?.session_id) {
           getWhatsappSessionDetail(wsMsg?.session_id).then((resp: any) => {
             // console.log("SESSION DATA", resp.data);
+            if (sessions.length === 0) {
+              setSessions([resp.data]);
+              return
+            }
             setSessions(
               sessions.map((s) => {
                 if (s.id === resp.data.id) {
@@ -339,7 +344,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         <div className="flex flex-wrap gap-2 items-center">
                           <div className="flex flex-row gap-2 items-center justify-center">
                           <small>
-                          {e.ref?.connected ? "🟢" : "🔴"} 
+                          {e.ref?.connected ? <Tooltip content="Connected">🟢</Tooltip> : <Tooltip content="Not Connected">🔴</Tooltip>} 
                           </small>
                           <div
                             className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
