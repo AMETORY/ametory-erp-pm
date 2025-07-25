@@ -13,6 +13,7 @@ func SetupAuthRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	authGroup := r.Group("/auth")
 	{
 		authGroup.POST("/login", authHandler.LoginHandler)
+		authGroup.POST("/refresh-token", authHandler.RefreshTokenHandler)
 		authGroup.POST("/register", authHandler.RegisterHandler)
 		authGroup.POST("/forgot", authHandler.ForgotPasswordHandler)
 		authGroup.GET("/verification/:token", authHandler.VerificationEmailHandler)

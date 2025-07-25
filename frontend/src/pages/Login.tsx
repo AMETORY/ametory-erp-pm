@@ -1,9 +1,9 @@
-import { Button } from "flowbite-react";
+import { Button, Checkbox } from "flowbite-react";
 import type { FC } from "react";
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
-import { LOCAL_STORAGE_TOKEN } from "../utils/constants";
+import { LOCAL_STORAGE_REMEMBER_TOKEN, LOCAL_STORAGE_TOKEN } from "../utils/constants";
 import Logo from "../components/logo";
 import { processLogin } from "../services/api/authApi";
 import { LoadingContext } from "../contexts/LoadingContext";
@@ -13,6 +13,7 @@ interface LoginProps {}
 
 const Login: FC<LoginProps> = ({}) => {
   const { loading, setLoading } = useContext(LoadingContext);
+  const [isRememberMe, setIsRememberMe] = useState(false);
 
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -28,6 +29,9 @@ const Login: FC<LoginProps> = ({}) => {
       });
 
       await asyncStorage.setItem(LOCAL_STORAGE_TOKEN, resp.token);
+      if (isRememberMe) {
+        await asyncStorage.setItem(LOCAL_STORAGE_REMEMBER_TOKEN,resp.refresh_token);
+      }
       window.location.reload();
     } catch (error) {
       toast.error(`${error}`);
@@ -104,10 +108,11 @@ const Login: FC<LoginProps> = ({}) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
-                      <input
+                      <Checkbox
                         id="remember"
                         aria-describedby="remember"
-                        type="checkbox"
+                        checked={isRememberMe}
+                        onChange={(e) => setIsRememberMe(e.target.checked)}
                         className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800"
                       />
                     </div>

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"ametory-pm/config"
 	"ametory-pm/objects"
 	"ametory-pm/services/app"
 	"encoding/json"
@@ -13,7 +14,9 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/utils"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+
 	"gorm.io/gorm/clause"
 )
 
@@ -73,9 +76,58 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"token": token})
+
+	refreshToken, err := utils.GenerateJWT(user.ID, time.Now().AddDate(0, 0, h.appService.Config.Server.RefreshTokenExpiredDay).Unix(), h.appService.Config.Server.SecretKey)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"token": token, "refresh_token": refreshToken})
+
+	// c.JSON(200, gin.H{"token": token})
 }
 
+func (h *AuthHandler) RefreshTokenHandler(c *gin.Context) {
+	var input struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	token, err := jwt.ParseWithClaims(input.RefreshToken, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.App.Server.SecretKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		c.Abort()
+		return
+	}
+	user := models.UserModel{}
+	err = h.ctx.DB.Find(&user, "id = ?", token.Claims.(*jwt.StandardClaims).Id).Error
+	if err != nil {
+		c.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+
+	newToken, err := utils.GenerateJWT(user.ID, time.Now().Add(5*time.Minute).Unix(), h.appService.Config.Server.SecretKey)
+	// newToken, err := utils.GenerateJWT(user.ID, time.Now().AddDate(0, 0, h.appService.Config.Server.TokenExpiredDay).Unix(), h.appService.Config.Server.SecretKey)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	refreshToken, err := utils.GenerateJWT(user.ID, time.Now().AddDate(0, 0, h.appService.Config.Server.RefreshTokenExpiredDay).Unix(), h.appService.Config.Server.SecretKey)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"token": newToken, "refresh_token": refreshToken})
+}
 func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 	var input struct {
 		FullName    string `json:"full_name" binding:"required"`
@@ -222,7 +274,7 @@ func (h *AuthHandler) ForgotPasswordHandler(c *gin.Context) {
 	var emailData objects.EmailData = objects.EmailData{
 		FullName: user.FullName,
 		Email:    user.Email,
-		Subject:  "Permintaan Penggatian PASSWORD",
+		Subject:  "Permintaan Penggantian PASSWORD",
 		Notif:    "Berikut ini adalah PASSWORD baru Anda",
 		Link:     link,
 		Password: newPassword,

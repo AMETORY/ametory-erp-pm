@@ -30,13 +30,18 @@ func SendMail(erpContext *context.ERPContext) {
 				log.Println(err)
 				continue
 			}
-			// fmt.Println("FullName", emailData.FullName)
-			// fmt.Println("Email", emailData.Email)
+
 			// fmt.Println("sender", sender)
 			subject := "Welcome to AMETORY PROJECT MANAGER"
 			if emailData.Subject != "" {
 				subject = emailData.Subject
 			}
+
+			fmt.Println("SEND MAIL")
+			fmt.Println("======================================")
+			fmt.Println("FullName", emailData.FullName)
+			fmt.Println("Email", emailData.Email)
+			fmt.Println("Subject", subject)
 
 			if config.App.Email.UseAPI {
 				senderAPI := email_api.NewEmailApiService(config.App.EmailApi.From, config.App.EmailApi.Domain, config.App.EmailApi.ApiKey, email_api.KirimEmail{})
