@@ -72,8 +72,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const { profile, setProfile } = useContext(ProfileContext);
   const [messages, setMessages] = useState<WhatsappMessageModel[]>([]);
   const [sessions, setSessions] = useState<WhatsappMessageSessionModel[]>([]);
-    const [page, setPage] = useState(1);
-    const [size, setSize] = useState(20);
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(20);
   const [pagination, setPagination] = useState<PaginationResponse>();
   const [mounted, setMounted] = useState(false);
   const { sessionId } = useParams();
@@ -199,17 +199,19 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     }
 
     timeout.current = window.setTimeout(() => {
-      if (
-        wsMsg?.command === "WHATSAPP_CLEAR_MESSAGE"
-      ) {
+      if (wsMsg?.command === "WHATSAPP_CLEAR_MESSAGE") {
         getAllSessions();
-      } else if (wsMsg?.command === "WHATSAPP_RECEIVED" || wsMsg?.command === "WHATSAPP_MESSAGE_READ" || wsMsg?.command === "UPDATE_SESSION") {
+      } else if (
+        wsMsg?.command === "WHATSAPP_RECEIVED" ||
+        wsMsg?.command === "WHATSAPP_MESSAGE_READ" ||
+        wsMsg?.command === "UPDATE_SESSION"
+      ) {
         if (wsMsg?.session_id) {
           getWhatsappSessionDetail(wsMsg?.session_id).then((resp: any) => {
             // console.log("SESSION DATA", resp.data);
             if (sessions.length === 0) {
               setSessions([resp.data]);
-              return
+              return;
             }
             setSessions(
               sessions.map((s) => {
@@ -343,18 +345,22 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                       <div className="flex flex-col">
                         <div className="flex flex-wrap gap-2 items-center">
                           <div className="flex flex-row gap-2 items-center justify-center">
-                          <small>
-                          {e.ref?.connected ? <Tooltip content="Connected">🟢</Tooltip> : <Tooltip content="Not Connected">🔴</Tooltip>} 
-                          </small>
-                          <div
-                            className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
-                            style={{
-                              background: e.ref?.color,
-                              color: getContrastColor(e.ref?.color),
-                            }}
-                          >
-                           {e.ref?.name}
-                          </div>
+                            <small>
+                              {e.ref?.connected ? (
+                                <Tooltip content="Connected">🟢</Tooltip>
+                              ) : (
+                                <Tooltip content="Not Connected">🔴</Tooltip>
+                              )}
+                            </small>
+                            <div
+                              className="flex text-[8pt] text-white  px-2 rounded-full w-fit"
+                              style={{
+                                background: e.ref?.color,
+                                color: getContrastColor(e.ref?.color),
+                              }}
+                            >
+                              {e.ref?.name}
+                            </div>
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -406,7 +412,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                           className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"
                           color="red"
                         >
-                          {e.count_unread?? 0 > 99 ? "99+" : e.count_unread}
+                          {(e.count_unread ?? 0) > 99 ? "99+" : e.count_unread}
                         </div>
                       )}
                       <div className="group/edit invisible group-hover/item:visible">
@@ -449,7 +455,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                           <Dropdown.Item
                             className="flex gap-2"
                             onClick={() => {
-                              console.log(e)
+                              console.log(e);
                               setSelectedSession(e);
                               setModalInfo(true);
                             }}

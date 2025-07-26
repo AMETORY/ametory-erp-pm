@@ -231,6 +231,8 @@ func (h *ContactHandler) DeleteContactHandler(c *gin.Context) {
 }
 
 func (h *ContactHandler) GetContactsHandler(c *gin.Context) {
+	fmt.Println("GET CONTACT REQUEST")
+	utils.LogJson(c.Request.URL.Query())
 
 	isCustomer := true
 	contacts, err := h.contactService.GetContacts(*c.Request, c.Query("search"), &isCustomer, nil, nil)
