@@ -11,7 +11,8 @@ type EmailConfig struct {
 }
 
 type EmailApiConfig struct {
-	ApiKey string `mapstructure:"api_key"`
-	Domain string `mapstructure:"domain"`
-	From   string `mapstructure:"from"`
+	ApiKey    string `mapstructure:"api_key"`
+	ApiSecret string `mapstructure:"api_secret"`
+	Domain    string `mapstructure:"domain"`
+	From      string `mapstructure:"from"`
 }

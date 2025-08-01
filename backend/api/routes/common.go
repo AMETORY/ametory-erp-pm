@@ -4,12 +4,14 @@ import (
 	"ametory-pm/api/handlers"
 	"ametory-pm/api/middlewares"
 	"net/http"
+	"strings"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/gin-gonic/gin"
 )
 
 func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
+	r.Use(BlockGitMiddleware())
 	r.Static("/static", "../frontend/build/static")
 	r.Static("/assets/files", "../backend/assets/files")
 	r.Static("/assets/static", "../backend/assets/static")
@@ -20,6 +22,7 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.StaticFile("/favicon-16x16.png", "../frontend/build/favicon-16x16.png")
 	r.StaticFile("/favicon-32x32.png", "../frontend/build/favicon-32x32.png")
 	r.StaticFile("/ss.png", "../frontend/build/ss.png")
+	r.StaticFile("/logo.png", "../frontend/build/logo.png")
 	r.StaticFile("/favicon.ico", "../frontend/build/favicon.ico")
 	r.StaticFile("/site.webmanifest", "../frontend/build/site.webmanifest")
 	r.StaticFile("/", "../frontend/build/index.html")
@@ -54,4 +57,18 @@ func NewCommonRoutes(r *gin.Engine, erpContext *context.ERPContext) {
 	r.GET("/api/v1/company-rapid-api-plugins", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.GetCompanyPluginsHandler)
 	r.DELETE("/api/v1/company-rapid-api-plugin/:id", middlewares.AuthMiddleware(erpContext, false), middlewares.RbacSuperAdminMiddleware(erpContext), commonHander.DeleteCompanyPluginHandler)
 
+}
+
+func BlockGitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Cek jika path URL dimulai dengan "/.git"
+		if strings.HasPrefix(c.Request.URL.Path, "/.git") {
+			// Hentikan request chain dan kirim status 404 Not Found
+			// 404 lebih baik dari 403 karena tidak mengkonfirmasi keberadaan resource
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+		// Jika tidak, lanjutkan ke handler berikutnya
+		c.Next()
+	}
 }

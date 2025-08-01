@@ -44,7 +44,7 @@ func SendMail(erpContext *context.ERPContext) {
 			fmt.Println("Subject", subject)
 
 			if config.App.Email.UseAPI {
-				senderAPI := email_api.NewEmailApiService(config.App.EmailApi.From, config.App.EmailApi.Domain, config.App.EmailApi.ApiKey, email_api.KirimEmail{})
+				senderAPI := email_api.NewEmailApiService(config.App.EmailApi.From, config.App.EmailApi.Domain, config.App.EmailApi.ApiKey, config.App.EmailApi.ApiSecret, email_api.KirimEmail{})
 				t := template.Must(template.ParseFiles("../templates/email/layout.html", "../templates/email/body.html"))
 
 				var buf bytes.Buffer
@@ -79,9 +79,26 @@ func TestEmail(erpContext context.ERPContext, email string) {
 	emailData.Subject = "Test Email"
 	emailData.FullName = "Test Email"
 	emailData.Email = email
-	erpContext.EmailSender.SetAddress(emailData.FullName, emailData.Email)
-	if err := erpContext.EmailSender.SendEmail(emailData.Subject, emailData, []string{}); err != nil {
-		log.Println(err)
-		fmt.Println(err)
+	if config.App.Email.UseAPI {
+		senderAPI := email_api.NewEmailApiService(config.App.EmailApi.From, config.App.EmailApi.Domain, config.App.EmailApi.ApiKey, config.App.EmailApi.ApiSecret, email_api.KirimEmail{})
+		t := template.Must(template.ParseFiles("../templates/email/layout.html", "../templates/email/body.html"))
+
+		var buf bytes.Buffer
+		if err := t.ExecuteTemplate(&buf, "layout", emailData); err != nil {
+			return
+		}
+		err := senderAPI.SendEmail(emailData.Subject, emailData.Email, buf.String(), []string{})
+		if err != nil {
+			log.Println(err)
+			fmt.Println(err)
+		}
+
+	} else {
+		erpContext.EmailSender.SetAddress(emailData.FullName, emailData.Email)
+		if err := erpContext.EmailSender.SendEmail(emailData.Subject, emailData, []string{}); err != nil {
+			log.Println(err)
+			fmt.Println(err)
+		}
 	}
+
 }
