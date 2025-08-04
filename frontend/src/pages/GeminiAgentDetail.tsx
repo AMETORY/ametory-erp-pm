@@ -143,6 +143,12 @@ const GeminiAgentDetail: FC<GeminiAgentDetailProps> = ({}) => {
     { label: "Gemini 2.0", value: "gemini-2.0" },
     { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
     { label: "Gemini 2.0 Flash Exp", value: "gemini-2.0-flash-exp" },
+    { label: "Gemma 3n E2B", value: "gemma-3n-e2b-it" },
+    { label: "Gemma 3n E4B", value: "gemma-3n-e4b-it" },
+    { label: "Gemma 3 1B", value: "gemma-3-1b-it" },
+    { label: "Gemma 3 4B", value: "gemma-3-4b-it" },
+    { label: "Gemma 3 12B", value: "gemma-3-12b-it" },
+    { label: "Gemma 3 27B", value: "gemma-3-27b-it" },
   ];
 
   const scrollToBottom = () => {

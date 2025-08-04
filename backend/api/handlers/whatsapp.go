@@ -1663,10 +1663,15 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 
 	}
 
+	if conn.AutoResponseStartTime == nil && conn.AutoResponseEndTime == nil {
+		autopilot = true
+	}
+
 	fmt.Println("AUTO PILOT", autopilot)
 	if whatsappSession.IsHumanAgent {
 		autopilot = false
 	}
+	fmt.Println("AUTO PILOT", autopilot)
 
 	var replyResponse *models.WhatsappMessageModel
 
@@ -1698,9 +1703,22 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 
 	}
+	if conn.GeminiAgent != nil {
+		fmt.Println("Gemini Agent", conn.GeminiAgent.Name)
+	}
+	fmt.Println("Conn Auto Pilot", conn.IsAutoPilot)
+	fmt.Println("Auto Pilot", autopilot)
 	if conn.GeminiAgent != nil && conn.IsAutoPilot && autopilot {
-		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature, conn.GeminiAgent.SetTopK, conn.GeminiAgent.SetTopP, conn.GeminiAgent.SetMaxOutputTokens, conn.GeminiAgent.ResponseMimetype, conn.GeminiAgent.Model)
-		h.geminiService.SetUpSystemInstruction(fmt.Sprintf(`%s
+		fmt.Println("API KEY", conn.GeminiAgent.ApiKey)
+		h.geminiService.SetupAPIKey(conn.GeminiAgent.ApiKey, true)
+		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature,
+			conn.GeminiAgent.SetTopK,
+			conn.GeminiAgent.SetTopP,
+			conn.GeminiAgent.SetMaxOutputTokens,
+			conn.GeminiAgent.ResponseMimetype,
+			conn.GeminiAgent.Model)
+
+		var systemInstruction = fmt.Sprintf(`%s
 		
 %s`, conn.GeminiAgent.SystemInstruction, `
 
@@ -1718,11 +1736,14 @@ type: command atau question
 command: jika tipe command
 params: jika tipe command dibutuhkan parameter
 
-`))
+`)
+		fmt.Println("SYSTEM INSTRUCTION", systemInstruction)
+		h.geminiService.SetUpSystemInstruction(systemInstruction)
 
 		var histories []models.GeminiHistoryModel
 		err = h.erpContext.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ? and is_model = ?", conn.GeminiAgent.ID, true).Error
 		if err != nil {
+			fmt.Println("ERROR GETTING HISTORIES", err)
 			c.JSON(404, gin.H{"error": "Agent histories is not found"})
 			return
 		}
@@ -1759,15 +1780,19 @@ params: jika tipe command dibutuhkan parameter
 		}
 
 		// utils.LogJson(chatHistories)
+		fmt.Println("Send Message To GEMINI", convMsg)
 		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
 		if err != nil {
+			fmt.Println("ERROR GENERATING CONTENT", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
+		fmt.Println("OUTPUT", output)
 		var response geminiResponse
 		err = json.Unmarshal([]byte(output), &response)
 		if err != nil {
+			fmt.Println("ERROR UNMARSHAL GEMINI", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
@@ -1776,9 +1801,11 @@ params: jika tipe command dibutuhkan parameter
 		}
 		infoByte, err := json.Marshal(info)
 		if err != nil {
+			fmt.Println("ERROR MARSHAL INFO", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
+		fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, response.Response)
 		// sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
 		waData := whatsmeow_client.WaMessage{
 			JID:     body.JID,
@@ -1789,6 +1816,7 @@ params: jika tipe command dibutuhkan parameter
 		h.waService.SetChatData(waData)
 		_, err = objects.SendChatMessage(h.waService)
 		if err != nil {
+			fmt.Println("ERROR SENDING MESSAGE", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
