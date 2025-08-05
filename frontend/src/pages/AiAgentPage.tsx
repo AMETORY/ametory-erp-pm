@@ -218,8 +218,11 @@ const AiAgentPage: FC<AiAgentPageProps> = ({}) => {
                 createAiAgent(selectedAgent)
                   .then(() => {
                     getAllAgents();
+                    setShowModal(false);
                   })
-                  .catch(toast.error);
+                  .catch(toast.error).finally(() => {
+                    
+                  })
               }}
             >
               Create
