@@ -29,6 +29,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/shared/objects"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/ai_generator"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
@@ -50,6 +51,7 @@ type WhatsappHandler struct {
 	contactService              *contact.ContactService
 	cacheService                *cache.CacheManager[paginate.Page]
 	whatsappWebService          *whatsmeow_client.WhatsmeowService
+	aiGeneratorService          *ai_generator.AiGeneratorService
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -93,6 +95,11 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 	if !ok {
 		panic("CacheService is not instance of cache.CacheManager")
 	}
+
+	aiGeneratorService, ok := erpContext.ThirdPartyServices["AiGenerator"].(*ai_generator.AiGeneratorService)
+	if !ok {
+		panic("aiGeneratorService is not instance of cache.CacheManager")
+	}
 	return &WhatsappHandler{
 		erpContext:                  erpContext,
 		waService:                   waService,
@@ -103,6 +110,7 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		contactService:              contactService,
 		cacheService:                cacheService,
 		whatsappWebService:          whatsappWebService,
+		aiGeneratorService:          aiGeneratorService,
 	}
 }
 
@@ -1675,7 +1683,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 
 	var replyResponse *models.WhatsappMessageModel
 
-	if conn.GeminiAgent == nil && conn.IsAutoPilot && autopilot && conn.AutoResponseMessage != "" {
+	if conn.AiAgent == nil && conn.IsAutoPilot && autopilot && conn.AutoResponseMessage != "" {
 		// sendWAMessage(h.erpContext, body.JID, body.Sender, conn.AutoResponseMessage)
 		waData := whatsmeow_client.WaMessage{
 			JID:     body.JID,
@@ -1703,26 +1711,36 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 
 	}
-	if conn.GeminiAgent != nil {
-		fmt.Println("Gemini Agent", conn.GeminiAgent.Name)
+	if conn.AiAgent != nil {
+		fmt.Println("Gemini Agent", conn.AiAgent.Name)
 	}
 	fmt.Println("Conn Auto Pilot", conn.IsAutoPilot)
 	fmt.Println("Auto Pilot", autopilot)
-	if conn.GeminiAgent != nil && conn.IsAutoPilot && autopilot {
-		fmt.Println("API KEY", conn.GeminiAgent.ApiKey)
-		h.geminiService.SetupAPIKey(conn.GeminiAgent.ApiKey, true)
-		h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature,
-			conn.GeminiAgent.SetTopK,
-			conn.GeminiAgent.SetTopP,
-			conn.GeminiAgent.SetMaxOutputTokens,
-			conn.GeminiAgent.ResponseMimetype,
-			conn.GeminiAgent.Model)
+	if conn.AiAgent != nil && conn.IsAutoPilot && autopilot {
+		generator, err := h.aiGeneratorService.GetGeneratorFromID(*conn.AiAgentID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		generator.SetApiKey(conn.AiAgent.ApiKey)
 
-		var systemInstruction = fmt.Sprintf(`%s
+		// fmt.Println("API KEY", conn.GeminiAgent.ApiKey)
+		// h.geminiService.SetupAPIKey(conn.GeminiAgent.ApiKey, true)
+		// h.geminiService.SetupModel(conn.GeminiAgent.SetTemperature,
+		// 	conn.GeminiAgent.SetTopK,
+		// 	conn.GeminiAgent.SetTopP,
+		// 	conn.GeminiAgent.SetMaxOutputTokens,
+		// 	conn.GeminiAgent.ResponseMimetype,
+		// 	conn.GeminiAgent.Model)
+
+		var systemInstruction = fmt.Sprintf(`Sekarang Waktu menunjukkan: tgl: %s ,
+jam: %s
+
+%s
 		
-%s`, conn.GeminiAgent.SystemInstruction, `
+%s`, time.Now().Format("02-Jan-2006"), time.Now().Format("15:04:05"), conn.AiAgent.SystemInstruction, `
 
-Tolong jawab dalam format : 
+Tolong jawab dalam format JSON : 
 {
   "response": string,
   "type": string,
@@ -1737,27 +1755,51 @@ command: jika tipe command
 params: jika tipe command dibutuhkan parameter
 
 `)
-		fmt.Println("SYSTEM INSTRUCTION", systemInstruction)
-		h.geminiService.SetUpSystemInstruction(systemInstruction)
+		// fmt.Println("SYSTEM INSTRUCTION", systemInstruction)
+		// h.geminiService.SetUpSystemInstruction(systemInstruction)
+		generator.SetSystemInstruction(systemInstruction)
 
-		var histories []models.GeminiHistoryModel
-		err = h.erpContext.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ? and is_model = ?", conn.GeminiAgent.ID, true).Error
+		aiAgent, err := h.aiGeneratorService.GetAgent(*conn.AiAgentID)
 		if err != nil {
-			fmt.Println("ERROR GETTING HISTORIES", err)
-			c.JSON(404, gin.H{"error": "Agent histories is not found"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		chatHistories := []map[string]any{}
+
+		isModel := true
+		histories, _ := h.aiGeneratorService.GetHistories(&aiAgent.ID, conn.CompanyID, nil, &isModel)
+		var his []ai_generator.AiMessage = []ai_generator.AiMessage{}
 		for _, v := range histories {
-			chatHistories = append(chatHistories, map[string]any{
-				"role":    "user",
-				"content": v.Input,
+
+			his = append(his, ai_generator.AiMessage{
+				Role:    "user",
+				Content: v.Input,
 			})
-			chatHistories = append(chatHistories, map[string]any{
-				"role":    "model",
-				"content": v.Output,
+
+			his = append(his, ai_generator.AiMessage{
+				Role:    "assistant",
+				Content: v.Output,
 			})
+
 		}
+
+		// var histories []models.GeminiHistoryModel
+		// err = h.erpContext.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ? and is_model = ?", conn.GeminiAgent.ID, true).Error
+		// if err != nil {
+		// 	fmt.Println("ERROR GETTING HISTORIES", err)
+		// 	c.JSON(404, gin.H{"error": "Agent histories is not found"})
+		// 	return
+		// }
+		// chatHistories := []map[string]any{}
+		// for _, v := range histories {
+		// 	chatHistories = append(chatHistories, map[string]any{
+		// 		"role":    "user",
+		// 		"content": v.Input,
+		// 	})
+		// 	chatHistories = append(chatHistories, map[string]any{
+		// 		"role":    "model",
+		// 		"content": v.Output,
+		// 	})
+		// }
 
 		userHistories := []models.WhatsappMessageModel{}
 		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.SessionID).Order("created_at desc").Limit(100).Find(&userHistories)
@@ -1766,37 +1808,45 @@ params: jika tipe command dibutuhkan parameter
 
 		for _, v := range userHistories {
 			if v.IsFromMe {
-				chatHistories = append(chatHistories, map[string]any{
-					"role":    "user",
-					"content": v.Message,
+				his = append(his, ai_generator.AiMessage{
+					Role:    "user",
+					Content: v.Message,
 				})
+
 			} else {
-				chatHistories = append(chatHistories, map[string]any{
-					"role":    "model",
-					"content": v.Message,
+				his = append(his, ai_generator.AiMessage{
+					Role:    "assistant",
+					Content: v.Message,
 				})
+
 			}
 
 		}
 
-		// utils.LogJson(chatHistories)
-		fmt.Println("Send Message To GEMINI", convMsg)
-		output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
+		output, err := generator.Generate(convMsg, nil, his)
 		if err != nil {
-			fmt.Println("ERROR GENERATING CONTENT", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		fmt.Println("OUTPUT", output)
-		var response geminiResponse
-		err = json.Unmarshal([]byte(output), &response)
+		// utils.LogJson(chatHistories)
+		// fmt.Println("Send Message To GEMINI", convMsg)
+		// output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
+		// if err != nil {
+		// 	fmt.Println("ERROR GENERATING CONTENT", err)
+		// 	c.JSON(500, gin.H{"error": err.Error()})
+		// 	return
+		// }
+
+		// fmt.Println("OUTPUT", output)
+		var response objects.AiResponse
+		err = json.Unmarshal([]byte(output.Content), &response)
 		if err != nil {
-			fmt.Println("ERROR UNMARSHAL GEMINI", err)
+			fmt.Println("ERROR UNMARSHAL AI RESPONSE", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		info := map[string]interface{}{
+		info := map[string]any{
 			"Timestamp": time.Now().Format(time.RFC3339),
 		}
 		infoByte, err := json.Marshal(info)
@@ -1805,7 +1855,14 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, response.Response)
+		fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, output.Content)
+		h.waService.SendTyping(whatsmeow_client.WaMessage{
+			JID:          body.JID,
+			To:           body.Sender,
+			IsGroup:      false,
+			ChatPresence: "composing",
+		})
+		time.Sleep(1 * time.Second)
 		// sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
 		waData := whatsmeow_client.WaMessage{
 			JID:     body.JID,
@@ -1820,9 +1877,15 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
+
+		err = h.appService.Redis.Publish(*h.erpContext.Ctx, "WA:TYPING", string(b)).Err()
+		if err != nil {
+			c.JSON(500, gin.H{"message": err.Error()})
+			return
+		}
 		replyResponse = &models.WhatsappMessageModel{
 			Receiver:    body.Sender,
-			Message:     response.Response,
+			Message:     output.Content,
 			MimeType:    body.MimeType,
 			Session:     body.SessionID,
 			JID:         body.JID,
@@ -1831,6 +1894,14 @@ params: jika tipe command dibutuhkan parameter
 			IsGroup:     body.Info["IsGroup"].(bool),
 			IsAutoPilot: true,
 		}
+
+		history := models.AiAgentHistory{
+			Input:     convMsg,
+			Output:    output.Content,
+			AiAgentID: &aiAgent.ID,
+		}
+		// ADD HISTORY TO DB
+		h.aiGeneratorService.CreateHistory(&history)
 	}
 
 	fmt.Println("SESSION ID #2", whatsappSession.ID)
@@ -1867,6 +1938,7 @@ params: jika tipe command dibutuhkan parameter
 		whatsappSession.LastMessage = replyResponse.Message
 		whatsappSession.LastOnlineAt = &now
 		h.erpContext.DB.Where("id = ?", whatsappSession.ID).Model(&models.WhatsappMessageSession{}).Updates(&whatsappSession)
+
 	}
 
 }

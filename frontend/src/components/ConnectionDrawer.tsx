@@ -42,6 +42,8 @@ import { ColumnModel } from "../models/column";
 import TelegramIntegrationGuide from "./TelegramGuide";
 import { LuInstagram } from "react-icons/lu";
 import { asyncStorage } from "../utils/async_storage";
+import { getAiAgents } from "../services/api/aiAgentApi";
+import { AgentModel } from "../models/agent";
 
 interface ConnectionDrawerProps {
   connection: ConnectionModel;
@@ -65,6 +67,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
   const [qrLoading, setQrLoading] = useState(false);
   const [qrStr, setQrStr] = useState("");
   const [geminiAgents, setGeminiAgents] = useState<GeminiAgent[]>([]);
+  const [aiAgents, setAiAgents] = useState<AgentModel[]>([]);
   const [projects, setProjects] = useState<ProjectModel[]>([]);
   const [columns, setColumns] = useState<ColumnModel[]>([]);
   const nav = useNavigate();
@@ -80,6 +83,9 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
       //   });
       getGeminiAgents({ page: 1, size: 20 }).then((res: any) => {
         setGeminiAgents(res.data.items);
+      });
+      getAiAgents({ page: 1, size: 20 }).then((res: any) => {
+        setAiAgents(res.data.items);
       });
       getAllProjects("");
     }
@@ -374,6 +380,36 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
 
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
+          <Label className="font-bold">Ai Agent</Label>
+          <Select
+            isClearable
+            options={aiAgents.map((e) => ({ label: e.name, value: e.id }))}
+            value={{
+              label: connection?.ai_agent?.name,
+              value: connection?.ai_agent?.id,
+            }}
+            styles={{
+              container: (provided) => ({
+                ...provided,
+                width: "100%",
+                borderRadius: "5px",
+              }),
+            }}
+            onChange={(e) => {
+              let selected = aiAgents.find(
+                (agent) => agent.id == e?.value!
+              );
+              onUpdate({
+                ...connection!,
+                ai_agent_id: selected?.id,
+                ai_agent: selected!,
+              });
+            }}
+          />
+        </div>
+      )}
+      {/* {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+        <div className="mt-4">
           <Label className="font-bold">Gemini Agent</Label>
           <Select
             isClearable
@@ -401,7 +437,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             }}
           />
         </div>
-      )}
+      )} */}
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
           <Label className="font-bold">Device Connection</Label>

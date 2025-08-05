@@ -31,7 +31,9 @@ func (c *ConnectionService) GetConnections(pagination *Pagination, httpRequest h
 		Preload("Project").
 		Preload("NewSessionColumn").
 		Preload("IdleColumn").
-		Preload("GeminiAgent").Where("company_id = ?", httpRequest.Header.Get("ID-Company"))
+		Preload("GeminiAgent").
+		Preload("AiAgent").
+		Where("company_id = ?", httpRequest.Header.Get("ID-Company"))
 
 	if httpRequest.URL.Query().Get("type") != "" {
 		stmt = stmt.Where("type = ?", httpRequest.URL.Query().Get("type"))
@@ -48,7 +50,9 @@ func (c *ConnectionService) GetConnection(id string) (*connection.ConnectionMode
 		Preload("Project").
 		Preload("NewSessionColumn").
 		Preload("IdleColumn").
-		Preload("GeminiAgent").First(&con).Error; err != nil {
+		Preload("GeminiAgent").
+		Preload("AiAgent").
+		First(&con).Error; err != nil {
 		return nil, err
 	}
 	return &con, nil
@@ -60,7 +64,9 @@ func (c *ConnectionService) GetConnectionBySession(session string) (*connection.
 		Preload("Project").
 		Preload("NewSessionColumn").
 		Preload("IdleColumn").
-		Preload("GeminiAgent").First(&con).Error; err != nil {
+		Preload("GeminiAgent").
+		Preload("AiAgent").
+		First(&con).Error; err != nil {
 		return nil, err
 	}
 	return &con, nil

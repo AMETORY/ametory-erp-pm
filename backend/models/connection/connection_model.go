@@ -51,6 +51,8 @@ type ConnectionModel struct {
 	AutoResponseEndTime   *string              `json:"auto_response_end_time" gorm:"type:varchar(32)"`
 	AutoResponseMessage   string               `json:"auto_response_message" gorm:"column:auto_response_message;type:varchar(255)"`
 	AuthData              *json.RawMessage     `json:"auth_data" gorm:"type:json;default:'{}'"`
+	AiAgentID             *string              `json:"ai_agent_id" gorm:"column:ai_agent_id;type:varchar(255)"`
+	AiAgent               *models.AiAgentModel `json:"ai_agent" gorm:"foreignKey:AiAgentID;references:ID"`
 }
 
 func (ConnectionModel) TableName() string {

@@ -389,6 +389,23 @@ const Sidebar: FC<SidebarProps> = ({}) => {
             </span>
           </li>
         )}
+        {member?.role?.is_super_admin && (
+          <li className="" style={{}}>
+            <span
+              className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group cursor-pointer"
+              onClick={handleNavigation("/ai-agent")}
+            >
+              <Tooltip content="Ai Agent">
+                <MdOutlineAssistant />
+              </Tooltip>
+              {!collapsed && (
+                <span className="flex-1 ms-3 whitespace-nowrap">
+                  Ai Agent
+                </span>
+              )}
+            </span>
+          </li>
+        )}
         {checkPermission("contact:customer:read") && (
           <li className="" style={{}}>
             <span

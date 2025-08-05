@@ -31,6 +31,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/tag"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/ai_generator"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/gin-contrib/cors"
@@ -179,6 +180,10 @@ func main() {
 	tagSrv := tag.NewTagService(erpContext)
 	erpContext.TagService = tagSrv
 
+	aiGeneratorService := ai_generator.NewAiGeneratorService(erpContext.Ctx, erpContext.DB, skipMigration)
+
+	erpContext.AddThirdPartyService("AiGenerator", aiGeneratorService)
+
 	// fmt.Println(erpContext.ThirdPartyServices)
 
 	// GEMINI
@@ -227,6 +232,7 @@ func main() {
 	routes.SetContactRoutes(v1, erpContext)
 	routes.SetupConnectionRoutes(v1, erpContext)
 	routes.SetupGeminiRoutes(v1, erpContext)
+	routes.SetupAiGeminiRoutes(v1, erpContext)
 	routes.NewWhatsappRoutes(v1, erpContext)
 	routes.SetBroadcastRoutes(v1, erpContext)
 	routes.SetupTagRoutes(v1, erpContext)

@@ -1,3 +1,4 @@
+import { AgentModel } from "./agent";
 import { ColumnModel } from "./column";
 import { GeminiAgent } from "./gemini";
 import { ProjectModel } from "./project";
@@ -19,6 +20,8 @@ export interface ConnectionModel {
   status?: string;
   gemini_agent_id?: string;
   gemini_agent?: GeminiAgent;
+  ai_agent_id?: string;
+  ai_agent?: AgentModel;
   is_auto_pilot?: boolean;
   session_auth?: boolean;
   connected?: boolean;

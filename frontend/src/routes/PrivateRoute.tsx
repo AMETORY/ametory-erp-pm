@@ -36,6 +36,8 @@ import TiktokAuth from "../pages/TiktokAuth";
 import ShopeeAuth from "../pages/ShopeeAuth";
 import LazadaAuth from "../pages/LazadaAuth";
 import TiktokPage from "../pages/TiktokPage";
+import AiAgentPage from "../pages/AiAgentPage";
+import AiAgentDetail from "../pages/AiAgentDetail";
 
 interface PrivateRouteProps {}
 
@@ -67,6 +69,8 @@ const PrivateRoute: FC<PrivateRouteProps> = ({}) => {
       <Route path="/connection/:connectionId" element={<ConnectionDetail />} />
       <Route path="/setting" element={<SettingPage />} />
       <Route path="/gemini-agent" element={<GeminiAgentPage />} />
+      <Route path="/ai-agent" element={<AiAgentPage />} />
+      <Route path="/ai-agent/:agentId" element={<AiAgentDetail />} />
       <Route path="/task-attribute" element={<TaskAttributePage />} />
       <Route path="/product" element={<ProductPage />} />
       <Route path="/whatsapp" element={<WhatsappPage />} />
