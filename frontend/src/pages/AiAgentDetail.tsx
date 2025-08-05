@@ -17,6 +17,7 @@ import {
   Textarea,
   TextInput,
   ToggleSwitch,
+  Tooltip,
 } from "flowbite-react";
 import Select, { InputActionMeta } from "react-select";
 import { AgentModel, AgentHistoryModel } from "../models/agent";
@@ -34,7 +35,7 @@ import "react-json-view-lite/dist/index.css";
 import { LoadingContext } from "../contexts/LoadingContext";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { BsTrash } from "react-icons/bs";
+import { BsFullscreen, BsFullscreenExit, BsTrash } from "react-icons/bs";
 import { JsonEditor } from "json-edit-react";
 import ReactSelect from "react-select";
 import { llmModel } from "../utils/constants";
@@ -50,6 +51,7 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
   const [histories, setHistories] = useState<AgentHistoryModel[]>([]);
   const [showHtml, setShowHtml] = useState(false);
   const [activeHistory, setActiveHistory] = useState<AgentHistoryModel>();
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const emojiStyle = {
     control: {
@@ -164,10 +166,18 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
   return (
     <AdminLayout>
       <div className="flex flex-row w-full h-full flex-1 gap-2">
-        <div className="w-[300px] h-full p-4 space-y-4 flex flex-col overflow-y-auto">
+        <div className={`${isFullScreen ? "w-[calc(100vw-200px)]" : "w-[300px]"} h-full p-4 space-y-4 flex flex-col overflow-y-auto`}>
           <div className="flex justify-between items-center">
             <h3 className="text-2xl font-bold">Agent Detail</h3>
-            <div className="flex gap-2 items-center"></div>
+            <div className="flex gap-2 items-center">
+              <Tooltip content="Wide" placement="bottom">
+                <Button onClick={() => {
+                  setIsFullScreen(!isFullScreen);
+                }} size="xs" color="gray">
+                  {isFullScreen ? <BsFullscreenExit /> : <BsFullscreen />}
+                </Button>
+              </Tooltip>
+            </div>
           </div>
           <form>
             <div className="mb-2 block">
@@ -198,7 +208,7 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
                   }))
                 }
                 placeholder="System Instructon"
-                rows={5}
+                rows={10}
                 required={true}
               />
             </div>
@@ -301,7 +311,6 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
                 }
               />
             </div>
-
 
             {/* <div className="mb-2 block">
               <Label htmlFor="response-mimetype" value="Response Mimetype" />

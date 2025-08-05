@@ -242,10 +242,10 @@ func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel) {
 			})
 		}
 		if (b.SequenceDelayTime > 0) && (i > 0) {
-			time.Sleep(time.Duration(b.SequenceDelayTime) * time.Millisecond)
+			time.Sleep(time.Duration(b.SequenceDelayTime) * time.Second)
 		}
 
-		s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Millisecond)
+		s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Second)
 	}
 	s.StartRetrySchedulers(*b)
 }

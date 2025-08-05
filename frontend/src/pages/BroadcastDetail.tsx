@@ -671,11 +671,11 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   }}
                 />
               ) : (
-                <div>{broadcast?.sequence_delay_time ?? 0}ms</div>
+                <div>{broadcast?.sequence_delay_time ?? 0}s</div>
               )}
             </div>
             <div>
-              <Label>Delay Time (ms)</Label>
+              <Label>Delay Time (s)</Label>
               {isEditable ? (
                 <TextInput
                   type="number"
@@ -689,7 +689,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   }}
                 />
               ) : (
-                <div>{broadcast?.delay_time ?? 0}ms</div>
+                <div>{broadcast?.delay_time ?? 0}s</div>
               )}
             </div>
             <div>

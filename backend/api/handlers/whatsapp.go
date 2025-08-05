@@ -1239,7 +1239,7 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("RECEIPT MESSAGE")
+	// fmt.Println("RECEIPT MESSAGE")
 	if ok && msgType != "read" {
 		utils.LogJson(body)
 	}
@@ -1825,6 +1825,7 @@ params: jika tipe command dibutuhkan parameter
 
 		output, err := generator.Generate(convMsg, nil, his)
 		if err != nil {
+			fmt.Println("ERROR GENERATING CONTENT", err)
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
@@ -1838,7 +1839,7 @@ params: jika tipe command dibutuhkan parameter
 		// 	return
 		// }
 
-		// fmt.Println("OUTPUT", output)
+		fmt.Println("OUTPUT", output)
 		var response objects.AiResponse
 		err = json.Unmarshal([]byte(output.Content), &response)
 		if err != nil {
@@ -1855,14 +1856,14 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, output.Content)
+		// fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, output.Content)
 		h.waService.SendTyping(whatsmeow_client.WaMessage{
 			JID:          body.JID,
 			To:           body.Sender,
 			IsGroup:      false,
 			ChatPresence: "composing",
 		})
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		// sendWAMessage(h.erpContext, body.JID, body.Sender, response.Response)
 		waData := whatsmeow_client.WaMessage{
 			JID:     body.JID,
