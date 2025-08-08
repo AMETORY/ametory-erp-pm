@@ -25,4 +25,5 @@ export interface ColumnActionModel {
   files: FileModel[];
   action_hour?: string;
   action_status?: string;
+  run_once?: boolean;
 }

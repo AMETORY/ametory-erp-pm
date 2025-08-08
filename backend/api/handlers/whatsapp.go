@@ -1340,7 +1340,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	}
 
 	profilePic, _ := sessionAuth.GetProfilePicture(h.erpContext.DB)
-	if profilePic == nil && body.ProfilePic != "" {
+	if body.ProfilePic != "" {
 		resp, err := http.Get(body.ProfilePic)
 		if err != nil {
 			log.Println(err)
@@ -1363,13 +1363,18 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 		mediaURLSaved := config.App.Server.BaseURL + "/" + path
 
-		h.erpContext.DB.Create(&models.FileModel{
-			FileName: sessionAuth.Name,
-			Path:     path,
-			URL:      mediaURLSaved,
-			RefID:    sessionAuth.ID,
-			RefType:  "contact",
-		})
+		if profilePic != nil {
+			profilePic.URL = mediaURLSaved
+			h.erpContext.DB.Save(profilePic)
+		} else {
+			h.erpContext.DB.Create(&models.FileModel{
+				FileName: sessionAuth.Name,
+				Path:     path,
+				URL:      mediaURLSaved,
+				RefID:    sessionAuth.ID,
+				RefType:  "contact",
+			})
+		}
 
 	}
 	// fmt.Println("session", sessionAuth)
@@ -1802,7 +1807,7 @@ params: jika tipe command dibutuhkan parameter
 		// }
 
 		userHistories := []models.WhatsappMessageModel{}
-		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.SessionID).Order("created_at desc").Limit(100).Find(&userHistories)
+		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.Sender).Order("created_at desc").Limit(100).Find(&userHistories)
 
 		userHistories = reverse(userHistories)
 
@@ -1886,7 +1891,7 @@ params: jika tipe command dibutuhkan parameter
 		}
 		replyResponse = &models.WhatsappMessageModel{
 			Receiver:    body.Sender,
-			Message:     output.Content,
+			Message:     response.Response,
 			MimeType:    body.MimeType,
 			Session:     body.SessionID,
 			JID:         body.JID,
@@ -1897,9 +1902,10 @@ params: jika tipe command dibutuhkan parameter
 		}
 
 		history := models.AiAgentHistory{
-			Input:     convMsg,
-			Output:    output.Content,
-			AiAgentID: &aiAgent.ID,
+			Input:       convMsg,
+			Output:      output.Content,
+			AiAgentID:   &aiAgent.ID,
+			SessionCode: &body.Sender,
 		}
 		// ADD HISTORY TO DB
 		h.aiGeneratorService.CreateHistory(&history)

@@ -129,11 +129,15 @@ func ScheduledMessageWorker(erpContext *context.ERPContext) {
 			}
 
 			if msgData.Task != nil {
-				err = erpContext.DB.Model(&mdl.TaskModel{}).Where("id = ?", msgData.Task.ID).Update("last_action_trigger_at", time.Now()).Error
-				if err != nil {
-					log.Println("ERROR", err)
-					continue
+				if !msgData.Action.RunOnce {
+					err = erpContext.DB.Model(&mdl.TaskModel{}).Where("id = ?", msgData.Task.ID).Update("last_action_trigger_at", time.Now()).Error
+					if err != nil {
+						log.Println("ERROR", err)
+						continue
+					}
 				}
+
+				erpContext.DB.Model(&msgData.Action).Association("ColumnActions").Append(&msgData.Action)
 			}
 
 		}

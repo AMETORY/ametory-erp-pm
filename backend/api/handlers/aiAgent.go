@@ -85,6 +85,8 @@ Tolong jawab dalam format json :
   "params": object
 }
 
+jangan menggunakan json markdown 
+
 Keterangan:
 response: jawaban bila tipe nya pertanyaan
 type: command atau question

@@ -213,14 +213,19 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
               setSessions([resp.data]);
               return;
             }
-            setSessions(
-              sessions.map((s) => {
+
+            let sessionData: WhatsappMessageSessionModel[] = sessions.map(
+              (s) => {
                 if (s.id === resp.data.id) {
                   return resp.data;
                 }
                 return s;
-              })
+              }
             );
+            sessionData
+              .filter((s) => s.last_online_at)
+              .sort((a, b) => (a.last_online_at! < b.last_online_at! ? 1 : -1));
+            setSessions(sessionData);
           });
         } else {
           getAllSessions();

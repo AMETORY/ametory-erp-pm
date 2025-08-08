@@ -61,6 +61,9 @@ import { getProducts } from "../services/api/productApi";
 import { HiMagnifyingGlass, HiXMark } from "react-icons/hi2";
 import { SearchContext } from "../contexts/SearchContext";
 import { ScrollContext } from "../contexts/ScrollContext";
+import { useNavigate } from "react-router-dom";
+import { asyncStorage } from "../utils/async_storage";
+import { LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION } from "../utils/constants";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -100,6 +103,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const [selectedMsg, setSelectedMsg] = useState<WhatsappMessageModel>();
   const msgRef = useRef<any>();
   const msgInputRef = useRef<any>();
+  const nav = useNavigate();
   // const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
@@ -243,13 +247,13 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       search,
     })
       .then((res: any) => {
-        setMessages(res.data.items);
+        setMessages(res.data.items.slice().reverse());
       })
       .catch((err) => {
         console.error(err);
         // window.location.href = "/whatsapp";
       });
-  }, [ sessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -489,28 +493,40 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
             </div>
           </div>
         </div>
-        {/* <HiOutlineUserGroup
+        <div className="flex flex-row items-center gap-2">
+          {/* <HiOutlineUserGroup
               className=" text-gray-300 hover:text-gray-600 cursor-pointer"
               size={24}
               onClick={openModal}
             /> */}
-        {connection?.is_auto_pilot && (
-          <ToggleSwitch
-            checked={session?.is_human_agent ?? false}
-            label="Human Agent"
-            onChange={(val) => {
-              setSession({
-                ...session,
-                is_human_agent: val,
-              });
+          {connection?.is_auto_pilot && (
+            <ToggleSwitch
+              checked={session?.is_human_agent ?? false}
+              label="Human Agent"
+              onChange={(val) => {
+                setSession({
+                  ...session,
+                  is_human_agent: val,
+                });
 
-              updateWhatsappSession(session!.id!, {
-                ...session,
-                is_human_agent: val,
-              });
+                updateWhatsappSession(session!.id!, {
+                  ...session,
+                  is_human_agent: val,
+                });
+              }}
+            />
+          )}
+          <HiXMark
+            className=" text-gray-300 hover:text-gray-600 cursor-pointer"
+            size={24}
+            onClick={async () => {
+              await asyncStorage.removeItem(
+                LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION
+              );
+              nav("/whatsapp");
             }}
           />
-        )}
+        </div>
       </div>
       <div
         id="channel-messages"
@@ -695,34 +711,34 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       )}
       <div className="shoutbox border-t pt-2 min-h-[20px] max-h-[150px] px-2  flex justify-between items-start gap-2 absolute bottom-0 left-0 right-0 bg-white ">
         <div className="h-[40px] pt-2  justify-center items-center flex-col">
-        <Dropdown
-          label={<BsPlusCircle />}
-          inline
-          placement="top"
-          arrowIcon={false}
-        >
-          <Dropdown.Item
-            className="flex gap-2"
-            onClick={() => {
-              fileRef.current?.click();
-            }}
-            icon={BsFileEarmark}
+          <Dropdown
+            label={<BsPlusCircle />}
+            inline
+            placement="top"
+            arrowIcon={false}
           >
-            File
-          </Dropdown.Item>
-          <Dropdown.Item
-            className="flex gap-2"
-            onClick={() => {
-              getProducts({ page: 1, size: 10 }).then((res: any) => {
-                setProducts(res.data.items);
-              });
-              setModalProduct(true);
-            }}
-            icon={BsTag}
-          >
-            Product
-          </Dropdown.Item>
-        </Dropdown>
+            <Dropdown.Item
+              className="flex gap-2"
+              onClick={() => {
+                fileRef.current?.click();
+              }}
+              icon={BsFileEarmark}
+            >
+              File
+            </Dropdown.Item>
+            <Dropdown.Item
+              className="flex gap-2"
+              onClick={() => {
+                getProducts({ page: 1, size: 10 }).then((res: any) => {
+                  setProducts(res.data.items);
+                });
+                setModalProduct(true);
+              }}
+              icon={BsTag}
+            >
+              Product
+            </Dropdown.Item>
+          </Dropdown>
         </div>
 
         <div className="relative w-full">

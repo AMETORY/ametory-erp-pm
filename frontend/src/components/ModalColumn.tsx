@@ -65,6 +65,10 @@ const ModalColumn: FC<ModalColumnProps> = ({
       label: "Hours",
       value: "hours",
     },
+    {
+      label: "Minutes",
+      value: "minutes",
+    },
   ];
 
   useEffect(() => {
@@ -286,6 +290,12 @@ const ModalColumn: FC<ModalColumnProps> = ({
                         >
                           Delete
                         </a>
+
+                        {action.run_once? (
+                          <div className="text-gray-600 text-xs">Run Once</div>
+                        ) : (
+                          ""
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -781,6 +791,20 @@ const ModalColumn: FC<ModalColumnProps> = ({
                         />
                       </svg>
                     </span>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="run_once" value="Run Once" />
+                  <div className="flex col-span-2">
+                    <ToggleSwitch
+                      onChange={(e) =>
+                        setSelectedAction({
+                          ...selectedAction!,
+                          run_once: e,
+                        })
+                      }
+                      checked={selectedAction?.run_once ?? false}
+                    />
                   </div>
                 </div>
                 {/*                 

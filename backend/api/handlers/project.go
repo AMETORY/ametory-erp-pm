@@ -365,6 +365,9 @@ func (h *ProjectHandler) EditColumnActionHandler(c *gin.Context) {
 		file.RefID = input.ID
 		h.ctx.DB.Save(&file)
 	}
+	if !input.RunOnce {
+		h.ctx.DB.Model(&input).Where("id = ?", input.ID).Update("run_once", false)
+	}
 
 	msg := gin.H{
 		"message":    "Column action edited successfully",

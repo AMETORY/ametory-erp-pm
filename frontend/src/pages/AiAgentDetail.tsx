@@ -14,6 +14,7 @@ import {
   Button,
   Label,
   Modal,
+  Table,
   Textarea,
   TextInput,
   ToggleSwitch,
@@ -39,6 +40,7 @@ import { BsFullscreen, BsFullscreenExit, BsTrash } from "react-icons/bs";
 import { JsonEditor } from "json-edit-react";
 import ReactSelect from "react-select";
 import { llmModel } from "../utils/constants";
+import { AiOutlineEdit } from "react-icons/ai";
 interface AiAgentDetailProps {}
 
 const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
@@ -52,6 +54,7 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
   const [showHtml, setShowHtml] = useState(false);
   const [activeHistory, setActiveHistory] = useState<AgentHistoryModel>();
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [previewMode, setPreviewMode] = useState("json");
 
   const emojiStyle = {
     control: {
@@ -163,17 +166,114 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
     }
   };
 
+  const renderTable = () => {
+    return (
+      <div className="p-2 bg-white rounded-lg">
+      <Table striped className="">
+        <Table.Head>
+          <Table.HeadCell>Input</Table.HeadCell>
+          <Table.HeadCell>Type</Table.HeadCell>
+          <Table.HeadCell>Command</Table.HeadCell>
+          <Table.HeadCell>Response</Table.HeadCell>
+          <Table.HeadCell>Params</Table.HeadCell>
+          <Table.HeadCell>Active</Table.HeadCell>
+          <Table.HeadCell>Action</Table.HeadCell>
+        </Table.Head>
+        <Table.Body>
+          {histories.map((history) => {
+            let resp = JSON.parse(history.output);
+            return (
+              <Table.Row key={history.id}>
+                <Table.Cell>{history.input}</Table.Cell>
+                <Table.Cell>{resp.type}</Table.Cell>
+                <Table.Cell>{resp.command}</Table.Cell>
+                <Table.Cell>{resp.response}</Table.Cell>
+                <Table.Cell>
+                  <JsonView
+                    data={resp.params}
+                    style={{
+                      ...defaultStyles,
+                    }}
+                  />
+                </Table.Cell>
+                <Table.Cell>
+                  <ToggleSwitch
+                    sizing="sm"
+                    checked={history.is_model ?? false}
+                    onChange={(checked) => {
+                      toggleAiAgentHistoryModel(agentId!, history.id!);
+                      setHistories(
+                        histories.map((item) => {
+                          if (item.id === history.id) {
+                            return { ...item, is_model: checked };
+                          }
+                          return item;
+                        })
+                      );
+                    }}
+                  />
+                </Table.Cell>
+                <Table.Cell>
+                  <div className="flex flex-row items-center justify-end">
+                    <small
+                      className="mr-2 cursor-pointer hover:underline text-blue-400"
+                      onClick={() => {
+                        setActiveHistory(history);
+                      }}
+                    >
+                      <AiOutlineEdit />
+                    </small>
+
+                    <BsTrash
+                      className="text-red-400 hover:text-red-600 cursor-pointer "
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Are you sure you want to delete this history?"
+                          )
+                        ) {
+                          deleteAiAgentHistory(agentId!, history.id!).then(
+                            () => {
+                              setHistories([
+                                ...histories.filter(
+                                  (item) => item.id !== history.id
+                                ),
+                              ]);
+                            }
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </Table.Cell>
+              </Table.Row>
+            );
+          })}
+        </Table.Body>
+      </Table>
+      </div>
+    );
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-row w-full h-full flex-1 gap-2">
-        <div className={`${isFullScreen ? "w-[calc(100vw-200px)]" : "w-[300px]"} h-full p-4 space-y-4 flex flex-col overflow-y-auto`}>
+        <div
+          className={`${
+            isFullScreen ? "w-[calc(100vw-200px)]" : "w-[300px]"
+          } h-full p-4 space-y-4 flex flex-col overflow-y-auto`}
+        >
           <div className="flex justify-between items-center">
             <h3 className="text-2xl font-bold">Agent Detail</h3>
             <div className="flex gap-2 items-center">
               <Tooltip content="Wide" placement="bottom">
-                <Button onClick={() => {
-                  setIsFullScreen(!isFullScreen);
-                }} size="xs" color="gray">
+                <Button
+                  onClick={() => {
+                    setIsFullScreen(!isFullScreen);
+                  }}
+                  size="xs"
+                  color="gray"
+                >
                   {isFullScreen ? <BsFullscreenExit /> : <BsFullscreen />}
                 </Button>
               </Tooltip>
@@ -328,14 +428,28 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
                 required={true}
               />
             </div> */}
-            <div className="mb-2 block">
+            {/* <div className="mb-2 block">
               <Label htmlFor="html" value="View HTML" />
               <ToggleSwitch
                 id="html"
                 checked={showHtml}
                 onChange={(checked) => setShowHtml(checked)}
               />
-            </div>
+            </div> */}
+            <Label htmlFor="html" value="View Mode" />
+            <ReactSelect
+              className="select"
+              options={[
+                { value: "json", label: "JSON" },
+                { value: "html", label: "HTML" },
+                { value: "table", label: "TABLE" },
+              ]}
+              value={{
+                value: previewMode,
+                label: previewMode.toUpperCase(),
+              }}
+              onChange={(e) => setPreviewMode(e?.value as string)}
+            />
           </form>
           <div className="flex justify-end gap-2 w-full">
             <Button
@@ -359,88 +473,97 @@ const AiAgentDetail: FC<AiAgentDetailProps> = ({}) => {
             id="messages"
             className="messages h-[calc(100vh-120px)] overflow-y-auto p-4 "
           >
-            {histories.map((e) => (
-              <div
-                key={e.id}
-                className="space-y-8 group/item hover:bg-yellow-50 p-2"
-              >
-                <div className="flex flex-row justify-between  items-center">
-                  <div>
-                    <small className="ml-2">User</small>
-                    <div className="bg-white rounded-lg  p-4 max-w-[600px]">
-                      {e.input}
-                    </div>
-                  </div>
-                  <div className="flex flex-row gap-2 group/edit invisible group-hover/item:visible">
-                    <ToggleSwitch
-                      sizing="sm"
-                      label={(e.is_model && "Active") || "Inactive"}
-                      checked={e.is_model ?? false}
-                      onChange={(checked) => {
-                        toggleAiAgentHistoryModel(agentId!, e.id!);
-                        setHistories(
-                          histories.map((item) => {
-                            if (item.id === e.id) {
-                              return { ...item, is_model: checked };
-                            }
-                            return item;
-                          })
-                        );
-                      }}
-                    />
+            {previewMode == "table" ? (
+              renderTable()
+            ) : (
+              <>
+                {histories.map((e) => (
+                  <div
+                    key={e.id}
+                    className="space-y-8 group/item hover:bg-yellow-50 p-2"
+                  >
+                    <div className="flex flex-row justify-between  items-center">
+                      <div>
+                        <small className="ml-2">User</small>
+                        <div className="bg-white rounded-lg  p-4 max-w-[600px]">
+                          {e.input}
+                        </div>
+                      </div>
+                      <div className="flex flex-row gap-2 group/edit invisible group-hover/item:visible">
+                        <ToggleSwitch
+                          sizing="sm"
+                          label={(e.is_model && "Active") || "Inactive"}
+                          checked={e.is_model ?? false}
+                          onChange={(checked) => {
+                            toggleAiAgentHistoryModel(agentId!, e.id!);
+                            setHistories(
+                              histories.map((item) => {
+                                if (item.id === e.id) {
+                                  return { ...item, is_model: checked };
+                                }
+                                return item;
+                              })
+                            );
+                          }}
+                        />
 
-                    <BsTrash
-                      className="text-red-400 hover:text-red-600 cursor-pointer "
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            "Are you sure you want to delete this history?"
-                          )
-                        ) {
-                          deleteAiAgentHistory(agentId!, e.id!).then(() => {
-                            setHistories([
-                              ...histories.filter((item) => item.id !== e.id),
-                            ]);
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-row justify-end">
-                  <div className="flex flex-col  items-end">
-                    <div className="flex gap-2">
-                      <small className="mr-2">Model</small>
-                      <small
-                        className="mr-2 cursor-pointer hover:underline"
-                        onClick={() => {
-                          setActiveHistory(e);
-                        }}
-                      >
-                        Edit
-                      </small>
+                        <BsTrash
+                          className="text-red-400 hover:text-red-600 cursor-pointer "
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Are you sure you want to delete this history?"
+                              )
+                            ) {
+                              deleteAiAgentHistory(agentId!, e.id!).then(() => {
+                                setHistories([
+                                  ...histories.filter(
+                                    (item) => item.id !== e.id
+                                  ),
+                                ]);
+                              });
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="bg-white rounded-lg  p-4 max-w-[600px]">
-                      <div className=" bg-white rounded-lg p-4 max-w-[600px] json-container">
-                        {showHtml ? (
-                          <Markdown remarkPlugins={[remarkGfm]}>
-                            {JSON.parse(e.output).response ?? ""}
-                          </Markdown>
-                        ) : (
-                          <JsonView
-                            data={JSON.parse(e.output!)}
-                            shouldExpandNode={allExpanded}
-                            style={{
-                              ...defaultStyles,
+                    <div className="flex flex-row justify-end">
+                      <div className="flex flex-col  items-end">
+                        <div className="flex gap-2">
+                          <small className="mr-2">Model</small>
+                          <small
+                            className="mr-2 cursor-pointer hover:underline"
+                            onClick={() => {
+                              setActiveHistory(e);
                             }}
-                          />
-                        )}
+                          >
+                            Edit
+                          </small>
+                        </div>
+                        <div className="bg-white rounded-lg  p-4 max-w-[600px]">
+                          <div className=" bg-white rounded-lg p-4 max-w-[600px] json-container">
+                            {previewMode === "html" && (
+                              <Markdown remarkPlugins={[remarkGfm]}>
+                                {JSON.parse(e.output).response ?? ""}
+                              </Markdown>
+                            )}
+                            {previewMode === "json" && (
+                              <JsonView
+                                data={JSON.parse(e.output!)}
+                                shouldExpandNode={allExpanded}
+                                style={{
+                                  ...defaultStyles,
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
           <div className="shoutbox border-t pt-2 min-h-[20px] max-h[60px] px-2  flex justify-between items-center gap-2 bg-white">
             <MentionsInput
