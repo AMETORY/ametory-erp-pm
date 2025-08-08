@@ -1376,6 +1376,9 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 			})
 		}
 
+	} else {
+		// DELETE FILE
+		h.erpContext.DB.Model(&models.FileModel{}).Where("ref_id = ? AND ref_type = ?", sessionAuth.ID, "contact").Delete(&models.FileModel{})
 	}
 	// fmt.Println("session", sessionAuth)
 

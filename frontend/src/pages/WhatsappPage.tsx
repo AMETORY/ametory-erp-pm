@@ -222,9 +222,19 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 return s;
               }
             );
-            sessionData
-              .filter((s) => s.last_online_at)
-              .sort((a, b) => (a.last_online_at! < b.last_online_at! ? 1 : -1));
+            sessionData.sort(
+              (a, b) =>
+                moment(b.last_online_at ?? new Date()).unix() -
+                moment(a.last_online_at ?? new Date()).unix()
+            );
+
+            // for (const element of sessionData) {
+            //   console.log(
+            //     element.contact?.name,
+            //     element.contact?.phone,
+            //     element.last_message
+            //   );
+            // }
             setSessions(sessionData);
           });
         } else {
