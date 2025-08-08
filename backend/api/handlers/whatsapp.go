@@ -1202,6 +1202,11 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
+	isGroup, ok := body.Info["IsGroup"].(bool)
+	if !ok {
+		isGroup = false
+	}
+
 	// GET CONNECTION
 	conn, err := h.appService.ConnectionService.GetConnectionBySession(body.SessionName)
 	if err != nil {
@@ -1239,7 +1244,7 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		return
 	}
 
-	// fmt.Println("RECEIPT MESSAGE")
+	fmt.Println("RECEIPT MESSAGE")
 	if ok && msgType != "read" {
 		utils.LogJson(body)
 	}
@@ -1339,8 +1344,9 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		sessionAuth = &contact
 	}
 
+	fmt.Println("PICTURE", body.ProfilePic, isGroup)
 	profilePic, _ := sessionAuth.GetProfilePicture(h.erpContext.DB)
-	if body.ProfilePic != "" {
+	if body.ProfilePic != "" && !isGroup {
 		resp, err := http.Get(body.ProfilePic)
 		if err != nil {
 			log.Println(err)
@@ -1378,6 +1384,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 
 	} else {
 		// DELETE FILE
+		fmt.Println("DELETE PIC")
 		h.erpContext.DB.Model(&models.FileModel{}).Where("ref_id = ? AND ref_type = ?", sessionAuth.ID, "contact").Delete(&models.FileModel{})
 	}
 	// fmt.Println("session", sessionAuth)
@@ -1687,6 +1694,9 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	if whatsappSession.IsHumanAgent {
 		autopilot = false
 	}
+	if isGroup {
+		autopilot = false
+	}
 	fmt.Println("AUTO PILOT", autopilot)
 
 	var replyResponse *models.WhatsappMessageModel
@@ -1864,7 +1874,7 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		// fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, output.Content)
+		fmt.Println("SEND MESSAGE AUTO PILOT", body.JID, body.Sender, response.Response)
 		h.waService.SendTyping(whatsmeow_client.WaMessage{
 			JID:          body.JID,
 			To:           body.Sender,

@@ -264,8 +264,8 @@ func main() {
 
 	go func() {
 		c := cron.New()
-		c.AddFunc("0 * * * * *", func() { worker.CheckIdleColumn(erpContext) })
-		// c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
+		// c.AddFunc("0 * * * * *", func() { worker.CheckIdleColumn(erpContext) })
+		c.AddFunc("@hourly", func() { worker.CheckIdleColumn(erpContext) })
 		c.Start()
 	}()
 
