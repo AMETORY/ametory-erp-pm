@@ -1342,11 +1342,19 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 		}
 
 		sessionAuth = &contact
+		if isGroup {
+			contact.Name = body.GroupInfo.Name
+			contact.IsGroup = true
+			err := h.erpContext.DB.Save(&contact).Error
+			if err != nil {
+				fmt.Println("ERROR UPDATE GROUP", err)
+			}
+		}
 	}
 
 	fmt.Println("PICTURE", body.ProfilePic, isGroup)
 	profilePic, _ := sessionAuth.GetProfilePicture(h.erpContext.DB)
-	if body.ProfilePic != "" && !isGroup {
+	if body.ProfilePic != "" {
 		resp, err := http.Get(body.ProfilePic)
 		if err != nil {
 			log.Println(err)
@@ -1696,6 +1704,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 	}
 	if isGroup {
 		autopilot = false
+
 	}
 	fmt.Println("AUTO PILOT", autopilot)
 
