@@ -520,15 +520,20 @@ func (h *FacebookHandler) FacebookCallbackHandler(c *gin.Context) {
 
 	state := c.Query("state")
 	if state != "" {
+		// &state=connection_id-d3dc83d7-30b1-4ed4-9849-21c0dbf25aa9
 		// &state=connection_id-f14cba4f-12e8-4901-874c-3c5a5b8df04f#_
 		connID := strings.ReplaceAll(state, "connection_id-", "")
 
 		stateParts := strings.Split(connID, "#_")
 		if len(stateParts) > 0 {
 			state = stateParts[0]
+			connectionID = state
+		} else {
+			connectionID = connID
 		}
-		connectionID = state
 	}
+
+	fmt.Sprintf("CONNECT TO FACEBOOK\nconnectionID: %s, code: %s\n", connectionID, code)
 
 	if code != "" && connectionID != "" {
 		redirectUrl := fmt.Sprintf(`%s/%s`, h.appService.Config.Facebook.RedirectURL, connectionID)

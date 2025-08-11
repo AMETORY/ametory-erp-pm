@@ -1793,7 +1793,7 @@ params: jika tipe command dibutuhkan parameter
 		}
 
 		isModel := true
-		histories, _ := h.aiGeneratorService.GetHistories(&aiAgent.ID, conn.CompanyID, nil, &isModel)
+		histories, _ := h.aiGeneratorService.GetHistories(&aiAgent.ID, conn.CompanyID, nil, &isModel, nil)
 		var his []ai_generator.AiMessage = []ai_generator.AiMessage{}
 		for _, v := range histories {
 

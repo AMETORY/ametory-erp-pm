@@ -256,13 +256,16 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             style={{
               width: "100%",
               backgroundColor: "#e1306c",
-              color: "white",
+              color: "white", 
             }}
             onClick={() => {
+              let url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${process.env.REACT_APP_IG_APP_ID}&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`
+              window.open(url);
+              //https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=1324863209085644&redirect_uri=https://crm.imaco.site/api/v1/facebook/instagram/callback&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights
               // Add your logic to connect to Facebook here
-              window.open(
-                `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=https://app.senandika.web.id/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&client_id=1033935721571526&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`
-              );
+              // window.open(
+              //   `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&client_id=${process.env.REACT_APP_IG_APP_ID}&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`
+              // );
             }}
           >
             <BsInstagram className="mr-2 w-4" /> Hubungkan ke Instagram
