@@ -244,6 +244,7 @@ func main() {
 	routes.SetupFacebookRoutes(v1, erpContext)
 	routes.SetupLazadaRoutes(v1, erpContext)
 	routes.SetupTiktokRoutes(v1, erpContext)
+	routes.SetupWhatsappApiRoutes(v1, erpContext)
 
 	// RUN WORKER
 	go func() {

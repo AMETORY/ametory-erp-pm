@@ -74,6 +74,9 @@ const ConnectionPage: FC<ConnectionPageProps> = ({}) => {
     if (process.env.REACT_APP_TELEGRAM_ENABLED) {
       connType.push({ label: "TELEGRAM", value: "telegram" });
     }
+    if (process.env.REACT_APP_WHATSAPP_API_ENABLED) {
+      connType.push({ label: "WHATSAPP API", value: "whatsapp-api" });
+    }
     if (process.env.REACT_APP_INSTAGRAM_ENABLED) {
       connType.push({ label: "INSTAGRAM", value: "instagram" });
     }

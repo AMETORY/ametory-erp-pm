@@ -361,7 +361,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         <div className="flex flex-wrap gap-2 items-center">
                           <div className="flex flex-row gap-2 items-center justify-center">
                             <small>
-                              {e.ref?.connected ? (
+                              {e.ref?.connected || e.ref?.type == "whatsapp-api" ? (
                                 <Tooltip content="Connected">🟢</Tooltip>
                               ) : (
                                 <Tooltip content="Not Connected">🔴</Tooltip>
@@ -556,7 +556,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   </div>
                 )}
                 options={connections.filter(
-                  (e) => e.type === "whatsapp" && e.status === "ACTIVE"
+                  (e) =>( e.type === "whatsapp" ||  e.type === "whatsapp-api") && e.status === "ACTIVE"
                 )}
                 value={selectedConnection}
                 onChange={(e) => setSelectedConnection(e!)}

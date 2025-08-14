@@ -233,7 +233,6 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           </div>
         </>
       )}
-     
 
       {connection.type == "shopee" &&
         connection?.status == "ACTIVE" &&
@@ -243,11 +242,51 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
               <Label className="font-bold">Connected To</Label>
               <p>{connection?.session_name}</p>
             </div>
-           
           </>
         )}
 
-
+      {connection.type == "whatsapp-api" && (
+        <>
+          <div className="mt-4">
+            <Label className="font-bold">Token</Label>
+            <TextInput
+              placeholder="Token"
+              value={connection?.access_token}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  access_token: e.target.value,
+                });
+              }}
+            />
+          </div>
+          <div className="mt-4">
+            <Label className="font-bold">Phone Number ID</Label>
+            <TextInput
+              placeholder="Phone Number ID"
+              value={connection?.session}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  session: e.target.value,
+                });
+              }}
+            />
+          </div>
+           {connection?.status != "ACTIVE" && (
+            <div>
+              <Button
+                className="mt-4"
+                onClick={async () => {
+                  onSave();
+                }}
+              >
+                SAVE
+              </Button>
+            </div>
+          )}
+        </>
+      )}
       {connection.type == "instagram" && (
         <div className="mt-4">
           <Button
@@ -256,10 +295,10 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             style={{
               width: "100%",
               backgroundColor: "#e1306c",
-              color: "white", 
+              color: "white",
             }}
             onClick={() => {
-              let url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${process.env.REACT_APP_IG_APP_ID}&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`
+              let url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${process.env.REACT_APP_IG_APP_ID}&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`;
               window.open(url);
               //https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=1324863209085644&redirect_uri=https://crm.imaco.site/api/v1/facebook/instagram/callback&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights
               // Add your logic to connect to Facebook here
@@ -273,8 +312,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
         </div>
       )}
 
-
-       {connection.type == "lazada" && (
+      {connection.type == "lazada" && (
         <>
           <div className="flex gap-2 flex-row">
             <Button
@@ -399,9 +437,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
               }),
             }}
             onChange={(e) => {
-              let selected = aiAgents.find(
-                (agent) => agent.id == e?.value!
-              );
+              let selected = aiAgents.find((agent) => agent.id == e?.value!);
               onUpdate({
                 ...connection!,
                 ai_agent_id: selected?.id,
@@ -597,131 +633,135 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           />
         </div>
       )}
-      {(connection?.status == "PENDING" || (!connection?.connected && connection?.status == "ACTIVE")) && connection.type == "whatsapp" && (
-        <div className="mt-4 p-4 border rounded-lg">
-          <h1 className="text-2xl font-bold">Connect to WhatsApp</h1>
-          <table style={{}}>
-            <tbody>
-              <tr>
-                <td className="less-pad">
-                  1.&nbsp;&nbsp;Open{" "}
-                  <span
-                    className="grey lighten-3 black-text"
-                    style={{
-                      padding: "2px 5px",
-                      margin: "0 3px",
-                      borderRadius: 5,
-                    }}
-                  >
-                    WhatsApp
-                  </span>{" "}
-                  on your phone
-                </td>
-              </tr>
-              <tr>
-                <td className="less-pad">
-                  2.&nbsp;&nbsp;Click{" "}
-                  <span
-                    className="grey lighten-3 black-text"
-                    style={{
-                      padding: "2px 5px",
-                      margin: "0 3px",
-                      borderRadius: 5,
-                    }}
-                  >
-                    3-dots
-                  </span>{" "}
-                  menu on the top right corner
-                </td>
-              </tr>
-              <tr>
-                <td className="less-pad">
-                  3.&nbsp;&nbsp;Tap on{" "}
-                  <span
-                    className="grey lighten-3 black-text"
-                    style={{
-                      padding: "2px 5px",
-                      margin: "0 3px",
-                      borderRadius: 5,
-                    }}
-                  >
-                    "Linked Devices"
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td className="less-pad">
-                  4.&nbsp;&nbsp;After that,{" "}
-                  <span
-                    className="grey lighten-3 black-text"
-                    style={{
-                      padding: "2px 5px",
-                      margin: "0 3px",
-                      borderRadius: 5,
-                    }}
-                  >
-                    Scan QR Code
-                  </span>{" "}
-                  below
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      {(connection?.status == "PENDING" ||
+        (!connection?.connected && connection?.status == "ACTIVE")) &&
+        connection.type == "whatsapp" && (
+          <div className="mt-4 p-4 border rounded-lg">
+            <h1 className="text-2xl font-bold">Connect to WhatsApp</h1>
+            <table style={{}}>
+              <tbody>
+                <tr>
+                  <td className="less-pad">
+                    1.&nbsp;&nbsp;Open{" "}
+                    <span
+                      className="grey lighten-3 black-text"
+                      style={{
+                        padding: "2px 5px",
+                        margin: "0 3px",
+                        borderRadius: 5,
+                      }}
+                    >
+                      WhatsApp
+                    </span>{" "}
+                    on your phone
+                  </td>
+                </tr>
+                <tr>
+                  <td className="less-pad">
+                    2.&nbsp;&nbsp;Click{" "}
+                    <span
+                      className="grey lighten-3 black-text"
+                      style={{
+                        padding: "2px 5px",
+                        margin: "0 3px",
+                        borderRadius: 5,
+                      }}
+                    >
+                      3-dots
+                    </span>{" "}
+                    menu on the top right corner
+                  </td>
+                </tr>
+                <tr>
+                  <td className="less-pad">
+                    3.&nbsp;&nbsp;Tap on{" "}
+                    <span
+                      className="grey lighten-3 black-text"
+                      style={{
+                        padding: "2px 5px",
+                        margin: "0 3px",
+                        borderRadius: 5,
+                      }}
+                    >
+                      "Linked Devices"
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="less-pad">
+                    4.&nbsp;&nbsp;After that,{" "}
+                    <span
+                      className="grey lighten-3 black-text"
+                      style={{
+                        padding: "2px 5px",
+                        margin: "0 3px",
+                        borderRadius: 5,
+                      }}
+                    >
+                      Scan QR Code
+                    </span>{" "}
+                    below
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-          {qrStr != "" && !qrStr.includes("redis") && <QRCode value={qrStr} />}
-          {qrLoading && <Spinner aria-label="Default status example" />}
-          <Button
-            className="mt-4"
-            onClick={async () => {
-              var refreshIntervalId: any;
-              setQrLoading(true);
-              connectDevice(connection!.id!)
-                .then((res: any) => {
-                  onFinish();
-                })
-                .catch((err) => {
-                  toast.error(`${err}`);
-                })
-
-                .finally(() => {
-                  setQrLoading(false);
-                  clearInterval(refreshIntervalId);
-                });
-
-              setTimeout(() => {
-                getQr(connection!.id!, connection!.session_name!)
-                  .then((res: any) => {
-                    setQrStr("");
-                    setQrStr((val) => res.data);
-                  })
-                  .catch((err) => {
-                    toast.error(`${err}`);
-                    setQrStr("");
-                  })
-                  .finally(() => {
-                    setQrLoading(false);
-                  });
-              }, 3000);
-              refreshIntervalId = setInterval(async () => {
+            {qrStr != "" && !qrStr.includes("redis") && (
+              <QRCode value={qrStr} />
+            )}
+            {qrLoading && <Spinner aria-label="Default status example" />}
+            <Button
+              className="mt-4"
+              onClick={async () => {
+                var refreshIntervalId: any;
                 setQrLoading(true);
-                getQr(connection!.id!, connection!.session_name!)
+                connectDevice(connection!.id!)
                   .then((res: any) => {
-                    setQrStr("");
-                    setQrStr((val) => res.data);
+                    onFinish();
                   })
                   .catch((err) => {
                     toast.error(`${err}`);
                   })
+
                   .finally(() => {
                     setQrLoading(false);
+                    clearInterval(refreshIntervalId);
                   });
-              }, 10000);
-            }}
-          >
-            Connect Device
-          </Button>
-        </div>
-      )}
+
+                setTimeout(() => {
+                  getQr(connection!.id!, connection!.session_name!)
+                    .then((res: any) => {
+                      setQrStr("");
+                      setQrStr((val) => res.data);
+                    })
+                    .catch((err) => {
+                      toast.error(`${err}`);
+                      setQrStr("");
+                    })
+                    .finally(() => {
+                      setQrLoading(false);
+                    });
+                }, 3000);
+                refreshIntervalId = setInterval(async () => {
+                  setQrLoading(true);
+                  getQr(connection!.id!, connection!.session_name!)
+                    .then((res: any) => {
+                      setQrStr("");
+                      setQrStr((val) => res.data);
+                    })
+                    .catch((err) => {
+                      toast.error(`${err}`);
+                    })
+                    .finally(() => {
+                      setQrLoading(false);
+                    });
+                }, 10000);
+              }}
+            >
+              Connect Device
+            </Button>
+          </div>
+        )}
       {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
           <ButtonGroup>
@@ -751,7 +791,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           </ButtonGroup>
         </div>
       )}
-      
+
       {connection?.status == "PENDING" && connection.type == "telegram" && (
         <TelegramIntegrationGuide />
       )}

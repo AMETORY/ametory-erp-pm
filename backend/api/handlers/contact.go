@@ -95,6 +95,7 @@ func (h *ContactHandler) GetContactHandler(c *gin.Context) {
 }
 
 func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
+	member := c.MustGet("member").(models.MemberModel)
 	input := struct {
 		Message      string `json:"message" binding:"required"`
 		Type         string `json:"type" binding:"required"`
@@ -122,13 +123,19 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 		var whatsappSession models.WhatsappMessageSession
 		err = h.ctx.DB.First(&whatsappSession, "contact_id = ?", contact.ID).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-			parts := strings.Split(conn.Session, "@")
+			session := ""
+			if conn.Type == "whatsapp-api" {
+				session = fmt.Sprintf("%s@%s", *contact.Phone, conn.Session)
+			} else {
+				parts := strings.Split(conn.Session, "@")
+				session = fmt.Sprintf("%s@%s", *contact.Phone, parts[1])
+			}
 			// userParts := strings.Split(parts[0], ":")
 			refType := "connection"
 			whatsappSession = models.WhatsappMessageSession{
 				ContactID:    &contact.ID,
 				JID:          conn.Session,
-				Session:      fmt.Sprintf("%s@%s", *contact.Phone, parts[1]),
+				Session:      session,
 				LastOnlineAt: &now,
 				LastMessage:  input.Message,
 				CompanyID:    conn.CompanyID,
@@ -144,19 +151,28 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 
 		}
 
+		if conn.Type == "whatsapp-api" {
+			err := SendWhatsappApiContactMessage(conn, *contact, input.Message, &member)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+		} else {
+			waData := whatsmeow_client.WaMessage{
+				JID:     whatsappSession.JID,
+				Text:    input.Message,
+				To:      *contact.Phone,
+				IsGroup: false,
+			}
+			h.waService.SetChatData(waData)
+			_, err = objects.SendChatMessage(h.waService)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+		}
 		// sendWAMessage(h.ctx, whatsappSession.JID, *contact.Phone, input.Message)
-		waData := whatsmeow_client.WaMessage{
-			JID:     whatsappSession.JID,
-			Text:    input.Message,
-			To:      *contact.Phone,
-			IsGroup: false,
-		}
-		h.waService.SetChatData(waData)
-		_, err = objects.SendChatMessage(h.waService)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
 
 		info := map[string]interface{}{
 			"Timestamp": time.Now().Format(time.RFC3339),
@@ -176,6 +192,8 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 			IsGroup:   false,
 			ContactID: &contact.ID,
 			CompanyID: conn.CompanyID,
+			MemberID:  &member.ID,
+			Member:    &member,
 		}
 
 		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)

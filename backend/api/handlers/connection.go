@@ -374,6 +374,16 @@ func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	if input.Type == "whatsapp-api" && input.AccessToken != "" && input.Session != "" {
+		input.Status = "ACTIVE"
+		if err := h.appService.ConnectionService.UpdateConnection(id, &input); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+	}
+	utils.LogJson(input)
 	c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully"})
 }
 func (h *ConnectionHandler) GetQRDeviceHandler(c *gin.Context) {

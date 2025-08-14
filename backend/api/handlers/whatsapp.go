@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -209,10 +208,21 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
 		return
 	}
-	splitJID := strings.Split(session.JID, "@")
-	splitSep := strings.Split(splitJID[0], ":")
+	var conn *connection.ConnectionModel
+	if *session.RefType == "connection" {
+		err = h.erpContext.DB.First(&conn, "id = ?", session.RefID).Error
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+	}
+	var sender string
 	var isGroup bool
 	var ok bool
+	if conn.Type == "whatsapp-api" {
+		sender = session.JID
+	}
 
 	info := make(map[string]any)
 	var infoStr string = "{}"
@@ -240,7 +250,6 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 				lastCustMsg.IsReplied = true
 				h.erpContext.DB.Save(&lastCustMsg)
 				refID = &lastCustMsg.ID
-
 			}
 		}
 
@@ -257,19 +266,24 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	parsedMessage := parseMsgTemplate(*session.Contact, &member, input.Message)
 	now := time.Now()
 	templateID := parseTemplateID(input.Message)
-	var connection connection.ConnectionModel
-	err = h.erpContext.DB.Select("id, session, company_id").First(&connection, "session ilike ? and company_id = ?", splitSep[0]+"%", session.CompanyID).Error
-	if err == nil {
-		fmt.Println("MESSAGE CONNECTION", session.JID)
-		fmt.Println("ACTIVE CONNECTION", connection.Session)
-		if session.JID != connection.Session {
-			// UPDATE SESSION JID
-			session.JID = connection.Session
-			err = h.erpContext.DB.Save(&session).Error
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
+	if conn.Type != "whatsapp-api" {
+		splitJID := strings.Split(session.JID, "@")
+		splitSep := strings.Split(splitJID[0], ":")
+		sender = splitSep[0]
+		var connection connection.ConnectionModel
+		err = h.erpContext.DB.Select("id, session, company_id").First(&connection, "session ilike ? and company_id = ?", splitSep[0]+"%", session.CompanyID).Error
+		if err == nil {
+			fmt.Println("MESSAGE CONNECTION", session.JID)
+			fmt.Println("ACTIVE CONNECTION", connection.Session)
+			if session.JID != connection.Session {
+				// UPDATE SESSION JID
+				session.JID = connection.Session
+				err = h.erpContext.DB.Save(&session).Error
+				if err != nil {
+					log.Println(err)
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
 			}
 		}
 	}
@@ -282,10 +296,9 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	// }
 
 	var waDataReply models.WhatsappMessageModel = models.WhatsappMessageModel{
-		Sender:   splitSep[0],
-		Receiver: *session.Contact.Phone,
-		Message:  parsedMessage,
-
+		Sender:       sender,
+		Receiver:     *session.Contact.Phone,
+		Message:      parsedMessage,
 		MessageInfo:  info,
 		Info:         infoStr,
 		Session:      session.Session,
@@ -309,24 +322,63 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	if waDataReply.IsGroup {
 		to = waDataReply.Session
 	}
+	waDataReply.MemberID = &memberID
+	waDataReply.Member = &member
 	// fmt.Println("WA DATA", fmt.Sprintf("%s@%s", splitSep[0], splitJID[1]))
 	// utils.LogJson(waDataReply)
 	if templateID == nil {
-		h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true, input.RefMsg)
-		resp, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
-		if err != nil {
-			log.Println(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		if conn.Type == "whatsapp-api" {
+			err := SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member)
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			info := map[string]interface{}{
+				"Timestamp": time.Now().Format(time.RFC3339),
+			}
+			infoByte, err := json.Marshal(info)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+			replyResponse := &models.WhatsappMessageModel{
+				Receiver:  *session.Contact.Phone,
+				Message:   waDataReply.Message,
+				Session:   session.Session,
+				JID:       session.JID,
+				IsFromMe:  true,
+				Info:      string(infoByte),
+				IsGroup:   false,
+				ContactID: &session.Contact.ID,
+				CompanyID: conn.CompanyID,
+				MemberID:  &member.ID,
+			}
+
+			err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
+			if err != nil {
+				// log.Println(err)
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, input.Files, input.Products, true, input.RefMsg)
+			_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+			if err != nil {
+				log.Println(err)
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
+
 		msgNotif := gin.H{
 			"message":    input.Message,
 			"command":    "WHATSAPP_RECEIVED",
 			"session_id": session.ID,
 			"data":       waDataReply,
 		}
-		fmt.Println("RESPONSE SEND MESSAGE", reflect.TypeOf(resp))
-		utils.LogJson(resp)
+		// fmt.Println("RESPONSE SEND MESSAGE", reflect.TypeOf(resp))
+		// utils.LogJson(resp)
 		// msgID, ok := resp.(*models.WhatsappMessageModel).MessageInfo["ID"].(string)
 		// if ok {
 		// 	waDataReply.MessageID = &msgID
@@ -346,14 +398,50 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		}
 		for _, msg := range template.Messages {
 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
+			if conn.Type == "whatsapp-api" {
+				err := SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member)
+				if err != nil {
+					log.Println(err)
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+				info := map[string]interface{}{
+					"Timestamp": time.Now().Format(time.RFC3339),
+				}
+				infoByte, err := json.Marshal(info)
+				if err != nil {
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				replyResponse := &models.WhatsappMessageModel{
+					Receiver:  *session.Contact.Phone,
+					Message:   waDataReply.Message,
+					Session:   session.Session,
+					JID:       session.JID,
+					IsFromMe:  true,
+					Info:      string(infoByte),
+					IsGroup:   false,
+					ContactID: &session.Contact.ID,
+					CompanyID: conn.CompanyID,
+					MemberID:  &member.ID,
+				}
 
-			h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, msg.Files, msg.Products, true, nil)
-			_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
-			if err != nil {
-				log.Println(err)
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
+				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
+				if err != nil {
+					// log.Println(err)
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+			} else {
+				h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, msg.Files, msg.Products, true, nil)
+				_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
+				if err != nil {
+					log.Println(err)
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
 			}
+
 			msgNotif := gin.H{
 				"message":    input.Message,
 				"command":    "WHATSAPP_RECEIVED",
@@ -1998,7 +2086,7 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 			var refType = "connection"
 			if *v.RefType == refType {
 				var conn connection.ConnectionModel
-				err = h.erpContext.DB.Select("id, session_name, session, name, color").First(&conn, "id = ?", v.RefID).Error
+				err = h.erpContext.DB.Select("id, session_name, session, name, color,type, status").First(&conn, "id = ?", v.RefID).Error
 				if _, ok := connectionStatus[conn.ID]; !ok {
 					fmt.Println("CHECK CONNECTION", conn.Session)
 					resp, err := h.whatsappWebService.CheckConnected(conn.Session)
