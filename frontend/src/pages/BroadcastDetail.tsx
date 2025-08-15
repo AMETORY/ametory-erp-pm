@@ -780,7 +780,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <Select
                     options={connections.filter(
                       (item: any) =>
-                        item.status === "ACTIVE" && item.type === "whatsapp"
+                        item.status === "ACTIVE" && (item.type === "whatsapp" || item.type === "whatsapp-api")
                     )}
                     value={broadcast?.connections ?? []}
                     isMulti

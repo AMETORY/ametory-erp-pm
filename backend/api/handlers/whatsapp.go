@@ -328,7 +328,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	// utils.LogJson(waDataReply)
 	if templateID == nil {
 		if conn.Type == "whatsapp-api" {
-			err := SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member)
+			err := app.SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member, input.Files)
 			if err != nil {
 				log.Println(err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -353,6 +353,15 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 				ContactID: &session.Contact.ID,
 				CompanyID: conn.CompanyID,
 				MemberID:  &member.ID,
+			}
+
+			if len(input.Files) > 0 {
+				for _, file := range input.Files {
+					replyResponse.MediaURL = file.URL
+					replyResponse.MimeType = file.MimeType
+				}
+				waDataReply.MediaURL = replyResponse.MediaURL
+				waDataReply.MimeType = replyResponse.MimeType
 			}
 
 			err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
@@ -399,7 +408,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		for _, msg := range template.Messages {
 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
 			if conn.Type == "whatsapp-api" {
-				err := SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member)
+				err := app.SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member, input.Files)
 				if err != nil {
 					log.Println(err)
 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -424,6 +433,14 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 					ContactID: &session.Contact.ID,
 					CompanyID: conn.CompanyID,
 					MemberID:  &member.ID,
+				}
+				if len(input.Files) > 0 {
+					for _, file := range input.Files {
+						replyResponse.MediaURL = file.URL
+						replyResponse.MimeType = file.MimeType
+						waDataReply.MediaURL = replyResponse.MediaURL
+						waDataReply.MimeType = replyResponse.MimeType
+					}
 				}
 
 				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)

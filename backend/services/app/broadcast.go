@@ -405,11 +405,20 @@ func (b *BroadcastService) sendWithRetryHandling(
 			// USE REGULAR MESSAGE
 			if broadcast.TemplateID == nil {
 				success = true
-				b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, broadcast.Files, broadcast.Products, false, nil)
-				_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
-				if err != nil {
-					log.Println("ERROR SEND MESSAGE REGULAR", err)
-					success = false
+				if sender.Type == "whatsapp-api" {
+					err := SendWhatsappApiContactMessage(sender, contact, msgData.Message, nil, broadcast.Files)
+					if err != nil {
+						log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
+						success = false
+					}
+				} else {
+
+					b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, broadcast.Files, broadcast.Products, false, nil)
+					_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
+					if err != nil {
+						log.Println("ERROR SEND MESSAGE REGULAR", err)
+						success = false
+					}
 				}
 
 				// err = b.customerRelationshipService.WhatsappService.SendWhatsappMessage(b.whatsmeowService, &msgData, *contact.Phone, broadcast.Files, broadcast.Products, false)
@@ -424,16 +433,25 @@ func (b *BroadcastService) sendWithRetryHandling(
 				template, err := b.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*broadcast.TemplateID)
 				if err == nil {
 					for _, v := range template.Messages {
-						success = true
-						msgData := mdl.WhatsappMessageModel{
-							JID:     sender.Session,
-							Message: parseMsgTemplate(contact, broadcast.Member, v.Body),
-						}
-						b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false, nil)
-						_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
-						if err != nil {
-							log.Println("ERROR SEND MESSAGE REGULAR", err)
-							success = false
+						if sender.Type == "whatsapp-api" {
+							parsedMsg := parseMsgTemplate(contact, broadcast.Member, v.Body)
+							err := SendWhatsappApiContactMessage(sender, contact, parsedMsg, nil, broadcast.Files)
+							if err != nil {
+								log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
+								success = false
+							}
+						} else {
+							success = true
+							msgData := mdl.WhatsappMessageModel{
+								JID:     sender.Session,
+								Message: parseMsgTemplate(contact, broadcast.Member, v.Body),
+							}
+							b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false, nil)
+							_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
+							if err != nil {
+								log.Println("ERROR SEND MESSAGE REGULAR", err)
+								success = false
+							}
 						}
 
 						// err = b.customerRelationshipService.WhatsappService.SendWhatsappMessage(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false)

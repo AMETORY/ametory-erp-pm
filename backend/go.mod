@@ -169,6 +169,7 @@ require (
 	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/olahol/melody.v1 v1.0.0-20170518105555-d52139073376
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	moul.io/http2curl v1.0.0
 )
 
 replace github.com/AMETORY/ametory-erp-modules => ../../ametory-erp-modules

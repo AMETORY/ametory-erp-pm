@@ -93,6 +93,7 @@ func (h *BroadcastHandler) CreateBroadcastHandler(c *gin.Context) {
 	input.CompanyID = &companyID
 	memberID := c.MustGet("memberID").(string)
 	input.MemberID = &memberID
+	input.DelayTime = 1
 	err := h.broadcastServ.CreateBroadcast(&input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

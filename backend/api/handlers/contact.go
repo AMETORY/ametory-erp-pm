@@ -152,7 +152,7 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 		}
 
 		if conn.Type == "whatsapp-api" {
-			err := SendWhatsappApiContactMessage(conn, *contact, input.Message, &member)
+			err := app.SendWhatsappApiContactMessage(conn, *contact, input.Message, &member, nil)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
