@@ -342,7 +342,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 			}
 			var quoteMessageID *string
 			if input.RefMsg != nil {
-				quoteMessageID = &input.RefMsg.ID
+				quoteMessageID = input.RefMsg.MessageID
 			}
 			h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
 			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, files, session.Contact, quoteMessageID)
@@ -352,13 +352,6 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 				return
 			}
 
-			// utils.LogJson(resp)
-			// err = app.SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member, input.Files)
-			// if err != nil {
-			// 	log.Println(err)
-			// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			// 	return
-			// }
 			info := map[string]interface{}{
 				"Timestamp": time.Now().Format(time.RFC3339),
 			}
@@ -438,47 +431,62 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		for _, msg := range template.Messages {
 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
 			if conn.Type == "whatsapp-api" {
-				err := app.SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member, input.Files)
-				if err != nil {
-					log.Println(err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
-				info := map[string]interface{}{
-					"Timestamp": time.Now().Format(time.RFC3339),
-				}
-				infoByte, err := json.Marshal(info)
-				if err != nil {
-					c.JSON(500, gin.H{"error": err.Error()})
-					return
-				}
-				replyResponse := &models.WhatsappMessageModel{
-					Receiver:  *session.Contact.Phone,
-					Message:   waDataReply.Message,
-					Session:   session.Session,
-					JID:       session.JID,
-					IsFromMe:  true,
-					Info:      string(infoByte),
-					IsGroup:   false,
-					ContactID: &session.Contact.ID,
-					CompanyID: conn.CompanyID,
-					MemberID:  &member.ID,
-				}
-				if len(input.Files) > 0 {
-					for _, file := range input.Files {
-						replyResponse.MediaURL = file.URL
-						replyResponse.MimeType = file.MimeType
-						waDataReply.MediaURL = replyResponse.MediaURL
-						waDataReply.MimeType = replyResponse.MimeType
-					}
-				}
+				h.appService.SendTemplateMessageWhatsappAPI(h.customerRelationshipService, h.metaService, conn, waDataReply, session, &member, input.Files, input.Products)
+				// var files []*models.FileModel
+				// for _, v := range msg.Files {
+				// 	files = append(files, &v)
+				// }
+				// var quoteMessageID *string
+				// h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
+				// resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, []*models.FileModel{}, session.Contact, quoteMessageID)
+				// if err != nil {
+				// 	log.Println(err)
+				// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				// 	return
+				// }
 
-				err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
-				if err != nil {
-					// log.Println(err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
+				// info := map[string]interface{}{
+				// 	"Timestamp": time.Now().Format(time.RFC3339),
+				// }
+				// infoByte, err := json.Marshal(info)
+				// if err != nil {
+				// 	c.JSON(500, gin.H{"error": err.Error()})
+				// 	return
+				// }
+				// replyResponse := &models.WhatsappMessageModel{
+				// 	Receiver:  *session.Contact.Phone,
+				// 	Message:   waDataReply.Message,
+				// 	Session:   session.Session,
+				// 	JID:       session.JID,
+				// 	IsFromMe:  true,
+				// 	Info:      string(infoByte),
+				// 	IsGroup:   false,
+				// 	ContactID: &session.Contact.ID,
+				// 	CompanyID: conn.CompanyID,
+				// 	MemberID:  &member.ID,
+				// }
+
+				// for _, v := range resp.Messages {
+				// 	replyResponse.MessageID = &v.ID
+				// 	waDataReply.MessageID = &v.ID
+				// }
+
+				// if len(input.Files) > 0 {
+				// 	for _, file := range input.Files {
+				// 		replyResponse.MediaURL = file.URL
+				// 		replyResponse.MimeType = file.MimeType
+				// 	}
+				// 	waDataReply.MediaURL = replyResponse.MediaURL
+				// 	waDataReply.MimeType = replyResponse.MimeType
+				// }
+
+				// err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
+				// if err != nil {
+				// 	// log.Println(err)
+				// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				// 	return
+				// }
+
 			} else {
 				h.customerRelationshipService.WhatsappService.SetMsgData(h.waService, &waDataReply, to, msg.Files, msg.Products, true, nil)
 				_, err := customer_relationship.SendCustomerServiceMessage(h.customerRelationshipService.WhatsappService)
@@ -487,19 +495,19 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 					return
 				}
+				msgNotif := gin.H{
+					"message":    input.Message,
+					"command":    "WHATSAPP_RECEIVED",
+					"session_id": session.ID,
+					"data":       waDataReply,
+				}
+				msgNotifStr, _ := json.Marshal(msgNotif)
+				h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
+					url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
+					return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+				})
 			}
 
-			msgNotif := gin.H{
-				"message":    input.Message,
-				"command":    "WHATSAPP_RECEIVED",
-				"session_id": session.ID,
-				"data":       waDataReply,
-			}
-			msgNotifStr, _ := json.Marshal(msgNotif)
-			h.appService.Websocket.BroadcastFilter(msgNotifStr, func(q *melody.Session) bool {
-				url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *session.CompanyID)
-				return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-			})
 		}
 	}
 

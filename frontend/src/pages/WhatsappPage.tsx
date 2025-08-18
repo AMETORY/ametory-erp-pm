@@ -58,6 +58,7 @@ import { MemberModel } from "../models/member";
 import moment from "moment";
 import { PiExport } from "react-icons/pi";
 import { SearchContext } from "../contexts/SearchContext";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -93,6 +94,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [modalDateOpen, setModalDateOpen] = useState(false);
   const { search, setSearch } = useContext(SearchContext);
   const [sessionTypeSelected, setSessionTypeSelected] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState([
     {
       label: "All Chat",
@@ -260,6 +262,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
   const getAllSessions = async (p?: number) => {
     try {
+      setIsLoading(true);
       // console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
       // console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
       // setLoading(true);
@@ -289,6 +292,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
       toast.error(`${error}`);
     } finally {
       // setLoading(false);
+      setIsLoading(false);
     }
   };
   return (
@@ -361,7 +365,8 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                         <div className="flex flex-wrap gap-2 items-center">
                           <div className="flex flex-row gap-2 items-center justify-center">
                             <small>
-                              {e.ref?.connected || e.ref?.type == "whatsapp-api" ? (
+                              {e.ref?.connected ||
+                              e.ref?.type == "whatsapp-api" ? (
                                 <Tooltip content="Connected">🟢</Tooltip>
                               ) : (
                                 <Tooltip content="Not Connected">🔴</Tooltip>
@@ -422,71 +427,78 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                       </div>
                     </div>
                     <div>
-                    <div className="flex flex-col items-end">
-                      {(e.count_unread ?? 0) > 0 && (
-                        <div
-                          className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"
-                          color="red"
-                        >
-                          {(e.count_unread ?? 0) > 99 ? "99+" : e.count_unread}
+                      <div className="flex flex-col items-end">
+                        {(e.count_unread ?? 0) > 0 && (
+                          <div
+                            className=" aspect-square w-4 text-xs h-4  rounded-full flex justify-center items-center bg-red-400 text-white"
+                            color="red"
+                          >
+                            {(e.count_unread ?? 0) > 99
+                              ? "99+"
+                              : e.count_unread}
+                          </div>
+                        )}
+                        <div className="group/edit invisible group-hover/item:visible">
+                          <Dropdown label="" inline>
+                            <Dropdown.Item
+                              className="flex gap-2"
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    "Are you sure you want to clear this session?"
+                                  )
+                                ) {
+                                  clearWhatsappSession(e.id!).then(() => {
+                                    toast.success("Chat cleared");
+                                    getAllSessions();
+                                  });
+                                }
+                              }}
+                            >
+                              Clear Chat
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              className="flex gap-2"
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    "Are you sure you want to delete this session?"
+                                  )
+                                ) {
+                                  deleteWhatsappSession(e.id!).then(() => {
+                                    toast.success("Chat deleted");
+                                    getAllSessions();
+                                    window.location.href = "/whatsapp";
+                                  });
+                                }
+                              }}
+                            >
+                              Delete Chat
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              className="flex gap-2"
+                              onClick={() => {
+                                console.log(e);
+                                setSelectedSession(e);
+                                setModalInfo(true);
+                              }}
+                            >
+                              Info
+                            </Dropdown.Item>
+                          </Dropdown>
                         </div>
-                      )}
-                      <div className="group/edit invisible group-hover/item:visible">
-                        <Dropdown label="" inline>
-                          <Dropdown.Item
-                            className="flex gap-2"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to clear this session?"
-                                )
-                              ) {
-                                clearWhatsappSession(e.id!).then(() => {
-                                  toast.success("Chat cleared");
-                                  getAllSessions();
-                                });
-                              }
-                            }}
-                          >
-                            Clear Chat
-                          </Dropdown.Item>
-                          <Dropdown.Item
-                            className="flex gap-2"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this session?"
-                                )
-                              ) {
-                                deleteWhatsappSession(e.id!).then(() => {
-                                  toast.success("Chat deleted");
-                                  getAllSessions();
-                                  window.location.href = "/whatsapp";
-                                });
-                              }
-                            }}
-                          >
-                            Delete Chat
-                          </Dropdown.Item>
-                          <Dropdown.Item
-                            className="flex gap-2"
-                            onClick={() => {
-                              console.log(e);
-                              setSelectedSession(e);
-                              setModalInfo(true);
-                            }}
-                          >
-                            Info
-                          </Dropdown.Item>
-                        </Dropdown>
                       </div>
                     </div>
-                    </div>
-                    
                   </div>
                 </li>
               ))}
-              {!pagination?.last && (
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center w-full p-8">
+                <div className="animate-spin h-5 w-5 border-b-2 border-gray-900 rounded-full">
+                  <AiOutlineLoading3Quarters />
+                </div></div>
+              )}
+              {!pagination?.last && !isLoading && (
                 <div className="w-full flex justify-center p-4">
                   <button
                     className="btn btn-primary hover:bg-gray-200 px-4 py-2 rounded-lg"
@@ -556,7 +568,9 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                   </div>
                 )}
                 options={connections.filter(
-                  (e) =>( e.type === "whatsapp" ||  e.type === "whatsapp-api") && e.status === "ACTIVE"
+                  (e) =>
+                    (e.type === "whatsapp" || e.type === "whatsapp-api") &&
+                    e.status === "ACTIVE"
                 )}
                 value={selectedConnection}
                 onChange={(e) => setSelectedConnection(e!)}

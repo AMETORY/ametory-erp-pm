@@ -40,9 +40,9 @@ const WhatsappMessageItem: FC<WhatsappMessageItemProps> = ({
         if (timeout.current) {
           window.clearTimeout(timeout.current);
         }
-
         timeout.current = window.setTimeout(() => {
-          if (!message?.is_from_me) {
+          if (!message?.is_from_me && !message?.is_read) {
+            // console.log(message);
             markAsRead(message!.id!, sessionId);
           }
         }, 500);

@@ -64,6 +64,19 @@ func (s *TiktokService) AuthorizeConnection(id, code string) (*apis.ResponseInfo
 	}
 	return resp, nil
 }
+func (s *TiktokService) RefreshToken(refreshToken string) (*apis.ResponseInfo, error) {
+	if s.appKey == "" || s.appSecret == "" || s.serviceID == "" {
+		return nil, errors.New("tiktok credentials not set")
+	}
+
+	auth := apis.NewAccessToken(s.appKey, s.appSecret)
+	resp, err := auth.RefreshToken(refreshToken)
+	if err != nil {
+		return nil, err
+
+	}
+	return resp, nil
+}
 
 // For more details about the SDK, refer to the documentation:
 // https://partner.tiktokshop.com/docv2/page/67c83e0799a75104986ae498

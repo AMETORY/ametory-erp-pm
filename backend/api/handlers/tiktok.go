@@ -312,6 +312,12 @@ func (h *TiktokHandler) SendMessageHandler(c *gin.Context) {
 		return
 	}
 
+	err = h.checkToken(connection)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	authData := map[string]any{}
 	if err := json.Unmarshal([]byte(*connection.AuthData), &authData); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -322,6 +328,7 @@ func (h *TiktokHandler) SendMessageHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	var responseMessage customer_service_v202309.CustomerService202309GetConversationMessagesResponseDataMessages
 	responseMessage.Id = resp.MessageId
 	msgType := input["type"].(string)
@@ -351,6 +358,31 @@ func (h *TiktokHandler) SendMessageHandler(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, gin.H{"data": responseMessage})
+}
+
+func (h *TiktokHandler) checkToken(connection *connection.ConnectionModel) error {
+	if connection.AccessTokenExpiredAt != nil {
+		if time.Since(*connection.AccessTokenExpiredAt) > 0 {
+			resp, err := h.tiktokService.RefreshToken(connection.RefreshToken)
+			if err == nil {
+				b, err := json.Marshal(resp.Data)
+				if err != nil {
+					return err
+				}
+				data := json.RawMessage(b)
+				connection.AuthData = &data
+				connection.AccessToken = resp.Data.AccessToken
+				connection.RefreshToken = resp.Data.RefreshToken
+				expiredAt := time.Unix(int64(resp.Data.AccessTokenExpireIn), 0)
+				connection.AccessTokenExpiredAt = &expiredAt
+				err = h.ctx.DB.Save(&connection).Error
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 func (h *TiktokHandler) GetSessionDetailHandler(c *gin.Context) {
 	conversationID := c.Param("sessionId")
@@ -382,6 +414,12 @@ func (h *TiktokHandler) GetSessionMessagesHandler(c *gin.Context) {
 
 	if connection.AuthData == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Connection is not authorized"})
+		return
+	}
+
+	err = h.checkToken(connection)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

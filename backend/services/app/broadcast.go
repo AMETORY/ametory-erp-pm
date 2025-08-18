@@ -16,6 +16,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared"
 	mdl "github.com/AMETORY/ametory-erp-modules/shared/models"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/meta"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/google/uuid"
@@ -31,6 +32,7 @@ type BroadcastService struct {
 	appService                  *AppService
 	whatsmeowService            *whatsmeow_client.WhatsmeowService
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
+	metaService                 *meta.MetaService
 }
 
 func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
@@ -55,11 +57,16 @@ func NewBroadcastService(ctx *context.ERPContext) *BroadcastService {
 	if ok {
 		customerRelationshipService = customerRelationshipSrv
 	}
+	metaService, ok := ctx.ThirdPartyServices["Meta"].(*meta.MetaService)
+	if !ok {
+		panic("MetaService is not instance of meta.MetaService")
+	}
 	return &BroadcastService{
 		ctx:                         ctx,
 		appService:                  appService,
 		whatsmeowService:            whatsmeowService,
 		customerRelationshipService: customerRelationshipService,
+		metaService:                 metaService,
 	}
 }
 
@@ -406,7 +413,10 @@ func (b *BroadcastService) sendWithRetryHandling(
 			if broadcast.TemplateID == nil {
 				success = true
 				if sender.Type == "whatsapp-api" {
-					err := SendWhatsappApiContactMessage(sender, contact, msgData.Message, nil, broadcast.Files)
+					var session *mdl.WhatsappMessageSession
+					session.Contact = &contact
+					err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products)
+					// err := SendWhatsappApiContactMessage(sender, contact, msgData.Message, nil, broadcast.Files, broadcast.Products)
 					if err != nil {
 						log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
 						success = false
@@ -435,7 +445,13 @@ func (b *BroadcastService) sendWithRetryHandling(
 					for _, v := range template.Messages {
 						if sender.Type == "whatsapp-api" {
 							parsedMsg := parseMsgTemplate(contact, broadcast.Member, v.Body)
-							err := SendWhatsappApiContactMessage(sender, contact, parsedMsg, nil, broadcast.Files)
+
+							var session *mdl.WhatsappMessageSession = &mdl.WhatsappMessageSession{
+								Contact: &contact,
+							}
+							msgData.Message = parsedMsg
+							err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products)
+							// err := SendWhatsappApiContactMessage(sender, contact, parsedMsg, nil, broadcast.Files)
 							if err != nil {
 								log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
 								success = false

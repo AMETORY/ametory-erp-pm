@@ -15,6 +15,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
 	"github.com/AMETORY/ametory-erp-modules/shared/objects"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/meta"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,7 @@ type ContactHandler struct {
 	customerRelationshipService *customer_relationship.CustomerRelationshipService
 	appService                  *app.AppService
 	waService                   *whatsmeow_client.WhatsmeowService
+	metaService                 *meta.MetaService
 }
 
 func NewContactHandler(ctx *context.ERPContext) *ContactHandler {
@@ -52,12 +54,18 @@ func NewContactHandler(ctx *context.ERPContext) *ContactHandler {
 		appService = appSrv
 	}
 
+	metaService, ok := ctx.ThirdPartyServices["Meta"].(*meta.MetaService)
+	if !ok {
+		panic("MetaService is not instance of meta.MetaService")
+	}
+
 	return &ContactHandler{
 		ctx:                         ctx,
 		contactService:              contactService,
 		customerRelationshipService: customerRelationshipService,
 		appService:                  appService,
 		waService:                   waService,
+		metaService:                 metaService,
 	}
 }
 
@@ -152,11 +160,28 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 		}
 
 		if conn.Type == "whatsapp-api" {
-			err := app.SendWhatsappApiContactMessage(conn, *contact, input.Message, &member, nil)
+			// fmt.Println("SEND")
+			h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
+			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, input.Message, []*models.FileModel{}, contact, nil)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
+
+			fmt.Println("RESPONSE")
+			utils.LogJson(resp)
+
+			whatsappSession.Contact = contact
+
+			h.appService.SaveWhatsappAPIResponse(h.customerRelationshipService, h.metaService, &conn, models.WhatsappMessageModel{
+				Receiver: *contact.Phone,
+				Message:  input.Message,
+			}, &whatsappSession, &member, resp, []models.FileModel{})
+			// err := app.SendWhatsappApiContactMessage(conn, *contact, input.Message, &member, nil)
+			// if err != nil {
+			// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			// 	return
+			// }
 
 		} else {
 			waData := whatsmeow_client.WaMessage{
@@ -171,50 +196,48 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 				c.JSON(500, gin.H{"error": err.Error()})
 				return
 			}
+			info := map[string]interface{}{
+				"Timestamp": time.Now().Format(time.RFC3339),
+			}
+			infoByte, err := json.Marshal(info)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+			replyResponse := &models.WhatsappMessageModel{
+				Receiver:  *contact.Phone,
+				Message:   input.Message,
+				Session:   whatsappSession.Session,
+				JID:       whatsappSession.JID,
+				IsFromMe:  true,
+				Info:      string(infoByte),
+				IsGroup:   false,
+				ContactID: &contact.ID,
+				CompanyID: conn.CompanyID,
+				MemberID:  &member.ID,
+				Member:    &member,
+			}
+
+			err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
+			if err != nil {
+				// log.Println(err)
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			replyResponse.SentAt = &now
+			msg := gin.H{
+				"message":    replyResponse.Message,
+				"command":    "WHATSAPP_RECEIVED",
+				"session_id": whatsappSession.ID,
+				"data":       replyResponse,
+			}
+			b, _ := json.Marshal(msg)
+			h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
+				url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
+				return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
+			})
 		}
 		// sendWAMessage(h.ctx, whatsappSession.JID, *contact.Phone, input.Message)
-
-		info := map[string]interface{}{
-			"Timestamp": time.Now().Format(time.RFC3339),
-		}
-		infoByte, err := json.Marshal(info)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		replyResponse := &models.WhatsappMessageModel{
-			Receiver:  *contact.Phone,
-			Message:   input.Message,
-			Session:   whatsappSession.Session,
-			JID:       whatsappSession.JID,
-			IsFromMe:  true,
-			Info:      string(infoByte),
-			IsGroup:   false,
-			ContactID: &contact.ID,
-			CompanyID: conn.CompanyID,
-			MemberID:  &member.ID,
-			Member:    &member,
-		}
-
-		err = h.customerRelationshipService.WhatsappService.CreateWhatsappMessage(replyResponse)
-		if err != nil {
-			// log.Println(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		replyResponse.SentAt = &now
-		msg := gin.H{
-			"message":    replyResponse.Message,
-			"command":    "WHATSAPP_RECEIVED",
-			"session_id": whatsappSession.ID,
-			"data":       replyResponse,
-		}
-		b, _ := json.Marshal(msg)
-		h.appService.Websocket.BroadcastFilter(b, func(q *melody.Session) bool {
-			url := fmt.Sprintf("%s/api/v1/ws/%s", h.appService.Config.Server.BaseURL, *conn.CompanyID)
-			return fmt.Sprintf("%s%s", h.appService.Config.Server.BaseURL, q.Request.URL.Path) == url
-		})
 
 	}
 

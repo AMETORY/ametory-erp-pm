@@ -330,9 +330,13 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
 		data := json.RawMessage(b)
 		conn.AuthData = &data
 		conn.AccessToken = resp.Data.AccessToken
+		conn.RefreshToken = resp.Data.RefreshToken
+		expiredAt := time.Unix(int64(resp.Data.AccessTokenExpireIn), 0)
+		conn.AccessTokenExpiredAt = &expiredAt
 		conn.Status = "ACTIVE"
 		err = h.ctx.DB.Save(&conn).Error
 		if err != nil {

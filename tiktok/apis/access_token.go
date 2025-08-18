@@ -70,7 +70,7 @@ func (a *AccessToken) GetToken(authCode string) (*ResponseInfo, error) {
 	return response, nil
 }
 
-func (a *AccessToken) RefreshToken(refreshToken string) (string, error) {
+func (a *AccessToken) RefreshToken(refreshToken string) (*ResponseInfo, error) {
 	req, _ := http.NewRequest(MethodGet, RefreshTokenUrl, nil)
 	q := req.URL.Query()
 	q.Add("app_key", a.AppKey)
@@ -82,14 +82,14 @@ func (a *AccessToken) RefreshToken(refreshToken string) (string, error) {
 	res, err := doRequest(MethodGet, req.URL.String(), nil)
 	if err != nil {
 		log.Printf("AccessToken.RefreshToken doRequest err:%v", err)
-		return "", err
+		return nil, err
 	}
 	response := &ResponseInfo{}
 	if parseErr := json.Unmarshal(res, response); parseErr != nil {
 		log.Printf("AccessToken.RefreshToken Unmarshal err:%v", parseErr)
-		return "", parseErr
+		return nil, parseErr
 	}
-	return response.Data.AccessToken, nil
+	return response, nil
 }
 
 func doRequest(method, url string, reqBody io.Reader) ([]byte, error) {

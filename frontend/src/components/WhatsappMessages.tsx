@@ -248,7 +248,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   };
 
   useEffect(() => {
+    if (!mounted) return;
     setIsLoading(true);
+    setMessages([]);
     getWhatsappMessages(sessionId, {
       page,
       size,
@@ -260,10 +262,11 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       .catch((err) => {
         console.error(err);
         // window.location.href = "/whatsapp";
-      }).finally(() => {
-        setIsLoading(false);
       })
-  }, [sessionId]);
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [sessionId, mounted]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -541,18 +544,21 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       <div
         id="channel-messages"
         className=" messages h-[calc(100vh-260px)]  p-4 bg-gray-50 space-y-8 relative"
-        style={{ 
-          overflowY: isLoading ? "hidden" : "auto"
-         }}
+        style={{
+          overflowY: isLoading ? "hidden" : "auto",
+        }}
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
         {isLoading && (
-          <div className="absolute top-0 left-0 right-0 bottom-0 h-[calc(100vh-200px)]  w-full inset-0 flex items-center justify-center bg-white bg-opacity-80 loading " style={{ zIndex: 9999999 }}>
-                <div className="animate-spin h-5 w-5 border-b-2 border-gray-900 rounded-full">
-                  <AiOutlineLoading3Quarters />
-                </div>
-              </div>
+          <div
+            className="absolute top-0 left-0 right-0 bottom-0 h-[calc(100vh-200px)]  w-full inset-0 flex items-center justify-center bg-white bg-opacity-80 loading "
+            style={{ zIndex: 9999999 }}
+          >
+            <div className="animate-spin h-5 w-5 border-b-2 border-gray-900 rounded-full">
+              <AiOutlineLoading3Quarters />
+            </div>
+          </div>
         )}
         {messages.map((msg) => (
           <WhatsappMessageItem
