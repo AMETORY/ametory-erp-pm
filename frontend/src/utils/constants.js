@@ -50,3 +50,7 @@ export const llmModel = {
         { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
     ]
 }
+
+export const interactiveTypes = [
+    { value: "list", label: "List" },
+]

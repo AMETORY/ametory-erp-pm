@@ -32,6 +32,23 @@ export const updateTemplate = async (id: string, data: any) => {
     body: JSON.stringify(data),
   });
 };
+export const createInteractiveTemplate = async (id: string, msgId: string, data: any) => {
+  return await customFetch(`api/v1/template/${id}/interactive/${msgId}/update`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
+export const updateInteractiveTemplate = async (id: string, interactiveId: string, data: any) => {
+  return await customFetch(`api/v1/template/${id}/interactive/${interactiveId}/update`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
+export const getInteractiveTemplate = async (id: string, msgId?: string) => {
+  return await customFetch(`api/v1/template/${id}/interactive/${msgId}`, {
+  });
+};
 
 export const deleteTemplate = async (id: string) => {
   return await customFetch(`api/v1/template/${id}`, {

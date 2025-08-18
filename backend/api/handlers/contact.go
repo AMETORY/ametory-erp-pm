@@ -162,7 +162,7 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 		if conn.Type == "whatsapp-api" {
 			// fmt.Println("SEND")
 			h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
-			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, input.Message, []*models.FileModel{}, contact, nil)
+			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, input.Message, []*models.FileModel{}, contact, nil, nil)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return

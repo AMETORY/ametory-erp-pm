@@ -1,5 +1,5 @@
 import { Button } from "flowbite-react";
-import type { FC } from "react";
+import { useEffect, useState, type FC } from "react";
 import { BsCamera, BsCart, BsTrash } from "react-icons/bs";
 import { HiOutlineDocumentAdd } from "react-icons/hi";
 import { IoDocumentsOutline } from "react-icons/io5";
@@ -9,6 +9,14 @@ import { uploadFile } from "../services/api/commonApi";
 import { money } from "../utils/helper";
 import MessageMention from "./MessageMention";
 import { parseMentions } from "../utils/helper-ui";
+import { CiBoxList } from "react-icons/ci";
+import {
+  WhatsappInteractiveListRow,
+  WhatsappInteractiveListSection,
+  WhatsappInteractiveModel,
+} from "../models/whatsapp_interactive_message";
+import { getInteractiveTemplate } from "../services/api/templateApi";
+import toast from "react-hot-toast";
 
 interface MessageTemplateFieldProps {
   index: number;
@@ -18,15 +26,21 @@ interface MessageTemplateFieldProps {
   onClickEmoji: () => void;
   files: FileModel[];
   product?: ProductModel;
+  interactive?: WhatsappInteractiveModel;
   onUploadFile: (file: FileModel, index?: number) => void;
   onUploadImage: (file: FileModel, index?: number) => void;
   showDelete?: boolean;
   onDelete?: () => void;
   onTapProduct?: () => void;
+  onTapInteractive?: () => void;
+  onEditInteractive?: (d: WhatsappInteractiveModel) => void;
   readonly?: boolean;
   onDeleteFile?: (file: FileModel) => void;
   onDeleteImage?: (file: FileModel) => void;
   disableProduct?: boolean;
+  disableInteractive?: boolean;
+  msgId?: string;
+  templateId?: string;
 }
 
 const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
@@ -45,7 +59,23 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
   onDeleteFile,
   onDeleteImage,
   disableProduct,
+  disableInteractive,
+  onTapInteractive,
+  onEditInteractive,
+  interactive,
+  msgId,
+  templateId,
 }) => {
+  const [selectedInteractive, setSelectedInteractive] =
+    useState<WhatsappInteractiveModel>();
+  useEffect(() => {
+    getInteractiveTemplate(templateId!, msgId)
+      .then((res: any) => {
+        console.log(res);
+        setSelectedInteractive(res.data);
+      })
+      .catch(toast.error);
+  }, [msgId]);
   return (
     <div className="bg-gray-50 rounded-lg p-4 flex flex-col mb-8">
       <h4 className="font-semibold">{title}</h4>
@@ -80,7 +110,10 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
               {files.filter((f) => f.mime_type.includes("image")).length ===
               0 ? (
                 <div className="flex flex-col items-center text-center">
-                  <span> {readonly ? "No Photo" : "Add Photo to message"} </span>
+                  <span>
+                    {" "}
+                    {readonly ? "No Photo" : "Add Photo to message"}{" "}
+                  </span>
                   {readonly ? null : <BsCamera />}
                 </div>
               ) : (
@@ -204,6 +237,106 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {!disableInteractive && (
+        <div className="mt-8">
+          <h4 className="font-semibold">Interactive</h4>
+          <div className="flex flex-col justify-center items-center p-4 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100">
+            {!selectedInteractive ? (
+              <div
+                className="flex flex-col items-center text-center cursor-pointer"
+                onClick={() => {
+                  if (readonly) return;
+                  onTapInteractive?.();
+                }}
+              >
+                <span>
+                  {" "}
+                  {readonly
+                    ? "No Interactive Message"
+                    : "Add Interactive Message"}{" "}
+                </span>
+                {readonly ? null : <CiBoxList size={32} />}
+              </div>
+            ) : (
+              <div className="w-full" onClick={() => {
+                onEditInteractive?.(selectedInteractive)
+              }}>
+                <table className="w-full">
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Title</td>
+                    <td>{selectedInteractive?.title}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Description</td>
+                    <td>{selectedInteractive?.description}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Type</td>
+                    <td>{selectedInteractive?.type}</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="font-semibold w-1/4 py-2">Data</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Header</td>
+                    <td>{selectedInteractive?.data?.header?.text}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Body</td>
+                    <td>{selectedInteractive?.data?.body?.text}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Footer</td>
+                    <td>{selectedInteractive?.data?.footer?.text}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Action</td>
+                    <td>{selectedInteractive?.data?.action?.button}</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="font-semibold w-1/4 py-2">Sections</td>
+                    <td></td>
+                  </tr>
+                </table>
+                {selectedInteractive?.data?.action?.sections?.map(
+                  (section: WhatsappInteractiveListSection, index: number) => (
+                    <div key={index} className="w-full mt-4">
+                      <h4 className="font-semibold">{section.title}</h4>
+                      <table className="w-full ">
+                        <thead>
+                          <tr>
+                            <th className="p-2 border border-gray-100">
+                              Title
+                            </th>
+                            <th className="p-2 border border-gray-100">
+                              Description
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {section.rows.map(
+                            (row: WhatsappInteractiveListRow) => (
+                              <tr key={row.id}>
+                                <td className="p-2 border border-gray-100">
+                                  {row.title}
+                                </td>
+                                <td className="p-2 border border-gray-100">
+                                  {row.description}
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

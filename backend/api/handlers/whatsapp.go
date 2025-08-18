@@ -345,7 +345,7 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 				quoteMessageID = input.RefMsg.MessageID
 			}
 			h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
-			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, files, session.Contact, quoteMessageID)
+			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, files, session.Contact, quoteMessageID, nil)
 			if err != nil {
 				log.Println(err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -431,7 +431,14 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 		for _, msg := range template.Messages {
 			waDataReply.Message = parseMsgTemplate(*session.Contact, &member, msg.Body)
 			if conn.Type == "whatsapp-api" {
-				h.appService.SendTemplateMessageWhatsappAPI(h.customerRelationshipService, h.metaService, conn, waDataReply, session, &member, input.Files, input.Products)
+				var interactive mdl.WhatsappInteractiveMessage
+				var intData *mdl.WhatsappInteractiveMessage
+				err = h.erpContext.DB.Where("ref_id = ?", msg.ID).First(&interactive).Error
+				if err == nil {
+					intData = &interactive
+				}
+
+				h.appService.SendTemplateMessageWhatsappAPI(h.customerRelationshipService, h.metaService, conn, waDataReply, session, &member, msg.Files, msg.Products, intData)
 				// var files []*models.FileModel
 				// for _, v := range msg.Files {
 				// 	files = append(files, &v)

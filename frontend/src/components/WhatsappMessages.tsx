@@ -972,7 +972,7 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       </Modal>
       <input
         multiple
-        accept=".png, .jpg, .jpeg, .doc, .docx, .xls, .xlsx, .pdf"
+        accept=".png, .jpg, .jpeg, .doc, .docx, .xls, .xlsx, .pdf, .mp4, .mp3"
         type="file"
         name="file"
         id=""

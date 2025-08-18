@@ -201,3 +201,70 @@ func (p *TemplateHandler) AddImageTemplateHandler(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"message": "Product Added successfully"})
 }
+
+func (h *TemplateHandler) CreateInteractiveTemplateHandler(c *gin.Context) {
+	id := c.Param("id")
+	messageId := c.Param("messageId")
+	var interactive models.WhatsappInteractiveMessage
+	if err := c.ShouldBindJSON(&interactive); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	refType := "template-message"
+	interactive.RefID = &messageId
+	interactive.RefType = &refType
+
+	err = h.ctx.DB.Create(&interactive).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Interactive message created successfully", "data": interactive})
+}
+func (h *TemplateHandler) UpdateInteractiveTemplateHandler(c *gin.Context) {
+	id := c.Param("id")
+	interactiveId := c.Param("interactiveId")
+	var interactive models.WhatsappInteractiveMessage
+	if err := c.ShouldBindJSON(&interactive); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.ctx.DB.Model(&models.WhatsappInteractiveMessage{}).Where("id = ?", interactiveId).Updates(&interactive).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Interactive message created successfully", "data": interactive})
+}
+
+func (h *TemplateHandler) GetInteractiveTemplateHandler(c *gin.Context) {
+	id := c.Param("id")
+	messageId := c.Param("messageId")
+	_, err := h.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(id)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+	interactive := models.WhatsappInteractiveMessage{}
+	err = h.ctx.DB.Where("ref_id = ? AND ref_type = ?", messageId, "template-message").First(&interactive).Error
+	if err != nil {
+		c.JSON(200, gin.H{"data": nil, "message": "Interactive message retrieved successfully"})
+		return
+	}
+	c.JSON(200, gin.H{"data": interactive, "message": "Interactive message retrieved successfully"})
+}

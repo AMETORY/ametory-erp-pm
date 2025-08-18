@@ -413,9 +413,10 @@ func (b *BroadcastService) sendWithRetryHandling(
 			if broadcast.TemplateID == nil {
 				success = true
 				if sender.Type == "whatsapp-api" {
-					var session *mdl.WhatsappMessageSession
-					session.Contact = &contact
-					err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products)
+					var session *mdl.WhatsappMessageSession = &mdl.WhatsappMessageSession{
+						Contact: &contact,
+					}
+					err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products, nil)
 					// err := SendWhatsappApiContactMessage(sender, contact, msgData.Message, nil, broadcast.Files, broadcast.Products)
 					if err != nil {
 						log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
@@ -441,16 +442,23 @@ func (b *BroadcastService) sendWithRetryHandling(
 				// USE TEMPLATE
 				var template mdl.WhatsappMessageTemplate
 				template, err := b.customerRelationshipService.WhatsappService.GetWhatsappMessageTemplate(*broadcast.TemplateID)
+
 				if err == nil {
 					for _, v := range template.Messages {
 						if sender.Type == "whatsapp-api" {
+							var interactive mdl.WhatsappInteractiveMessage
+							var intData *mdl.WhatsappInteractiveMessage
+							err = b.ctx.DB.Where("ref_id = ?", v.ID).First(&interactive).Error
+							if err == nil {
+								intData = &interactive
+							}
 							parsedMsg := parseMsgTemplate(contact, broadcast.Member, v.Body)
 
 							var session *mdl.WhatsappMessageSession = &mdl.WhatsappMessageSession{
 								Contact: &contact,
 							}
 							msgData.Message = parsedMsg
-							err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products)
+							err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products, intData)
 							// err := SendWhatsappApiContactMessage(sender, contact, parsedMsg, nil, broadcast.Files)
 							if err != nil {
 								log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)

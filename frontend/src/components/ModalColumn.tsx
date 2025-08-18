@@ -394,6 +394,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                 <div>
                   <MessageTemplateField
                     disableProduct
+                    disableInteractive
                     index={0}
                     title={"Message"}
                     body={selectedAction?.action_data?.message ?? ""}

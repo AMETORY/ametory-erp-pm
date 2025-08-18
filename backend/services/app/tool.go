@@ -24,32 +24,48 @@ func (a *AppService) SendTemplateMessageWhatsappAPI(
 	member *models.MemberModel,
 	files []models.FileModel,
 	products []models.ProductModel,
+	interactive *models.WhatsappInteractiveMessage,
 ) error {
 	var quoteMessageID *string
 	metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
 
+	thumbnail, restFiles := models.GetThumbnail(files)
+
+	thumbnailFile := []*models.FileModel{}
+	thumbnailFile2 := []models.FileModel{}
+	if thumbnail != nil {
+		thumbnailFile = append(thumbnailFile, thumbnail)
+		thumbnailFile2 = append(thumbnailFile2, *thumbnail)
+	}
+
+	fmt.Println("thumbnailFile", thumbnailFile)
 	// SEND PRIMARY MESSAGE
-	resp, err := metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, []*models.FileModel{}, session.Contact, quoteMessageID)
+	resp, err := metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, thumbnailFile, session.Contact, quoteMessageID, interactive)
 	if err != nil {
 		return err
 	}
 
-	a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, []models.FileModel{})
+	a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, thumbnailFile2)
 
 	// SEND TEMPLATE MESSAGES
+	// fmt.Println("FILES")
+	// utils.LogJson(files)
 
-	for _, v := range files {
-		if v.Caption != nil {
-			waDataReply.Message = *v.Caption
-		} else {
-			waDataReply.Message = ""
+	if interactive == nil {
+		for _, v := range restFiles {
+			if v.Caption != nil {
+				waDataReply.Message = *v.Caption
+			} else {
+				waDataReply.Message = ""
+			}
+			resp, err := metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, []*models.FileModel{&v}, session.Contact, quoteMessageID, nil)
+			if err != nil {
+				return err
+			}
+			a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, []models.FileModel{v})
 		}
-		resp, err := metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, []*models.FileModel{&v}, session.Contact, quoteMessageID)
-		if err != nil {
-			return err
-		}
-		a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, []models.FileModel{v})
 	}
+
 	return nil
 }
 
