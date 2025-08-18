@@ -179,6 +179,7 @@ func (h *WhatsappHandler) ReadAllMessage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "service not found"})
 		return
 	}
+
 	err = h.customerRelationshipService.WhatsappService.ReadAllMessages(session.Session)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -2312,12 +2313,38 @@ func (h *WhatsappHandler) MarkAsReadHandler(c *gin.Context) {
 		return
 	}
 
-	if msg.MessageID != nil && !msg.IsRead {
-		err = h.waService.MarkAsRead(msg.JID, []string{*msg.MessageID}, msg.Sender)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
+	var session *models.WhatsappMessageSession
+	err = h.erpContext.DB.First(&session, "id = ?", sessionId).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if msg.MessageID != nil && !msg.IsRead && session != nil {
+		var conn *connection.ConnectionModel
+		if *session.RefType == "connection" {
+			err = h.erpContext.DB.First(&conn, "id = ?", session.RefID).Error
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
 		}
+		if conn.Type == "whatsapp-api" {
+			err = h.metaService.WhatsappApiService.MarkAsRead(session.JID, *msg.MessageID, false)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+		}
+		if conn.Type == "whatsapp" {
+			err = h.waService.MarkAsRead(msg.JID, []string{*msg.MessageID}, msg.Sender)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
 	}
 	err = h.customerRelationshipService.WhatsappService.MarkMessageAsRead(messageId)
 	if err != nil {
