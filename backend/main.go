@@ -33,6 +33,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/thirdparty"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/ai_generator"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/meta"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/gin-contrib/cors"
 	"github.com/morkid/paginate"
@@ -183,6 +184,9 @@ func main() {
 	aiGeneratorService := ai_generator.NewAiGeneratorService(erpContext.Ctx, erpContext.DB, skipMigration)
 
 	erpContext.AddThirdPartyService("AiGenerator", aiGeneratorService)
+
+	metaService := meta.NewMetaService(db, erpContext, cfg.Whatsapp.BaseURL, cfg.Facebook.BaseURL, "local")
+	erpContext.AddThirdPartyService("Meta", metaService)
 
 	// fmt.Println(erpContext.ThirdPartyServices)
 

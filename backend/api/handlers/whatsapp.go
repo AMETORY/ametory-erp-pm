@@ -30,6 +30,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/shared/objects"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/ai_generator"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/google"
+	"github.com/AMETORY/ametory-erp-modules/thirdparty/meta"
 	"github.com/AMETORY/ametory-erp-modules/thirdparty/whatsmeow_client"
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/gin-gonic/gin"
@@ -51,6 +52,7 @@ type WhatsappHandler struct {
 	cacheService                *cache.CacheManager[paginate.Page]
 	whatsappWebService          *whatsmeow_client.WhatsmeowService
 	aiGeneratorService          *ai_generator.AiGeneratorService
+	metaService                 *meta.MetaService
 }
 
 // var eligibleKeyWords = []string{"Order", "order", "ORDER", "Orders", "orders", "ORDERS", "LOGIN", "login", "Login", "Menu", "MENU", "menu", "logout"}
@@ -99,6 +101,10 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 	if !ok {
 		panic("aiGeneratorService is not instance of cache.CacheManager")
 	}
+	metaService, ok := erpContext.ThirdPartyServices["Meta"].(*meta.MetaService)
+	if !ok {
+		panic("MetaService is not instance of meta.MetaService")
+	}
 	return &WhatsappHandler{
 		erpContext:                  erpContext,
 		waService:                   waService,
@@ -110,6 +116,7 @@ func NewWhatsappHandler(erpContext *context.ERPContext) *WhatsappHandler {
 		cacheService:                cacheService,
 		whatsappWebService:          whatsappWebService,
 		aiGeneratorService:          aiGeneratorService,
+		metaService:                 metaService,
 	}
 }
 
@@ -328,12 +335,29 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 	// utils.LogJson(waDataReply)
 	if templateID == nil {
 		if conn.Type == "whatsapp-api" {
-			err := app.SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member, input.Files)
+			var files []*models.FileModel
+			for _, v := range input.Files {
+				files = append(files, &v)
+			}
+			var quoteMessageID *string
+			if input.RefMsg != nil {
+				quoteMessageID = &input.RefMsg.ID
+			}
+			h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
+			resp, err := h.metaService.WhatsappApiService.SendMessage(conn.Session, waDataReply.Message, files, session.Contact, quoteMessageID)
 			if err != nil {
 				log.Println(err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
+
+			// utils.LogJson(resp)
+			// err = app.SendWhatsappApiContactMessage(*conn, *session.Contact, waDataReply.Message, &member, input.Files)
+			// if err != nil {
+			// 	log.Println(err)
+			// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			// 	return
+			// }
 			info := map[string]interface{}{
 				"Timestamp": time.Now().Format(time.RFC3339),
 			}
@@ -353,6 +377,11 @@ func (h *WhatsappHandler) SendMessage(c *gin.Context) {
 				ContactID: &session.Contact.ID,
 				CompanyID: conn.CompanyID,
 				MemberID:  &member.ID,
+			}
+
+			for _, v := range resp.Messages {
+				replyResponse.MessageID = &v.ID
+				waDataReply.MessageID = &v.ID
 			}
 
 			if len(input.Files) > 0 {
@@ -1844,7 +1873,7 @@ Anda belum terdaftar di sistem kami, silakan lakukan pendaftaran terlebih dahulu
 
 	}
 	if conn.AiAgent != nil {
-		fmt.Println("Gemini Agent", conn.AiAgent.Name)
+		fmt.Println("Ai Agent", conn.AiAgent.Name)
 	}
 	fmt.Println("Conn Auto Pilot", conn.IsAutoPilot)
 	fmt.Println("Auto Pilot", autopilot)
@@ -1914,25 +1943,6 @@ params: jika tipe command dibutuhkan parameter
 
 		}
 
-		// var histories []models.GeminiHistoryModel
-		// err = h.erpContext.DB.Model(&models.GeminiHistoryModel{}).Find(&histories, "agent_id = ? and is_model = ?", conn.GeminiAgent.ID, true).Error
-		// if err != nil {
-		// 	fmt.Println("ERROR GETTING HISTORIES", err)
-		// 	c.JSON(404, gin.H{"error": "Agent histories is not found"})
-		// 	return
-		// }
-		// chatHistories := []map[string]any{}
-		// for _, v := range histories {
-		// 	chatHistories = append(chatHistories, map[string]any{
-		// 		"role":    "user",
-		// 		"content": v.Input,
-		// 	})
-		// 	chatHistories = append(chatHistories, map[string]any{
-		// 		"role":    "model",
-		// 		"content": v.Output,
-		// 	})
-		// }
-
 		userHistories := []models.WhatsappMessageModel{}
 		h.erpContext.DB.Model(&models.WhatsappMessageModel{}).Where("session = ?", body.Sender).Order("created_at desc").Limit(100).Find(&userHistories)
 
@@ -1961,15 +1971,6 @@ params: jika tipe command dibutuhkan parameter
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-
-		// utils.LogJson(chatHistories)
-		// fmt.Println("Send Message To GEMINI", convMsg)
-		// output, err := h.geminiService.GenerateContent(*h.erpContext.Ctx, convMsg, chatHistories, "", "")
-		// if err != nil {
-		// 	fmt.Println("ERROR GENERATING CONTENT", err)
-		// 	c.JSON(500, gin.H{"error": err.Error()})
-		// 	return
-		// }
 
 		fmt.Println("OUTPUT", output)
 		var response objects.AiResponse
