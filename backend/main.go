@@ -185,7 +185,7 @@ func main() {
 
 	erpContext.AddThirdPartyService("AiGenerator", aiGeneratorService)
 
-	metaService := meta.NewMetaService(db, erpContext, cfg.Whatsapp.BaseURL, cfg.Facebook.BaseURL, "local")
+	metaService := meta.NewMetaService(db, erpContext, cfg.Server.BaseURL, cfg.Facebook.BaseURL, "local")
 	erpContext.AddThirdPartyService("Meta", metaService)
 
 	// fmt.Println(erpContext.ThirdPartyServices)

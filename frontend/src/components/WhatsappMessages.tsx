@@ -64,6 +64,9 @@ import { ScrollContext } from "../contexts/ScrollContext";
 import { useNavigate } from "react-router-dom";
 import { asyncStorage } from "../utils/async_storage";
 import { LOCAL_STORAGE_DEFAULT_WHATSAPP_SESSION } from "../utils/constants";
+import WhatsappMessageItem from "./WhatsappMessageItem";
+import Loading from "./Loading";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 interface WhatsappMessagesProps {
   //   session: WhatsappMessageSessionModel;
@@ -104,6 +107,9 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   const msgRef = useRef<any>();
   const msgInputRef = useRef<any>();
   const nav = useNavigate();
+  const [spottedMsgId, setSpottedMsgId] = useState<string>();
+  const [isLoading, setIsLoading] = useState(false);
+
   // const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
@@ -205,31 +211,32 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
               let message = messages.find(
                 (m) => m.id == entry.target.getAttribute("id")
               );
+              setSpottedMsgId(message?.id);
               // console.log(message?.message)
-              if (
-                message &&
-                !message.is_read &&
-                !(message?.is_from_me ?? false)
-              ) {
-                setMessages([
-                  ...messages.map((m) => {
-                    if (m.id == message?.id) {
-                      return { ...m, is_read: true };
-                    }
-                    return m;
-                  }),
-                ]);
+              // if (
+              //   message &&
+              //   !message.is_read &&
+              //   !(message?.is_from_me ?? false)
+              // ) {
+              //   setMessages([
+              //     ...messages.map((m) => {
+              //       if (m.id == message?.id) {
+              //         return { ...m, is_read: true };
+              //       }
+              //       return m;
+              //     }),
+              //   ]);
 
-                if (timeout.current) {
-                  window.clearTimeout(timeout.current);
-                }
+              //   if (timeout.current) {
+              //     window.clearTimeout(timeout.current);
+              //   }
 
-                timeout.current = window.setTimeout(() => {
-                  if (!message?.is_from_me) {
-                    markAsRead(message!.id!, sessionId);
-                  }
-                }, 500);
-              }
+              //   timeout.current = window.setTimeout(() => {
+              //     if (!message?.is_from_me) {
+              //       markAsRead(message!.id!, sessionId);
+              //     }
+              //   }, 500);
+              // }
             }
           });
         },
@@ -241,18 +248,21 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
   };
 
   useEffect(() => {
+    setIsLoading(true);
     getWhatsappMessages(sessionId, {
       page,
       size,
       search,
     })
       .then((res: any) => {
-        setMessages(res.data.items.slice().reverse());
+        setMessages(res.data.items);
       })
       .catch((err) => {
         console.error(err);
         // window.location.href = "/whatsapp";
-      });
+      }).finally(() => {
+        setIsLoading(false);
+      })
   }, [sessionId]);
 
   useEffect(() => {
@@ -530,138 +540,162 @@ const WhatsappMessages: FC<WhatsappMessagesProps> = ({ sessionId }) => {
       </div>
       <div
         id="channel-messages"
-        className="messages h-[calc(100vh-260px)] overflow-y-auto p-4 bg-gray-50 space-y-8 relative"
+        className=" messages h-[calc(100vh-260px)]  p-4 bg-gray-50 space-y-8 relative"
+        style={{ 
+          overflowY: isLoading ? "hidden" : "auto"
+         }}
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
+        {isLoading && (
+          <div className="absolute top-0 left-0 right-0 bottom-0 h-[calc(100vh-200px)]  w-full inset-0 flex items-center justify-center bg-white bg-opacity-80 loading " style={{ zIndex: 9999999 }}>
+                <div className="animate-spin h-5 w-5 border-b-2 border-gray-900 rounded-full">
+                  <AiOutlineLoading3Quarters />
+                </div>
+              </div>
+        )}
         {messages.map((msg) => (
-          <div
+          <WhatsappMessageItem
+            sessionId={sessionId}
+            spottedMsgId={spottedMsgId}
             key={msg.id}
-            className={`group/item message flex flex-row items-end mb-2  ${
-              msg.is_from_me ? "justify-end" : "justify-start"
-            }`}
-            id={msg.id}
-          >
-            <div
-              className={`relative min-w-[300px] max-w-[600px] ${
-                !msg.is_from_me ? "bg-green-500 text-white" : "bg-gray-200"
-              } p-2 rounded-md`}
-              data-id={msg.id}
-            >
-              {msg.media_url && msg.mime_type?.includes("video") && (
-                <video
-                  controls
-                  src={msg.media_url}
-                  className={`rounded-md mb-2 ${
-                    msg.is_from_me ? "ml-auto" : "mr-auto"
-                  } w-[300px] h-[300px] object-cover`}
-                />
-              )}
-              {msg.media_url && msg.mime_type?.includes("audio") && (
-                <audio
-                  controls
-                  src={msg.media_url}
-                  className={`rounded-md mb-2 ${
-                    msg.is_from_me ? "ml-auto" : "mr-auto"
-                  } w-[300px]`}
-                />
-              )}
+            msg={msg}
+            selectMessage={(m) => {
+              setSelectedMsg(m);
+              if (msgInputRef.current) {
+                // console.log(msgInputRef.current);
+                msgInputRef.current.focus();
+                // msgRef.current?.focus();
+              }
+            }}
+          />
+          // <div
+          //   key={msg.id}
+          //   className={`group/item message flex flex-row items-end mb-2  ${
+          //     msg.is_from_me ? "justify-end" : "justify-start"
+          //   }`}
+          //   id={msg.id}
+          // >
+          //   <div
+          //     className={`relative min-w-[300px] max-w-[600px] ${
+          //       !msg.is_from_me ? "bg-green-500 text-white" : "bg-gray-200"
+          //     } p-2 rounded-md`}
+          //     data-id={msg.id}
+          //   >
+          //     {msg.media_url && msg.mime_type?.includes("video") && (
+          //       <video
+          //         controls
+          //         src={msg.media_url}
+          //         className={`rounded-md mb-2 ${
+          //           msg.is_from_me ? "ml-auto" : "mr-auto"
+          //         } w-[300px] h-[300px] object-cover`}
+          //       />
+          //     )}
+          //     {msg.media_url && msg.mime_type?.includes("audio") && (
+          //       <audio
+          //         controls
+          //         src={msg.media_url}
+          //         className={`rounded-md mb-2 ${
+          //           msg.is_from_me ? "ml-auto" : "mr-auto"
+          //         } w-[300px]`}
+          //       />
+          //     )}
 
-              {msg.media_url && msg.mime_type?.includes("image") && (
-                <Popover
-                  placement="bottom"
-                  content={
-                    <div className="bg-white p-4 rounded-md w-[600px]">
-                      <img
-                        src={msg.media_url}
-                        alt=""
-                        className="w-full h-full object-cover rounded-md"
-                      />
-                    </div>
-                  }
-                >
-                  <img
-                    src={msg.media_url}
-                    alt=""
-                    className={` rounded-md mb-2 ${
-                      msg.is_from_me ? "ml-auto" : "mr-auto"
-                    } w-[300px] h-[300px] object-cover`}
-                  />
-                </Popover>
-              )}
-              {!msg.is_from_me && !msg.is_group && (
-                <small className="font-semibold">{msg.contact?.name}</small>
-              )}
-              {msg.is_from_me && (
-                <small className="font-semibold">
-                  {msg.member?.user?.full_name}
-                </small>
-              )}
-              {msg.is_group && !msg.is_from_me && (
-                <small className="font-semibold">
-                  {msg.message_info?.PushName}
-                </small>
-              )}
-              {msg.media_url &&
-                !msg.mime_type?.includes("image") &&
-                !msg.mime_type?.includes("video") &&
-                !msg.mime_type?.includes("audio") && (
-                  <div
-                    className="flex items-center cursor-pointer"
-                    onClick={() => {
-                      const url = msg.media_url;
-                      window.open(url, "_blank");
-                    }}
-                  >
-                    <RiAttachment2 /> File Attachment
-                  </div>
-                )}
-              {msg.quoted_message && (
-                <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
-                  {msg.quoted_message}
-                </div>
-              )}
-              <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
-              {(msg.whatsapp_message_reactions ?? []).length > 0 && (
-                <div className="flex mt-2 absolute -bottom-3 right-2 flex-row gap-1">
-                  {(msg.whatsapp_message_reactions ?? []).map((reaction) => (
-                    <span key={reaction.id} className=" cursor-pointer ">
-                      {reaction.reaction}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="text-[10px] justify-between flex items-center">
-                {msg.created_at && <Moment fromNow>{msg.created_at}</Moment>}
-                {msg.is_read && (
-                  <IoCheckmarkDone
-                    size={16}
-                    style={{
-                      color: msg.is_from_me ? "#0e9f6e" : "white",
-                    }}
-                  />
-                )}
-              </div>
-              <div className="group/edit invisible group-hover/item:visible absolute top-2 right-2">
-                <Dropdown label="" inline className="context-menu">
-                  <Dropdown.Item
-                    className="flex flex-row gap-1"
-                    icon={RiReplyFill}
-                    onClick={() => {
-                      setSelectedMsg(msg);
-                      if (msgInputRef.current) {
-                        // console.log(msgInputRef.current);
-                        msgInputRef.current.focus();
-                        // msgRef.current?.focus();
-                      }
-                    }}
-                  >
-                    Reply
-                  </Dropdown.Item>
-                </Dropdown>
-              </div>
-            </div>
-          </div>
+          //     {msg.media_url && msg.mime_type?.includes("image") && (
+          //       <Popover
+          //         placement="bottom"
+          //         content={
+          //           <div className="bg-white p-4 rounded-md w-[600px]">
+          //             <img
+          //               src={msg.media_url}
+          //               alt=""
+          //               className="w-full h-full object-cover rounded-md"
+          //             />
+          //           </div>
+          //         }
+          //       >
+          //         <img
+          //           src={msg.media_url}
+          //           alt=""
+          //           className={` rounded-md mb-2 ${
+          //             msg.is_from_me ? "ml-auto" : "mr-auto"
+          //           } w-[300px] h-[300px] object-cover`}
+          //         />
+          //       </Popover>
+          //     )}
+          //     {!msg.is_from_me && !msg.is_group && (
+          //       <small className="font-semibold">{msg.contact?.name}</small>
+          //     )}
+          //     {msg.is_from_me && (
+          //       <small className="font-semibold">
+          //         {msg.member?.user?.full_name}
+          //       </small>
+          //     )}
+          //     {msg.is_group && !msg.is_from_me && (
+          //       <small className="font-semibold">
+          //         {msg.message_info?.PushName}
+          //       </small>
+          //     )}
+          //     {msg.media_url &&
+          //       !msg.mime_type?.includes("image") &&
+          //       !msg.mime_type?.includes("video") &&
+          //       !msg.mime_type?.includes("audio") && (
+          //         <div
+          //           className="flex items-center cursor-pointer"
+          //           onClick={() => {
+          //             const url = msg.media_url;
+          //             window.open(url, "_blank");
+          //           }}
+          //         >
+          //           <RiAttachment2 /> File Attachment
+          //         </div>
+          //       )}
+          //     {msg.quoted_message && (
+          //       <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
+          //         {msg.quoted_message}
+          //       </div>
+          //     )}
+          //     <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>
+          //     {(msg.whatsapp_message_reactions ?? []).length > 0 && (
+          //       <div className="flex mt-2 absolute -bottom-3 right-2 flex-row gap-1">
+          //         {(msg.whatsapp_message_reactions ?? []).map((reaction) => (
+          //           <span key={reaction.id} className=" cursor-pointer ">
+          //             {reaction.reaction}
+          //           </span>
+          //         ))}
+          //       </div>
+          //     )}
+          //     <div className="text-[10px] justify-between flex items-center">
+          //       {msg.created_at && <Moment fromNow>{msg.created_at}</Moment>}
+          //       {msg.is_read && (
+          //         <IoCheckmarkDone
+          //           size={16}
+          //           style={{
+          //             color: msg.is_from_me ? "#0e9f6e" : "white",
+          //           }}
+          //         />
+          //       )}
+          //     </div>
+          //     <div className="group/edit invisible group-hover/item:visible absolute top-2 right-2">
+          //       <Dropdown label="" inline className="context-menu">
+          //         <Dropdown.Item
+          //           className="flex flex-row gap-1"
+          //           icon={RiReplyFill}
+          //           onClick={() => {
+          //             setSelectedMsg(msg);
+          //             if (msgInputRef.current) {
+          //               // console.log(msgInputRef.current);
+          //               msgInputRef.current.focus();
+          //               // msgRef.current?.focus();
+          //             }
+          //           }}
+          //         >
+          //           Reply
+          //         </Dropdown.Item>
+          //       </Dropdown>
+          //     </div>
+          //   </div>
+          // </div>
         ))}
         {showScrollBottom && (
           <button
