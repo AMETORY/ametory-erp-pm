@@ -298,7 +298,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
               color: "white",
             }}
             onClick={() => {
-              let url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${process.env.REACT_APP_IG_APP_ID}&redirect_uri=${process.env.REACT_APP_BASE_URL}/api/v1/facebook/instagram/callback&state=connection_id-${connection.id}&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`;
+              let url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${process.env.REACT_APP_IG_APP_ID}&redirect_uri=${process.env.REACT_APP_IG_REDIRECT_URL}&state=connection_id-${connection.id}&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`;
               window.open(url);
               //https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=1324863209085644&redirect_uri=https://crm.imaco.site/api/v1/facebook/instagram/callback&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights
               // Add your logic to connect to Facebook here
@@ -342,7 +342,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
         </>
       )}
 
-      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
         <div className="mt-4">
           <Label className="font-bold">Session Auth</Label>
           <ToggleSwitch
@@ -357,7 +357,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
         </div>
       )}
 
-      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
         <div className="mt-4">
           <Label className="font-bold">Auto Pilot</Label>
           <ToggleSwitch
@@ -371,7 +371,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
           />
         </div>
       )}
-      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
         <div className="mt-4">
           <Label className="font-bold">Auto Response Time</Label>
           <div className="grid grid-cols-2 gap-2">
@@ -399,7 +399,7 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
         </div>
       )}
 
-      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
         <div className="mt-4">
           <Label className="font-bold">Auto Response Message</Label>
           <Textarea
@@ -413,13 +413,13 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
             placeholder="Enter auto response message"
           />
           <small className="" style={{ lineHeight: "0.8" }}>
-            if you don't set any gemini agent auto response message will be sent
+            if you don't set any ai agent auto response message will be sent
             to user during the time frame.
           </small>
         </div>
       )}
 
-      {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
+      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api") && (
         <div className="mt-4">
           <Label className="font-bold">Ai Agent</Label>
           <Select
