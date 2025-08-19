@@ -45,7 +45,7 @@ func (a *AppService) SendTemplateMessageWhatsappAPI(
 		return err
 	}
 
-	a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, thumbnailFile2)
+	a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, thumbnailFile2, interactive)
 
 	// SEND TEMPLATE MESSAGES
 	// fmt.Println("FILES")
@@ -62,7 +62,7 @@ func (a *AppService) SendTemplateMessageWhatsappAPI(
 			if err != nil {
 				return err
 			}
-			a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, []models.FileModel{v})
+			a.SaveWhatsappAPIResponse(customerRelationshipService, metaService, conn, waDataReply, session, member, resp, []models.FileModel{v}, nil)
 		}
 	}
 
@@ -78,6 +78,7 @@ func (a *AppService) SaveWhatsappAPIResponse(
 	member *models.MemberModel,
 	resp *objects.WaResponse,
 	files []models.FileModel,
+	interactive *models.WhatsappInteractiveMessage,
 ) error {
 	if session.JID == "" {
 		return nil
@@ -102,6 +103,12 @@ func (a *AppService) SaveWhatsappAPIResponse(
 		ContactID: &session.Contact.ID,
 		CompanyID: conn.CompanyID,
 		MemberID:  &member.ID,
+	}
+
+	if interactive != nil {
+		b, _ := json.Marshal(interactive)
+		replyResponse.InteractiveMessage = json.RawMessage(b)
+		waDataReply.InteractiveMessage = json.RawMessage(b)
 	}
 
 	for _, v := range resp.Messages {
