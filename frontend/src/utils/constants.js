@@ -54,6 +54,7 @@ export const llmModel = {
 export const interactiveTypes = [
     { value: "list", label: "List" },
     { value: "cta_url", label: "CTA URL" },
+    { value: "button", label: "Reply Button" },
 ]
 export const interactiveHeaderTypes = [
     { value: "text", label: "Text" },

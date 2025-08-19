@@ -34,6 +34,7 @@ import {
   WhatsappInteractiveListRow,
   WhatsappInteractiveListSection,
   WhatsappInteractiveModel,
+  WhatsappInteractiveReplyButton,
 } from "../models/whatsapp_interactive_message";
 import { interactiveHeaderTypes, interactiveTypes } from "../utils/constants";
 import { HiOutlineTableCells } from "react-icons/hi2";
@@ -203,6 +204,12 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                     setModalProduct(true);
                   }}
                   onTapInteractive={() => {
+                    const conf = window.confirm(
+                      "Interactive Messages cannot be combined with direct messages, files and products, do you want to continue?"
+                    );
+                    if (!conf) {
+                      return;
+                    }
                     setSelectedMessage(template?.messages?.[i]);
                     setModalInteractive(true);
                     setInteractive({
@@ -387,7 +394,7 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                         delete intData.data.header.document;
                         delete intData.data.header.image;
                         delete intData.data.header.video;
-                        
+
                         intData.data.action = {
                           button: "Button Action",
                           sections: [
@@ -413,6 +420,26 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                           },
                         };
                         break;
+                      case "button":
+                        intData.data.action = {
+                          buttons: [
+                            {
+                              type: "reply",
+                              reply: {
+                                id: "change-button",
+                                title: "Change",
+                              },
+                            },
+                            {
+                              type: "reply",
+                              reply: {
+                                id: "cancel-button",
+                                title: "Cancel",
+                              },
+                            },
+                          ],
+                        };
+                        break;
                     }
 
                     setInteractive({
@@ -425,7 +452,8 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
             <div className=" flex flex-col space-y-2">
               <div>
                 <Label>Header</Label>
-                {interactive?.type === "cta_url" && (
+                {(interactive?.type === "cta_url" ||
+                  interactive?.type === "button") && (
                   <Select
                     className="mb-4"
                     options={interactiveHeaderTypes}
@@ -572,6 +600,7 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                   }}
                 />
               </div>
+
               {interactive?.type === "cta_url" && (
                 <>
                   <div>
@@ -639,6 +668,85 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                       }}
                     />
                   </div>
+                </>
+              )}
+              {interactive?.type === "button" && (
+                <>
+                  <table className="w-full mt-4">
+                    <thead>
+                      <tr>
+                        <th
+                          className="p-2  border border-gray-200 text-sm"
+                          style={{ width: "30%" }}
+                        >
+                          ID
+                        </th>
+                        <th
+                          className="p-2  border border-gray-200 text-sm"
+                          style={{ width: "60%" }}
+                        >
+                          Title
+                        </th>
+
+                        <th
+                          className="p-2  border border-gray-200 text-sm "
+                          style={{ width: "10%" }}
+                        ></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {interactive?.data?.action?.buttons?.map(
+                        (r: WhatsappInteractiveReplyButton, j: number) => (
+                          <tr key={j}>
+                            <td className="p-2 w-12 border border-gray-200">
+                              <TextInput
+                                placeholder="Title"
+                                value={r.reply.id}
+                                onChange={(e) => {
+                                  let row: WhatsappInteractiveReplyButton =
+                                    interactive?.data?.action?.buttons[j];
+                                  row.reply.id = e.target.value;
+                                  interactive.data.action.buttons[j].rows[j] =
+                                    row;
+                                  setInteractive({
+                                    ...interactive!,
+                                  });
+                                }}
+                              />
+                            </td>
+                            <td className="p-2 w-32 border border-gray-200">
+                              <TextInput
+                                placeholder="Title"
+                                value={r.reply.title}
+                                onChange={(e) => {
+                                  let row: WhatsappInteractiveReplyButton =
+                                    interactive?.data?.action?.buttons[j];
+                                  row.reply.title = e.target.value;
+                                  interactive.data.action.buttons[j] = row;
+                                  setInteractive({
+                                    ...interactive!,
+                                  });
+                                }}
+                              />
+                            </td>
+
+                            <td className="p-2 w-1/2 border border-gray-200">
+                              <BsTrash
+                                className="text-red-400 hover:text-red-600 cursor-pointer del"
+                                onClick={() => {
+                                  let rows = interactive?.data?.action?.buttons;
+                                  rows.splice(j, 1);
+                                  setInteractive({
+                                    ...interactive!,
+                                  });
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
                 </>
               )}
               {interactive?.type === "list" && (
@@ -882,7 +990,11 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
 
                 try {
                   setLoading(true);
-                  if (interactive?.id !== "" && interactive?.id !== "undefined" && interactive?.id !== undefined) {
+                  if (
+                    interactive?.id !== "" &&
+                    interactive?.id !== "undefined" &&
+                    interactive?.id !== undefined
+                  ) {
                     // interactive.data.type = interactive.type;
                     // delete interactive.data.header.title;
                     await updateInteractiveTemplate(

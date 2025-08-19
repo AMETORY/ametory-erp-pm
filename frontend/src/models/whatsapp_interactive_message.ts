@@ -63,3 +63,16 @@ export interface WhatsappInteractiveCTAUrlAction {
         url: string;
     };
 }
+
+
+export interface WhatsappInteractiveReplyButtonList {
+    buttons: WhatsappInteractiveReplyButton[];
+}
+
+export interface WhatsappInteractiveReplyButton {
+    type: string;
+    reply: {
+        id: string;
+        title: string;
+    };
+}

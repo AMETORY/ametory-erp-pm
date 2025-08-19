@@ -53,6 +53,7 @@ import { getContrastColor, money } from "../utils/helper";
 import { parseMentions } from "../utils/helper-ui";
 import { IoDocumentsOutline } from "react-icons/io5";
 import { GoClock } from "react-icons/go";
+import { AiOutlineEdit } from "react-icons/ai";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -83,6 +84,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<
     ContactModel[]
   >([]);
+  const [scheduledTimeDistance, setScheduledTimeDistance] = useState(0);
 
   const [countdown, setCountdown] = useState("");
 
@@ -90,7 +92,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     const targetDate = new Date(scheduledAt).getTime();
     const now = new Date().getTime();
     const distance = targetDate - now;
-
+    setScheduledTimeDistance(distance);
     if (distance < 0) {
       return "Scheduled time has passed";
     }
@@ -601,6 +603,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   )}
                 </Button>
               )}
+              <div className="flex flex-row gap-2">
               {broadcast?.status === "DRAFT" && (
                 <Button onClick={() => update()}>Save</Button>
               )}
@@ -609,6 +612,31 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <GoClock className="mr-2" /> {countdown}
                 </Button>
               )}
+              {broadcast?.status === "SCHEDULED" &&
+                scheduledTimeDistance < 0 && (
+                  <Button
+                    color="yellow"
+                    onClick={() => {
+                      setLoading(true);
+                      updateBroadcast(broadcast?.id!, {
+                        ...broadcast,
+                        status: "DRAFT",
+                      })
+                        .then(() => {
+                          getDetail();
+                        })
+                        .catch((error) => {
+                          toast.error(`${error}`);
+                        })
+                        .finally(() => {
+                          setLoading(false);
+                        });
+                    }}
+                  >
+                    <AiOutlineEdit className="mr-2" /> Edit Broadcast
+                  </Button>
+                )}
+                </div>
             </div>
           </div>
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -780,7 +808,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   <Select
                     options={connections.filter(
                       (item: any) =>
-                        item.status === "ACTIVE" && (item.type === "whatsapp" || item.type === "whatsapp-api")
+                        item.status === "ACTIVE" &&
+                        (item.type === "whatsapp" ||
+                          item.type === "whatsapp-api")
                     )}
                     value={broadcast?.connections ?? []}
                     isMulti
@@ -1041,7 +1071,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     )}
                   </Table.Cell>
                   <Table.Cell className="w-32">
-                    {(broadcast?.status === "COMPLETED" || broadcast?.status === "PROCESSING") && (
+                    {(broadcast?.status === "COMPLETED" ||
+                      broadcast?.status === "PROCESSING") && (
                       <div className="flex gap-2">
                         <ul>
                           <li className="flex gap-2 w-full justify-between">
