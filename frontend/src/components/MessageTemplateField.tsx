@@ -17,6 +17,8 @@ import {
 } from "../models/whatsapp_interactive_message";
 import { getInteractiveTemplate } from "../services/api/templateApi";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
+import { AiOutlineFile, AiOutlineLink } from "react-icons/ai";
 
 interface MessageTemplateFieldProps {
   index: number;
@@ -261,9 +263,12 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
                 {readonly ? null : <CiBoxList size={32} />}
               </div>
             ) : (
-              <div className="w-full" onClick={() => {
-                onEditInteractive?.(selectedInteractive)
-              }}>
+              <div
+                className="w-full"
+                onClick={() => {
+                  onEditInteractive?.(selectedInteractive);
+                }}
+              >
                 <table className="w-full">
                   <tr>
                     <td className="font-semibold w-1/4 py-2">Title</td>
@@ -283,7 +288,32 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
                   </tr>
                   <tr>
                     <td className="font-semibold w-1/4 py-2">Header</td>
-                    <td>{selectedInteractive?.data?.header?.text}</td>
+                    <td>
+                      {selectedInteractive?.data?.header?.type == "image" && (
+                        <img
+                          src={selectedInteractive?.data?.header?.image?.link}
+                          alt="header"
+                          className="w-32 h-32 rounded-lg object-cover"
+                        />
+                      )}
+                      {selectedInteractive?.data?.header?.type == "video" && (
+                        <video
+                          src={selectedInteractive?.data?.header?.video?.link}
+                          controls
+                        />
+                      )}
+                      {selectedInteractive?.data?.header?.type ==
+                        "document" && (
+                        <Link
+                          to={selectedInteractive?.data?.header?.document?.link}
+                        >
+                          <AiOutlineFile size={32} />
+                        </Link>
+                      )}
+                      {selectedInteractive?.data?.header?.type == "text" && (
+                        <span>{selectedInteractive?.data?.header?.text}</span>
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td className="font-semibold w-1/4 py-2">Body</td>
@@ -293,48 +323,62 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
                     <td className="font-semibold w-1/4 py-2">Footer</td>
                     <td>{selectedInteractive?.data?.footer?.text}</td>
                   </tr>
+                  {selectedInteractive?.data?.type == "list" && (
                   <tr>
                     <td className="font-semibold w-1/4 py-2">Action</td>
                     <td>{selectedInteractive?.data?.action?.button}</td>
                   </tr>
-                  <tr className="border-b">
-                    <td className="font-semibold w-1/4 py-2">Sections</td>
-                    <td></td>
+                  )}
+                  {selectedInteractive?.data?.type == "cta_url" && (
+                  <tr>
+                    <td className="font-semibold w-1/4 py-2">Action</td>
+                    <td className="flex">{selectedInteractive?.data?.action?.parameters?.display_text}  <AiOutlineLink size={16} onClick={() => window.open(selectedInteractive?.data?.action?.parameters?.url, "_blank")}/></td>
                   </tr>
+                  )}
+                  {selectedInteractive?.data?.type == "list" && (
+                    <tr className="border-b">
+                      <td className="font-semibold w-1/4 py-2">Sections</td>
+                      <td></td>
+                    </tr>
+                  )}
                 </table>
-                {selectedInteractive?.data?.action?.sections?.map(
-                  (section: WhatsappInteractiveListSection, index: number) => (
-                    <div key={index} className="w-full mt-4">
-                      <h4 className="font-semibold">{section.title}</h4>
-                      <table className="w-full ">
-                        <thead>
-                          <tr>
-                            <th className="p-2 border border-gray-100">
-                              Title
-                            </th>
-                            <th className="p-2 border border-gray-100">
-                              Description
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {section.rows.map(
-                            (row: WhatsappInteractiveListRow) => (
-                              <tr key={row.id}>
-                                <td className="p-2 border border-gray-100">
-                                  {row.title}
-                                </td>
-                                <td className="p-2 border border-gray-100">
-                                  {row.description}
-                                </td>
-                              </tr>
-                            )
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  )
-                )}
+                {selectedInteractive?.data?.type == "list" &&
+                  selectedInteractive?.data?.action?.sections?.map(
+                    (
+                      section: WhatsappInteractiveListSection,
+                      index: number
+                    ) => (
+                      <div key={index} className="w-full mt-4">
+                        <h4 className="font-semibold">{section.title}</h4>
+                        <table className="w-full ">
+                          <thead>
+                            <tr>
+                              <th className="p-2 border border-gray-100">
+                                Title
+                              </th>
+                              <th className="p-2 border border-gray-100">
+                                Description
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {section.rows.map(
+                              (row: WhatsappInteractiveListRow) => (
+                                <tr key={row.id}>
+                                  <td className="p-2 border border-gray-100">
+                                    {row.title}
+                                  </td>
+                                  <td className="p-2 border border-gray-100">
+                                    {row.description}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  )}
               </div>
             )}
           </div>

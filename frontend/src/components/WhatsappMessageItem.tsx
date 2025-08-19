@@ -5,8 +5,10 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Moment from "react-moment";
 import { IoCheckmarkDone } from "react-icons/io5";
-import { Dropdown, Popover } from "flowbite-react";
+import { Button, Dropdown, Popover } from "flowbite-react";
 import { markAsRead } from "../services/api/whatsappApi";
+import { Link } from "react-router-dom";
+import { AiOutlineFile } from "react-icons/ai";
 interface WhatsappMessageItemProps {
   sessionId: string;
   msg: WhatsappMessageModel;
@@ -131,6 +133,57 @@ const WhatsappMessageItem: FC<WhatsappMessageItemProps> = ({
         {msg.quoted_message && (
           <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
             {msg.quoted_message}
+          </div>
+        )}
+        {msg.interactive_message && (
+          <div className="text-sm p-4 rounded-lg bg-[rgb(255,255,255,0.3)]">
+            <p className="text-bold italic">Interactive Message</p>
+            {msg.interactive_message.data?.header?.type == "image" && (
+              <img
+                src={msg.interactive_message.data?.header?.image?.link}
+                alt=""
+                className="max-w-[300px] h-full object-cover rounded-md"
+              />
+            )}
+            {msg.interactive_message.data?.header?.type == "video" && (
+              <video
+                src={msg.interactive_message.data?.header?.video?.link}
+                controls
+              />
+            )}
+            {msg.interactive_message.data?.header?.type == "document" && (
+              <Link to={msg.interactive_message.data?.header?.document?.link}>
+                <AiOutlineFile size={32} />
+              </Link>
+            )}
+            {msg.interactive_message?.data?.header?.type == "text" && (
+              <strong>{msg.interactive_message?.data?.header?.text}</strong>
+            )}
+
+            <p className="mt-2">{msg.interactive_message?.data?.body?.text}</p>
+            <p className="mt-2 text-sm italic">
+              {msg.interactive_message?.data?.footer?.text}
+            </p>
+
+            {msg.interactive_message.data?.type == "cta_url" && (
+              <Button
+              size="xs"
+              color="blue"
+              className="w-full"
+                onClick={() => {
+                  window.open(
+                    msg.interactive_message?.data?.action?.parameters?.url,
+                    "_blank"
+                  );
+                }}
+              >
+                {
+                  msg.interactive_message?.data?.action?.parameters
+                    ?.display_text
+                }
+              </Button>
+            )}
+            {/* {JSON.stringify(msg.interactive_message.data?.header)} */}
           </div>
         )}
         <Markdown remarkPlugins={[remarkGfm]}>{msg.message}</Markdown>

@@ -3,6 +3,7 @@ import { ConnectionModel } from "./connection";
 import { ContactModel } from "./contact";
 import { MemberModel } from "./member";
 import { UserModel } from "./user";
+import { WhatsappInteractiveModel } from "./whatsapp_interactive_message";
 
 export interface WhatsappMessageModel {
   id?: string;
@@ -32,6 +33,7 @@ export interface WhatsappMessageModel {
   user?: UserModel;
   response_time?: number;
   whatsapp_message_reactions?: WhatsappReactionModel[];
+  interactive_message?: WhatsappInteractiveModel
 }
 
 export interface WhatsappMessageSessionModel {

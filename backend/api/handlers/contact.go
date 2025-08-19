@@ -168,15 +168,15 @@ func (h *ContactHandler) SendMessageContactHandler(c *gin.Context) {
 				return
 			}
 
-			fmt.Println("RESPONSE")
-			utils.LogJson(resp)
+			// fmt.Println("RESPONSE")
+			// utils.LogJson(resp)
 
 			whatsappSession.Contact = contact
 
 			h.appService.SaveWhatsappAPIResponse(h.customerRelationshipService, h.metaService, &conn, models.WhatsappMessageModel{
 				Receiver: *contact.Phone,
 				Message:  input.Message,
-			}, &whatsappSession, &member, resp, []models.FileModel{})
+			}, &whatsappSession, &member, resp, []models.FileModel{}, nil)
 			// err := app.SendWhatsappApiContactMessage(conn, *contact, input.Message, &member, nil)
 			// if err != nil {
 			// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

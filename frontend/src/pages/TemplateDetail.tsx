@@ -10,7 +10,7 @@ import {
 } from "flowbite-react";
 import { useContext, useEffect, useState, type FC } from "react";
 import toast from "react-hot-toast";
-import { useParams } from "react-router-dom";
+import { data, useParams } from "react-router-dom";
 import Select from "react-select";
 import AdminLayout from "../components/layouts/admin";
 import MessageTemplateField from "../components/MessageTemplateField";
@@ -35,11 +35,12 @@ import {
   WhatsappInteractiveListSection,
   WhatsappInteractiveModel,
 } from "../models/whatsapp_interactive_message";
-import { interactiveTypes } from "../utils/constants";
+import { interactiveHeaderTypes, interactiveTypes } from "../utils/constants";
 import { HiOutlineTableCells } from "react-icons/hi2";
 import { randomString } from "../utils/helper";
 import { BsTrash } from "react-icons/bs";
 import { title } from "process";
+import { Header } from "react-native/Libraries/NewAppScreen";
 
 interface TemplateDetailProps {}
 
@@ -211,9 +212,24 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                         type: "list",
                         header: {
                           type: "text",
-                          title: "",
-                        }
-                      }
+                          text: "",
+                        },
+                        action: {
+                          button: "Button Action",
+                          sections: [
+                            {
+                              title: "Section Title",
+                              rows: [
+                                {
+                                  id: "row_title",
+                                  title: "Row Title",
+                                  description: "Row Description",
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      },
                     });
                   }}
                   onEditInteractive={(d: WhatsappInteractiveModel) => {
@@ -362,9 +378,45 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                     (i) => i.value === interactive?.type
                   )}
                   onChange={(e) => {
+                    let intData = { ...interactive };
+                    intData.type = e!.value!;
+                    intData.data.type = e!.value!;
+                    intData.data.header.type = "text";
+                    switch (e!.value) {
+                      case "list":
+                        delete intData.data.header.document;
+                        delete intData.data.header.image;
+                        delete intData.data.header.video;
+                        
+                        intData.data.action = {
+                          button: "Button Action",
+                          sections: [
+                            {
+                              title: "Section Title",
+                              rows: [
+                                {
+                                  id: "row_title",
+                                  title: "Row Title",
+                                  description: "Row Description",
+                                },
+                              ],
+                            },
+                          ],
+                        };
+                        break;
+                      case "cta_url":
+                        intData.data.action = {
+                          name: "cta_url",
+                          parameters: {
+                            display_text: "Display Text",
+                            url: "https://example.com",
+                          },
+                        };
+                        break;
+                    }
+
                     setInteractive({
-                      ...interactive!,
-                      type: e!.value!,
+                      ...intData,
                     });
                   }}
                 />
@@ -373,27 +425,118 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
             <div className=" flex flex-col space-y-2">
               <div>
                 <Label>Header</Label>
-                <TextInput
-                  placeholder="Header"
-                  value={interactive?.data?.header?.text}
-                  onChange={(e) => {
-                    setInteractive({
-                      ...interactive!,
-                      data: {
-                        ...interactive?.data!,
-                        header: {
-                          ...interactive?.data?.header!,
-                          text: e.target.value,
+                {interactive?.type === "cta_url" && (
+                  <Select
+                    className="mb-4"
+                    options={interactiveHeaderTypes}
+                    value={interactiveHeaderTypes.find(
+                      (i) => i.value === interactive?.data?.header?.type
+                    )}
+                    onChange={(e) => {
+                      let intData = { ...interactive };
+                      intData.data.header.type = e!.value!;
+                      setInteractive({
+                        ...intData,
+                      });
+                    }}
+                  />
+                )}
+                {interactive?.data?.header?.type === "text" && (
+                  <TextInput
+                    max={60}
+                    placeholder="Header Text"
+                    value={interactive?.data?.header?.text}
+                    onChange={(e) => {
+                      setInteractive({
+                        ...interactive!,
+                        data: {
+                          ...interactive?.data!,
+                          header: {
+                            ...interactive?.data?.header!,
+                            text: e.target.value,
+                          },
                         },
-                      },
-                    });
-                  }}
-                />
+                      });
+                    }}
+                  />
+                )}
+                {interactive?.data?.header?.type === "document" && (
+                  <>
+                    <TextInput
+                      max={60}
+                      placeholder="Document Link"
+                      value={interactive?.data?.header?.document?.link}
+                      onChange={(e) => {
+                        setInteractive({
+                          ...interactive!,
+                          data: {
+                            ...interactive?.data!,
+                            header: {
+                              ...interactive?.data?.header!,
+                              document: {
+                                ...interactive?.data?.header?.document!,
+                                link: e.target.value,
+                              },
+                            },
+                          },
+                        });
+                      }}
+                    />
+                  </>
+                )}
+                {interactive?.data?.header?.type === "image" && (
+                  <>
+                    <TextInput
+                      max={60}
+                      placeholder="Image Link"
+                      value={interactive?.data?.header?.image?.link}
+                      onChange={(e) => {
+                        setInteractive({
+                          ...interactive!,
+                          data: {
+                            ...interactive?.data!,
+                            header: {
+                              ...interactive?.data?.header!,
+                              image: {
+                                ...interactive?.data?.header?.image!,
+                                link: e.target.value,
+                              },
+                            },
+                          },
+                        });
+                      }}
+                    />
+                  </>
+                )}
+                {interactive?.data?.header?.type === "video" && (
+                  <>
+                    <TextInput
+                      max={60}
+                      placeholder="Video Link"
+                      value={interactive?.data?.header?.video?.link}
+                      onChange={(e) => {
+                        setInteractive({
+                          ...interactive!,
+                          data: {
+                            ...interactive?.data!,
+                            header: {
+                              ...interactive?.data?.header!,
+                              video: {
+                                ...interactive?.data?.header?.video!,
+                                link: e.target.value,
+                              },
+                            },
+                          },
+                        });
+                      }}
+                    />
+                  </>
+                )}
               </div>
               <div>
                 <Label>Body</Label>
-                <TextInput
-                  placeholder="Body"
+                <Textarea
+                  placeholder="Body Text"
                   value={interactive?.data?.body?.text}
                   onChange={(e) => {
                     setInteractive({
@@ -412,7 +555,8 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
               <div>
                 <Label>Footer</Label>
                 <TextInput
-                  placeholder="Footer"
+                  max={60}
+                  placeholder="Footer Text"
                   value={interactive?.data?.footer?.text}
                   onChange={(e) => {
                     setInteractive({
@@ -428,187 +572,288 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                   }}
                 />
               </div>
-              <div>
-                <Label>Action</Label>
-                <TextInput
-                  placeholder="Action"
-                  value={interactive?.data?.action?.button}
-                  onChange={(e) => {
-                    setInteractive({
-                      ...interactive!,
-                      data: {
-                        ...interactive?.data!,
-                        action: {
-                          ...interactive?.data?.action!,
-                          button: e.target.value,
-                        },
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="p-4  bg-gray-50 border-gray-200 rounded-lg">
-                <div>
-                  <div className="flex flex-row justify-between mb-4">
-                    <Label>Sections</Label>
-                    <div
-                      className="text-sm cursor-pointer"
-                      onClick={() => {
+              {interactive?.type === "cta_url" && (
+                <>
+                  <div>
+                    <Label>Action</Label>
+                    <TextInput
+                      placeholder="Action Name"
+                      value={interactive?.data?.action?.name}
+                      onChange={(e) => {
                         setInteractive({
                           ...interactive!,
                           data: {
                             ...interactive?.data!,
                             action: {
                               ...interactive?.data?.action!,
-                              sections: [
-                                ...(interactive?.data?.action?.sections ?? []),
-                                {
-                                  title: "",
-                                  rows: [],
-                                },
-                              ],
+                              name: e.target.value,
                             },
                           },
                         });
                       }}
-                    >
-                      + Section
+                    />
+                  </div>
+                  <div>
+                    <Label>Display Text</Label>
+                    <TextInput
+                      placeholder="Display Text"
+                      value={
+                        interactive?.data?.action?.parameters?.display_text
+                      }
+                      onChange={(e) => {
+                        setInteractive({
+                          ...interactive!,
+                          data: {
+                            ...interactive?.data!,
+                            action: {
+                              ...interactive?.data?.action!,
+                              parameters: {
+                                ...interactive?.data?.action?.parameters!,
+                                display_text: e.target.value,
+                              },
+                            },
+                          },
+                        });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label>URL</Label>
+                    <TextInput
+                      placeholder="URL"
+                      value={interactive?.data?.action?.parameters?.url}
+                      onChange={(e) => {
+                        setInteractive({
+                          ...interactive!,
+                          data: {
+                            ...interactive?.data!,
+                            action: {
+                              ...interactive?.data?.action!,
+                              parameters: {
+                                ...interactive?.data?.action?.parameters!,
+                                url: e.target.value,
+                              },
+                            },
+                          },
+                        });
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+              {interactive?.type === "list" && (
+                <>
+                  <div>
+                    <Label>Action</Label>
+                    <TextInput
+                      placeholder="Action Button"
+                      value={interactive?.data?.action?.button}
+                      onChange={(e) => {
+                        setInteractive({
+                          ...interactive!,
+                          data: {
+                            ...interactive?.data!,
+                            action: {
+                              ...interactive?.data?.action!,
+                              button: e.target.value,
+                            },
+                          },
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="p-4  bg-gray-50 border-gray-200 rounded-lg">
+                    <div>
+                      <div className="flex flex-row justify-between mb-4">
+                        <Label>Sections</Label>
+                        <div
+                          className="text-sm cursor-pointer"
+                          onClick={() => {
+                            setInteractive({
+                              ...interactive!,
+                              data: {
+                                ...interactive?.data!,
+                                action: {
+                                  ...interactive?.data?.action!,
+                                  sections: [
+                                    ...(interactive?.data?.action?.sections ??
+                                      []),
+                                    {
+                                      title: "",
+                                      rows: [],
+                                    },
+                                  ],
+                                },
+                              },
+                            });
+                          }}
+                        >
+                          + Section
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      {interactive?.data?.action?.sections?.map(
+                        (s: WhatsappInteractiveListSection, i: number) => (
+                          <div key={i} className="mb-4">
+                            <Label>Section #{i + 1}</Label>
+                            <div className="flex flex-row justify-center items-center ">
+                              <TextInput
+                                placeholder="Section Title"
+                                value={s.title}
+                                className="flex-1"
+                                onChange={(e) => {
+                                  let section =
+                                    interactive?.data?.action?.sections[i];
+                                  section.title = e.target.value;
+                                  interactive.data.action.sections[i] = section;
+                                  setInteractive({
+                                    ...interactive!,
+                                  });
+                                }}
+                              />
+                              <div
+                                className="cursor-pointer px-2"
+                                onClick={() => {
+                                  let rows =
+                                    interactive?.data?.action?.sections[i].rows;
+                                  rows.push({
+                                    id: randomString(10),
+                                    title: "",
+                                    description: "",
+                                  });
+                                  setInteractive({
+                                    ...interactive!,
+                                  });
+                                }}
+                              >
+                                <HiOutlineTableCells className="" size={20} />
+                              </div>
+                            </div>
+                            <table className="w-full mt-4">
+                              <thead>
+                                <tr>
+                                  <th
+                                    className="p-2  border border-gray-200 text-sm"
+                                    style={{ width: "30%" }}
+                                  >
+                                    ID
+                                  </th>
+                                  <th
+                                    className="p-2  border border-gray-200 text-sm"
+                                    style={{ width: "30%" }}
+                                  >
+                                    Title
+                                  </th>
+                                  <th
+                                    className="p-2  border border-gray-200 text-sm"
+                                    style={{ width: "60%" }}
+                                  >
+                                    Description
+                                  </th>
+                                  <th
+                                    className="p-2  border border-gray-200 text-sm "
+                                    style={{ width: "10%" }}
+                                  ></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {s.rows.length === 0 && (
+                                  <tr>
+                                    <td
+                                      className="p-2 w-1/2 border border-gray-200 text-center"
+                                      colSpan={4}
+                                    >
+                                      No Rows
+                                    </td>
+                                  </tr>
+                                )}
+                                {s.rows.map(
+                                  (
+                                    r: WhatsappInteractiveListRow,
+                                    j: number
+                                  ) => (
+                                    <tr key={j}>
+                                      <td className="p-2 w-12 border border-gray-200">
+                                        <TextInput
+                                          placeholder="Title"
+                                          value={r.id}
+                                          onChange={(e) => {
+                                            let row =
+                                              interactive?.data?.action
+                                                ?.sections[i].rows[j];
+                                            row.id = e.target.value;
+                                            interactive.data.action.sections[
+                                              i
+                                            ].rows[j] = row;
+                                            setInteractive({
+                                              ...interactive!,
+                                            });
+                                          }}
+                                        />
+                                      </td>
+                                      <td className="p-2 w-32 border border-gray-200">
+                                        <TextInput
+                                          placeholder="Title"
+                                          value={r.title}
+                                          onChange={(e) => {
+                                            let row =
+                                              interactive?.data?.action
+                                                ?.sections[i].rows[j];
+                                            row.title = e.target.value;
+                                            interactive.data.action.sections[
+                                              i
+                                            ].rows[j] = row;
+                                            setInteractive({
+                                              ...interactive!,
+                                            });
+                                          }}
+                                        />
+                                      </td>
+                                      <td className="p-2 w-full border border-gray-200">
+                                        <TextInput
+                                          placeholder="Description"
+                                          value={r.description}
+                                          onChange={(e) => {
+                                            let row =
+                                              interactive?.data?.action
+                                                ?.sections[i].rows[j];
+                                            row.description = e.target.value;
+                                            interactive.data.action.sections[
+                                              i
+                                            ].rows[j] = row;
+                                            setInteractive({
+                                              ...interactive!,
+                                            });
+                                          }}
+                                        />
+                                      </td>
+                                      <td className="p-2 w-1/2 border border-gray-200">
+                                        <BsTrash
+                                          className="text-red-400 hover:text-red-600 cursor-pointer del"
+                                          onClick={() => {
+                                            let rows =
+                                              interactive?.data?.action
+                                                ?.sections[i].rows;
+                                            rows.splice(j, 1);
+                                            setInteractive({
+                                              ...interactive!,
+                                            });
+                                          }}
+                                        />
+                                      </td>
+                                    </tr>
+                                  )
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
-                </div>
-                <div>
-                  {interactive?.data?.action?.sections?.map(
-                    (s: WhatsappInteractiveListSection, i: number) => (
-                      <div key={i} className="mb-4">
-                        <Label>Section #{i + 1}</Label>
-                        <div className="flex flex-row justify-center items-center ">
-                          <TextInput
-                            placeholder="Section Title"
-                            value={s.title}
-                            className="flex-1"
-                            onChange={(e) => {
-                              let section =
-                                interactive?.data?.action?.sections[i];
-                              section.title = e.target.value;
-                              interactive.data.action.sections[i] = section;
-                              setInteractive({
-                                ...interactive!,
-                              });
-                            }}
-                          />
-                          <div
-                            className="cursor-pointer px-2"
-                            onClick={() => {
-                              let rows =
-                                interactive?.data?.action?.sections[i].rows;
-                              rows.push({
-                                id: randomString(10),
-                                title: "",
-                                description: "",
-                              });
-                              setInteractive({
-                                ...interactive!,
-                              });
-                            }}
-                          >
-                            <HiOutlineTableCells className="" size={20} />
-                          </div>
-                        </div>
-                        <table className="w-full mt-4">
-                          <thead>
-                            <tr>
-                              <th
-                                className="p-2  border border-gray-200 text-sm"
-                                style={{ width: "30%" }}
-                              >
-                                Title
-                              </th>
-                              <th
-                                className="p-2  border border-gray-200 text-sm"
-                                style={{ width: "60%" }}
-                              >
-                                Description
-                              </th>
-                              <th
-                                className="p-2  border border-gray-200 text-sm "
-                                style={{ width: "10%" }}
-                              ></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {s.rows.length === 0 && (
-                              <tr>
-                                <td
-                                  className="p-2 w-1/2 border border-gray-200 text-center"
-                                  colSpan={3}
-                                >
-                                  No Rows
-                                </td>
-                              </tr>
-                            )}
-                            {s.rows.map(
-                              (r: WhatsappInteractiveListRow, j: number) => (
-                                <tr key={j}>
-                                  <td className="p-2 w-1/2 border border-gray-200">
-                                    <TextInput
-                                      placeholder="Title"
-                                      value={r.title}
-                                      onChange={(e) => {
-                                        let row =
-                                          interactive?.data?.action?.sections[i]
-                                            .rows[j];
-                                        row.title = e.target.value;
-                                        interactive.data.action.sections[
-                                          i
-                                        ].rows[j] = row;
-                                        setInteractive({
-                                          ...interactive!,
-                                        });
-                                      }}
-                                    />
-                                  </td>
-                                  <td className="p-2 w-1/2 border border-gray-200">
-                                    <TextInput
-                                      placeholder="Description"
-                                      value={r.description}
-                                      onChange={(e) => {
-                                        let row =
-                                          interactive?.data?.action?.sections[i]
-                                            .rows[j];
-                                        row.description = e.target.value;
-                                        interactive.data.action.sections[
-                                          i
-                                        ].rows[j] = row;
-                                        setInteractive({
-                                          ...interactive!,
-                                        });
-                                      }}
-                                    />
-                                  </td>
-                                  <td className="p-2 w-1/2 border border-gray-200">
-                                    <BsTrash
-                                      className="text-red-400 hover:text-red-600 cursor-pointer del"
-                                      onClick={() => {
-                                        let rows =
-                                          interactive?.data?.action?.sections[i]
-                                            .rows;
-                                        rows.splice(j, 1);
-                                        setInteractive({
-                                          ...interactive!,
-                                        });
-                                      }}
-                                    />
-                                  </td>
-                                </tr>
-                              )
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
+                </>
+              )}
             </div>
           </div>
         </ModalBody>
@@ -637,7 +882,9 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
 
                 try {
                   setLoading(true);
-                  if (interactive?.id) {
+                  if (interactive?.id !== "" && interactive?.id !== "undefined" && interactive?.id !== undefined) {
+                    // interactive.data.type = interactive.type;
+                    // delete interactive.data.header.title;
                     await updateInteractiveTemplate(
                       templateId!,
                       interactive?.id!,
@@ -653,9 +900,8 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
 
                   toast.success("Save successfully");
                   setModalInteractive(false);
-                  setTemplate(null)
+                  setTemplate(null);
                   getDetail();
-
                 } catch (err) {
                   console.log(err);
                 } finally {

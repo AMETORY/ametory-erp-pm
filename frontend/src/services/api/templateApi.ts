@@ -33,7 +33,7 @@ export const updateTemplate = async (id: string, data: any) => {
   });
 };
 export const createInteractiveTemplate = async (id: string, msgId: string, data: any) => {
-  return await customFetch(`api/v1/template/${id}/interactive/${msgId}/update`, {
+  return await customFetch(`api/v1/template/${id}/interactive/${msgId}`, {
     method: "POST",
     body: JSON.stringify(data),
   });

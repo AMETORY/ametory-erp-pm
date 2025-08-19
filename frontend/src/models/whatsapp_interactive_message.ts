@@ -41,9 +41,25 @@ export interface WhatsappInteractiveListAction {
 
 export interface WhatsappInteractiveList {
     type: string;
-    header: WhatsappInteractiveListHeader;
+    header?: WhatsappInteractiveListHeader;
     body: WhatsappInteractiveListBody;
     footer?: WhatsappInteractiveListFooter;
     action: WhatsappInteractiveListAction;
 }
 
+
+export interface WhatsappInteractiveCTAUrl {
+    type: string;
+    header?: WhatsappInteractiveListHeader;
+    body: WhatsappInteractiveListBody;
+    footer?: WhatsappInteractiveListFooter;
+    action: WhatsappInteractiveCTAUrlAction;
+}
+
+export interface WhatsappInteractiveCTAUrlAction {
+    name: string;
+    parameters: {
+        display_text: string;
+        url: string;
+    };
+}
