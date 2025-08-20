@@ -16,8 +16,15 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Button, Dropdown, Label, Tabs } from "flowbite-react";
-import { ReactNode, useEffect, useRef, useState, type FC } from "react";
+import {
+  Button,
+  Dropdown,
+  Label,
+  Select,
+  Tabs,
+  TextInput,
+} from "flowbite-react";
+import { ReactNode, useContext, useEffect, useRef, useState, type FC } from "react";
 import toast from "react-hot-toast";
 import { BsBuilding, BsCurrencyDollar, BsEye, BsTrash } from "react-icons/bs";
 import { MdOutlineAlternateEmail } from "react-icons/md";
@@ -50,10 +57,14 @@ import FormSectionComponent from "../components/FormSectionComponent";
 import FormFieldComponent from "../components/FormFieldComponent";
 import FormView from "../components/FormView";
 import { toSnakeCase } from "../utils/helper";
+import { HiColorSwatch, HiOutlineColorSwatch } from "react-icons/hi";
+import FormStyle from "../components/FormStyle";
+import { LoadingContext } from "../contexts/LoadingContext";
 
 interface FormTempateDetailProps {}
 
 const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
+  const {loading, setLoading} = useContext(LoadingContext);
   const { templateId } = useParams();
   const [mounted, setMounted] = useState(false);
   const [template, setTemplate] = useState<FormTemplateModel>();
@@ -61,19 +72,23 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
   const [activeSection, setActiveSection] = useState<FormSection>();
   const [activeField, setActiveField] = useState<FormField>();
   const timeout = useRef<number | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (mounted) {
-      getFormTemplate(templateId!)
-        .then((resp: any) => {
-          setTemplate(resp.data);
-        })
-        .catch(toast.error);
+      getDetail();
     }
   }, [mounted]);
+  const getDetail = () => {
+    getFormTemplate(templateId!)
+      .then((resp: any) => {
+        setTemplate(resp.data);
+      })
+      .catch(toast.error);
+  };
 
   const renderIcon = (e: FormFieldType, size: number): ReactNode => {
     switch (e) {
@@ -166,6 +181,7 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     const { id } = active;
@@ -277,6 +293,7 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
       );
     }
   };
+
   return (
     <AdminLayout>
       <div className="p-8">
@@ -384,14 +401,36 @@ const FormTempateDetail: FC<FormTempateDetailProps> = ({}) => {
               </DndContext>
             </div>
           </Tabs.Item>
-          <Tabs.Item title="Preview" active={activeTab == 1} icon={BsEye}>
-            <div className="bg-gray-100 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-240px)]">
+          <Tabs.Item
+            title="Style"
+            active={activeTab == 1}
+            icon={HiOutlineColorSwatch}
+          >
+            <FormStyle
+              formTemplate={template!}
+              style={template?.style}
+              onSave={(val) => {
+                setLoading(true)
+                updateFormTemplate(templateId!, val).then((val) => {
+                  toast.success("Style updated successfully");
+                  getDetail();
+                }).catch(() => {
+                  toast.error("Failed to update style");
+                }).finally(() => {
+                  setLoading(false)
+                })
+              }}
+            />
+          </Tabs.Item>
+          <Tabs.Item title="Preview" active={activeTab == 2} icon={BsEye}>
+            <div className="bg-gray-100 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-240px)]" style={{ backgroundColor: template?.style?.backgroundColor }}>
               <FormView
+              style={template?.style}
                 sections={template?.sections ?? []}
                 onSubmit={(val) => {
                   for (const section of val) {
                     for (const field of section.fields) {
-                      console.log(toSnakeCase(field.label),":", field.value);
+                      console.log(toSnakeCase(field.label), ":", field.value);
                     }
                   }
                 }}

@@ -116,7 +116,7 @@ func (h *FormHandler) DeleteFormTemplateHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, gin.H{"message": "Form template deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Form template deleted successfully"})
 }
 
 // CreateFormHandler handles the creation of a new form
@@ -216,7 +216,7 @@ func (h *FormHandler) DeleteFormHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, gin.H{"message": "Form deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Form deleted successfully"})
 }
 
 func (h *FormHandler) PublicFormHandler(c *gin.Context) {

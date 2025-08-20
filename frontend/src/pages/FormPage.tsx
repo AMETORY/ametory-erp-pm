@@ -17,6 +17,8 @@ import toast from "react-hot-toast";
 import {
   createForm,
   createFormTemplate,
+  deleteForm,
+  deleteFormTemplate,
   getForms,
   getFormTemplates,
 } from "../services/api/formApi";
@@ -241,6 +243,15 @@ const FormPage: FC<FormPageProps> = ({}) => {
                                 `Are you sure you want to delete  ${template.title}?`
                               )
                             ) {
+                              setLoading(true);
+                              deleteFormTemplate(template.id!).then(() => {
+                                getAllTemplates();
+                              }).catch((e) => {
+                                toast.error(`${e}`);
+                              }).then(() => {
+                                setLoading(false);
+                              })
+
                             }
                           }}
                         >
@@ -307,6 +318,14 @@ const FormPage: FC<FormPageProps> = ({}) => {
                                 `Are you sure you want to delete  ${form.title}?`
                               )
                             ) {
+                              setLoading(true);
+                              deleteForm(form.id!).then(() => {
+                                getAllForms();
+                              }).catch((e) => {
+                                toast.error(`${e}`);
+                              }).then(() => {
+                                setLoading(false);
+                              })
                             }
                           }}
                         >

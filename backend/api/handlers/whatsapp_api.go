@@ -417,7 +417,7 @@ func (h *WhatsappApiHandler) WhatsappApiWebhookHandler(c *gin.Context) {
 		utils.LogJson(data)
 	}
 	// now := time.Now()
-	h.metaService.WhatsappApiService.WhatsappApiWebhook(c.Request, data, "", h.getContact, h.getSession, h.getMessageData, h.runAutoPilot)
+	h.metaService.WhatsappApiService.WhatsappApiWebhook(c.Request, data, "", h.getContact, h.getSession, h.getMessageData, h.runAutoPilot, nil)
 	// fmt.Println("DATA WEBHOOK")
 	// utils.LogJson(data)
 

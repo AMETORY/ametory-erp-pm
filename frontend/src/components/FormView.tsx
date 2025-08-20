@@ -17,16 +17,27 @@ import moment from "moment";
 interface FormViewProps {
   sections: FormSection[];
   onSubmit: (val: FormSection[]) => void;
+  style?: any | null;
 }
 
-const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
+const FormView: FC<FormViewProps> = ({ sections, onSubmit, style }) => {
   const [sectionValues, setSectionValues] = useState([...sections]);
+
+  const [formstyle, setFormStyle] = useState<any | null>();
 
   useEffect(() => {
     if (sections.length) {
       setSectionValues([...sections]);
     }
   }, [sections]);
+
+  useEffect(() => {
+    if (style) {
+      setFormStyle({
+        ...style,
+      });
+    }
+  }, [style]);
   const renderField = (
     sectionIndex: number,
     fieldIndex: number,
@@ -50,7 +61,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -70,7 +89,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -98,7 +125,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -119,7 +154,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -139,7 +182,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -159,7 +210,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -177,7 +236,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -194,7 +261,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               }}
             />
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -277,7 +352,15 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
               />
             </div>
             {field.help_text && (
-              <small className="text-gray-400">{field.help_text}</small>
+              <small
+                className="text-gray-400"
+                style={{
+                  fontFamily: style?.fontFamily,
+                  color: style?.textColor,
+                }}
+              >
+                {field.help_text}
+              </small>
             )}
           </div>
         );
@@ -286,7 +369,14 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
           <div key={field.id}>
             <fieldset className="flex max-w-md flex-col gap-4">
               {field.help_text && (
-                <legend className="mb-4 text-sm text-gray-400">
+                <legend
+                  className="mb-4 text-sm text-gray-400"
+                  style={{
+                    fontFamily: style?.fontFamily,
+                    fontSize: style?.fontSize,
+                    color: style?.textColor,
+                  }}
+                >
                   {field.help_text}
                 </legend>
               )}
@@ -299,6 +389,9 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
                       sectionValues[sectionIndex].fields[fieldIndex].value ==
                       option.value
                     }
+                    style={{
+                      color: style?.buttonColor,
+                    }}
                     onChange={(val) => {
                       // sectionValues[sectionIndex].fields[fieldIndex].value =
                       //   val.target.value;
@@ -325,7 +418,16 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
                       ]);
                     }}
                   />
-                  <Label htmlFor={option.value}>{option.label}</Label>
+                  <Label
+                    htmlFor={option.value}
+                    style={{
+                      fontFamily: style?.fontFamily,
+                      fontSize: style?.fontSize,
+                      color: style?.textColor,
+                    }}
+                  >
+                    {option.label}{" "}
+                  </Label>
                 </div>
               ))}
             </fieldset>
@@ -339,7 +441,14 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
           <div key={field.id}>
             <fieldset className="flex max-w-md flex-col gap-4">
               {field.help_text && (
-                <legend className="mb-4 text-sm text-gray-400">
+                <legend
+                  className="mb-4 text-sm text-gray-400"
+                  style={{
+                    fontFamily: style?.fontFamily,
+                    fontSize: style?.fontSize,
+                    color: style?.textColor,
+                  }}
+                >
                   {field.help_text}
                 </legend>
               )}
@@ -372,7 +481,16 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
                       setSectionValues([...sectionValues]);
                     }}
                   />
-                  <Label htmlFor={option.value}>{option.label}</Label>
+                  <Label
+                    htmlFor={option.value}
+                    style={{
+                      fontFamily: style?.fontFamily,
+                      fontSize: style?.fontLabelSize,
+                      color: style?.textColor,
+                    }}
+                  >
+                    {option.label}
+                  </Label>
                 </div>
               ))}
             </fieldset>
@@ -419,6 +537,11 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
         return (
           <div key={field.id}>
             <Select
+              style={{
+                fontFamily: style?.fontFamily,
+                fontSize: style?.fontSize,
+                color: style?.textColor,
+              }}
               value={sectionValues[sectionIndex].fields[fieldIndex].value}
               onChange={(val) => {
                 sectionValues[sectionIndex].fields[fieldIndex].value =
@@ -450,14 +573,50 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
       {sections.map((section, index) => (
         <div
           className="bg-white p-4 rounded-lg border border-t-4 border-t-blue-400"
+          style={{
+            borderColor: style?.borderColor,
+            borderTopWidth: style?.border ? `${style?.border}px`:0,
+            boxShadow: style?.boxShadow,
+          }}
           key={section.id}
         >
-          <h1 className="text-2xl font-bold">{section.section_title}</h1>
-          <div className="text-md text-gray-600">{section?.description}</div>
-          <div className="flex flex-col space-y-4 mt-4">
+          <h1
+            className="text-2xl font-bold"
+            style={{
+              fontFamily: style?.fontFamily,
+              color: style?.textColor,
+            }}
+          >
+            {section.section_title}
+          </h1>
+          <div
+            className="text-md text-gray-600"
+            style={{
+              fontFamily: style?.fontFamily,
+              fontSize: style?.fontSize,
+              color: style?.textColor,
+            }}
+          >
+            {section?.description}
+          </div>
+          <div
+            className="flex flex-col space-y-4 mt-4"
+            style={{
+     
+            }}
+          >
             {section.fields.map((field, fieldIndex) => (
               <div key={field.id}>
-                <Label className="font-bold text-md">{field.label}</Label>
+                <Label
+                  className="font-bold text-md"
+                  style={{
+                    fontFamily: style?.fontFamily,
+                    fontSize: style?.fontLabelSize,
+                    color: style?.textColor,
+                  }}
+                >
+                  {field.label}
+                </Label>
                 {renderField(index, fieldIndex, field)}
               </div>
             ))}
@@ -468,6 +627,9 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit }) => {
         type="submit"
         onClick={() => {
           onSubmit(sectionValues);
+        }}
+        style={{
+          backgroundColor: style?.buttonColor,
         }}
       >
         Submit Form

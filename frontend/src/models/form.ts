@@ -14,6 +14,7 @@ export interface FormTemplateModel {
   created_by_member: MemberModel;
   sections: FormSection[];
   data?: any;
+  style?:any;
 }
 
 export const enum FormFieldType {

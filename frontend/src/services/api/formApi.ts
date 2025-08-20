@@ -82,3 +82,9 @@ export const updateForm = async (id: string, data: any) => {
     body: JSON.stringify(data),
   });
 };
+
+export const deleteForm = async (id: string) => {
+  return await customFetch(`api/v1/form/${id}`, {
+    method: "DELETE",
+  });
+};

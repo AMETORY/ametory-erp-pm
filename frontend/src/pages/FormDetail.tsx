@@ -117,15 +117,15 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
   const renderResponses = (responses: FormData[]) => {
     if (responses.length == 0) return;
     let sections: any[] = [];
-      for (const section of responses[0].sections) {
-        sections.push({
-          id: section.id,
-          record_id: responses[0].id,
-          title: section.section_title,
-          number_field: section.fields.length,
-          sub_title: section.fields.map((e) => e.label),
-        });
-      }
+    for (const section of responses[0].sections) {
+      sections.push({
+        id: section.id,
+        record_id: responses[0].id,
+        title: section.section_title,
+        number_field: section.fields.length,
+        sub_title: section.fields.map((e) => e.label),
+      });
+    }
     let records: any = [];
     for (const resp of responses) {
       let fields: any = [];
@@ -134,7 +134,7 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
       }
       records.push({
         id: resp.id,
-        data: fields
+        data: fields,
       });
     }
     // console.log(records);
@@ -168,11 +168,20 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
           </thead>
           <tbody>
             {records.map((e: any, i: number) => (
-              <tr key={i} id={`data-${e.id}`} className="hover:bg-blue-50" onClick={() => {
-                setSelectedResponse(form?.responses?.find(r => r.id == e.id))
-              }}>
+              <tr
+                key={i}
+                id={`data-${e.id}`}
+                className="hover:bg-blue-50"
+                onClick={() => {
+                  setSelectedResponse(
+                    form?.responses?.find((r) => r.id == e.id)
+                  );
+                }}
+              >
                 {e.data.map((f: FormField, j: number) => (
-                  <td className="px-4 py-2 border cursor-pointer " key={j}>{f.value}</td>
+                  <td className="px-4 py-2 border cursor-pointer " key={j}>
+                    {f.value}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -495,13 +504,29 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
         <div className="w-[calc(100%-300px)] border-l relative bg-gray-50">
           <Tabs>
             <Tabs.Item title="Preview">
-              <div className="bg-gray-50 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-100px)] ">
+              <div
+                className="bg-gray-100 flex flex-col  items-center p-16 overflow-y-auto h-[calc(100vh-240px)]"
+                style={{
+                  backgroundColor: form?.form_template?.style?.backgroundColor,
+                }}
+              >
                 <div className="flex flex-col justify-center w-1/2 space-y-4 mb-4">
-                  <div className="bg-white rounded-lg border border-t-4 border-t-blue-400">
+                  <div
+                    className="bg-white rounded-lg border border-t-4 border-t-blue-400"
+                    style={{
+                      borderColor: form?.form_template?.style?.borderColor,
+                      borderTopWidth: form?.form_template?.style?.border
+                        ? `${form?.form_template?.style?.border}px`
+                        : 0,
+                    }}
+                  >
                     {form?.cover && (
                       <img
                         src={form?.cover?.url}
                         className=" aspect-video w-full object-cover"
+                        style={{
+                          height: form?.form_template?.style?.coverHeight,
+                        }}
                       />
                     )}
                     <div className="p-4  ">
@@ -511,6 +536,7 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
                   </div>
                 </div>
                 <FormView
+                  style={form?.form_template?.style}
                   sections={form?.form_template?.sections ?? []}
                   onSubmit={(val) => {
                     console.log(val);

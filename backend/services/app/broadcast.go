@@ -5,6 +5,7 @@ import (
 	"ametory-pm/models"
 	"ametory-pm/models/connection"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -21,6 +22,7 @@ import (
 	"github.com/AMETORY/ametory-erp-modules/utils"
 	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
+	"gorm.io/gorm"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/go-redis/redis/v8"
@@ -337,6 +339,47 @@ func chunkContacts(contacts []mdl.ContactModel, size int) [][]mdl.ContactModel {
 	return append(batches, contacts)
 }
 
+func (b *BroadcastService) saveSession(contact mdl.ContactModel, sender connection.ConnectionModel, convMsg string, broadcast *models.BroadcastModel) {
+	now := time.Now()
+	if contact.Phone != nil {
+		var whatsappSession *mdl.WhatsappMessageSession
+		err := b.ctx.DB.First(&whatsappSession, "session_name = ? AND company_id = ? AND j_id = ?", contact.Phone, broadcast.CompanyID, sender.Session).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			refType := "connection"
+			// CREATE NEW SESSION
+			whatsappSession = &mdl.WhatsappMessageSession{
+				JID:          sender.Session,
+				Session:      *contact.Phone + "@s.whatsapp.net",
+				SessionName:  *contact.Phone,
+				LastOnlineAt: &now,
+				LastMessage:  convMsg,
+				RefID:        &sender.ID,
+				RefType:      &refType,
+				CompanyID:    broadcast.CompanyID,
+				ContactID:    &contact.ID,
+			}
+			b.ctx.DB.Create(whatsappSession)
+		}
+
+		replyResponse := &mdl.WhatsappMessageModel{
+			Receiver:  *contact.Phone,
+			Message:   convMsg,
+			Session:   whatsappSession.Session,
+			JID:       whatsappSession.JID,
+			IsGroup:   false,
+			ContactID: &contact.ID,
+			CompanyID: broadcast.CompanyID,
+		}
+
+		// fmt.Println("SAVE SESSION")
+		// utils.LogJson(replyResponse)
+
+		err = b.ctx.DB.Create(replyResponse).Error
+		if err != nil {
+			fmt.Println("ERROR SAVE SESSION", err)
+		}
+	}
+}
 func (b *BroadcastService) sendWithRetryHandling(
 	sender connection.ConnectionModel,
 	broadcastID string,
@@ -346,6 +389,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 	logHandler func(log models.MessageLog),
 	retryHandler func(retry models.MessageRetry),
 ) {
+	convMsg := ""
+
 	// var broadcast models.BroadcastModel
 	// b.ctx.DB.Where("id = ?", broadcastID).Preload("Member.User").First(&broadcast)
 
@@ -382,6 +427,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 		// USE REAL API
 		if contact.Phone != nil {
+			// GET SESSION
+
 			fmt.Println("WITH PHONE NUMBER", *contact.Phone)
 			resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
 			if err != nil {
@@ -407,8 +454,9 @@ func (b *BroadcastService) sendWithRetryHandling(
 				Message: parseMsgTemplate(contact, broadcast.Member, broadcast.Message),
 			}
 
-			fmt.Println("PRODUCTS BROADCAST")
-			utils.LogJson(broadcast.Products)
+			convMsg = msgData.Message
+			// fmt.Println("PRODUCTS BROADCAST")
+			// utils.LogJson(broadcast.Products)
 			// USE REGULAR MESSAGE
 			if broadcast.TemplateID == nil {
 				success = true
@@ -432,6 +480,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 					}
 				}
 
+				b.saveSession(contact, sender, convMsg, broadcast)
+
 				// err = b.customerRelationshipService.WhatsappService.SendWhatsappMessage(b.whatsmeowService, &msgData, *contact.Phone, broadcast.Files, broadcast.Products, false)
 				// if err != nil {
 				// 	log.Println("ERROR SEND MESSAGE REGULAR", err)
@@ -453,7 +503,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 								intData = &interactive
 							}
 							parsedMsg := parseMsgTemplate(contact, broadcast.Member, v.Body)
-
+							convMsg = parsedMsg
 							var session *mdl.WhatsappMessageSession = &mdl.WhatsappMessageSession{
 								Contact: &contact,
 							}
@@ -470,6 +520,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 								JID:     sender.Session,
 								Message: parseMsgTemplate(contact, broadcast.Member, v.Body),
 							}
+							convMsg = msgData.Message
 							b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false, nil)
 							_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
 							if err != nil {
@@ -478,6 +529,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 							}
 						}
 
+						b.saveSession(contact, sender, convMsg, broadcast)
 						// err = b.customerRelationshipService.WhatsappService.SendWhatsappMessage(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false)
 						// if err != nil {
 						// 	log.Println("ERROR SEND MESSAGE WITH TEMPLATE", err)
@@ -705,6 +757,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 		logHandler(msgLog)
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", true)
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
+
 	} else {
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", false)
 		if isNotOnWhatsapp {
