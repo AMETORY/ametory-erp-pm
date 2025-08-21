@@ -121,6 +121,21 @@ func (h *FormHandler) DeleteFormTemplateHandler(c *gin.Context) {
 
 // CreateFormHandler handles the creation of a new form
 
+func (h *FormHandler) DownloadFormHandler(c *gin.Context) {
+	id := c.Param("id")
+	_, err := h.csrService.FormService.GetForm(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	b, _ := json.Marshal(map[string]any{"id": id, "user": c.MustGet("user"), "company_id": c.GetHeader("ID-Company")})
+	err = h.appService.Redis.Publish(*h.ctx.Ctx, "FORM:DOWNLOAD", string(b)).Err()
+	if err != nil {
+		c.JSON(500, gin.H{"message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Form download working at background"})
+}
 func (h *FormHandler) CreateFormHandler(c *gin.Context) {
 	var form models.FormModel
 	if err := c.ShouldBindJSON(&form); err != nil {

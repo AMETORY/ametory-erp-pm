@@ -266,6 +266,9 @@ func main() {
 	go func() {
 		worker.ImportContact(erpContext)
 	}()
+	go func() {
+		worker.FormDownload(erpContext)
+	}()
 
 	go func() {
 		c := cron.New()

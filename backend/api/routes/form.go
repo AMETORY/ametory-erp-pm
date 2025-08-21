@@ -29,6 +29,7 @@ func SetFormRoutes(r *gin.RouterGroup, erpContext *context.ERPContext) {
 	{
 		formGroup.GET("/list", formHandler.GetFormsHandler)
 		formGroup.GET("/:id", formHandler.GetFormHandler)
+		formGroup.POST("/:id/download", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form:update"}), formHandler.DownloadFormHandler)
 		formGroup.POST("/create", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form:create"}), formHandler.CreateFormHandler)
 		formGroup.PUT("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form:update"}), formHandler.UpdateFormHandler)
 		formGroup.DELETE("/:id", middlewares.RbacUserMiddleware(erpContext, []string{"customer_relationship:form:delete"}), formHandler.DeleteFormHandler)

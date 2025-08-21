@@ -1,7 +1,11 @@
 import { useContext, useEffect, useRef, useState, type FC } from "react";
 import AdminLayout from "../components/layouts/admin";
 import { Link, useParams } from "react-router-dom";
-import { getFormDetail, updateForm } from "../services/api/formApi";
+import {
+  downloadFormResponse,
+  getFormDetail,
+  updateForm,
+} from "../services/api/formApi";
 import {
   FormModel,
   FormSection,
@@ -38,6 +42,8 @@ import {
 } from "react-icons/bs";
 import Moment from "react-moment";
 import { money } from "../utils/helper";
+import { WebsocketContext } from "../contexts/WebsocketContext";
+import { ProfileContext } from "../contexts/ProfileContext";
 interface FormDetailProps {}
 
 const FormDetail: FC<FormDetailProps> = ({}) => {
@@ -50,6 +56,8 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileCover, setFileCover] = useState<FileModel>();
   const [selectedResponse, setSelectedResponse] = useState<FormData>();
+  const { wsMsg } = useContext(WebsocketContext);
+  const { profile, setProfile } = useContext(ProfileContext);
 
   useEffect(() => {
     getAllProjects("");
@@ -70,6 +78,15 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
       .then((e: any) => setProjects(e.data.items))
       .catch(toast.error);
   };
+
+  useEffect(() => {
+    if (!wsMsg) return;
+    if (wsMsg?.command == "FORM_GENERATED") {
+      if (wsMsg.sender_id == profile?.id && wsMsg.form_id == formId) {
+        toast.success(wsMsg.message, {});
+      }
+    }
+  }, [wsMsg, profile, formId]);
 
   const renderValue = (fieldType: FormFieldType, val: any) => {
     switch (fieldType) {
@@ -545,7 +562,25 @@ const FormDetail: FC<FormDetailProps> = ({}) => {
               </div>
             </Tabs.Item>
             <Tabs.Item title="Responses">
-              <div className="px-4">
+              <div className="px-4 flex flex-col">
+                <div className="flex justify-end mb-4">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        await downloadFormResponse(form?.id!);
+                        toast.success("process works at the background");
+                      } catch (error) {
+                        toast.error(`${error}`);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    Download Response
+                  </Button>
+                </div>
                 {form?.responses && renderResponses(form.responses)}
               </div>
             </Tabs.Item>

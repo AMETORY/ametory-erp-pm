@@ -228,7 +228,7 @@ const FormView: FC<FormViewProps> = ({ sections, onSubmit, style }) => {
             <Textarea
               placeholder={field.placeholder}
               required={field.required}
-              value={sectionValues[sectionIndex].fields[fieldIndex].value}
+              value={sectionValues[sectionIndex]?.fields[fieldIndex]?.value}
               onChange={(e) => {
                 sectionValues[sectionIndex].fields[fieldIndex].value =
                   e.target.value;

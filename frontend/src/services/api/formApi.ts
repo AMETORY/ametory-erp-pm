@@ -63,6 +63,11 @@ export const getFormDetail = async (id: string) => {
     method: "GET",
   });
 };
+export const downloadFormResponse = async (id: string) => {
+  return await customFetch(`api/v1/form/${id}/download`, {
+    method: "POST",
+  });
+};
 
 export const getFormPublic = async (code: string) => {
   return await customFetch(`api/v1/form/public/${code}`, {

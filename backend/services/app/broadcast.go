@@ -430,25 +430,27 @@ func (b *BroadcastService) sendWithRetryHandling(
 			// GET SESSION
 
 			fmt.Println("WITH PHONE NUMBER", *contact.Phone)
-			resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
-			if err != nil {
-				log.Println("ERROR CHECK NUMBER", resp)
-			}
+			if sender.Type != "whatsapp-api" {
+				resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
+				if err != nil {
+					log.Println("ERROR CHECK NUMBER", resp)
+				}
 
-			var respCheck QueryIsOnWhatsapp
-			if err := json.Unmarshal(resp, &respCheck); err != nil {
-				log.Println("ERROR CHECK NUMBER PARSE RESPONSE")
-			}
+				var respCheck QueryIsOnWhatsapp
+				if err := json.Unmarshal(resp, &respCheck); err != nil {
+					log.Println("ERROR CHECK NUMBER PARSE RESPONSE")
+				}
 
-			for _, v := range respCheck.Query {
-				if !v.IsIn {
-					isNotOnWhatsapp = true
+				for _, v := range respCheck.Query {
+					if !v.IsIn {
+						isNotOnWhatsapp = true
+					}
+				}
+				if isNotOnWhatsapp {
+					log.Println("NUMBER IS NOT REGISTERED ON WHATSAPP")
 				}
 			}
 
-			if isNotOnWhatsapp {
-				log.Println("NUMBER IS NOT REGISTERED ON WHATSAPP")
-			}
 			msgData := mdl.WhatsappMessageModel{
 				JID:     sender.Session,
 				Message: parseMsgTemplate(contact, broadcast.Member, broadcast.Message),
@@ -757,6 +759,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 		logHandler(msgLog)
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", true)
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
+		log.Println("Message sent successfully to", contact.Name, *contact.Phone, "with message \n", convMsg)
 
 	} else {
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", false)
@@ -765,16 +768,18 @@ func (b *BroadcastService) sendWithRetryHandling(
 			msgLog.ErrorMessage = "number is not registered on whatsapp"
 			logHandler(msgLog)
 			b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
+			log.Println("Message  error (number is not registered on whatsapp)", contact.Name, *contact.Phone, "with message \n", convMsg)
 		} else if attempt >= 3 {
 			msgLog.Status = "undeliverable"
 			msgLog.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
 			logHandler(msgLog)
 			b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
+			log.Println("Message  error (undeliverable)", contact.Name, *contact.Phone, "with message \n", convMsg)
 		} else {
 			msgLog.Status = "failed"
 			msgLog.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
 			logHandler(msgLog)
-
+			log.Println("Message  error (try to send)", contact.Name, *contact.Phone, "with message \n", convMsg)
 			retryHandler(models.MessageRetry{
 				BroadcastID: broadcastID,
 				Contact:     contact,
@@ -832,7 +837,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 func simulateSend(contact mdl.ContactModel, msg string) bool {
 
-	fmt.Println("Simulate send to", contact.Name, *contact.Phone, "with message \n", msg)
+	log.Println("Simulate send to", contact.Name, *contact.Phone, "with message \n", msg)
 	// 90% berhasil
 	return rand.Intn(100) < 90
 }

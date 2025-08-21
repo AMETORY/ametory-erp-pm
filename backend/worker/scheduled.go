@@ -35,17 +35,17 @@ func ScheduledBroadcastWorker(erpContext *context.ERPContext) {
 				continue
 			}
 			log.Println("BROADCAST SCHEDULED", broadcastData.Description, broadcastData.ScheduledAt.Format("2006-01-02 15:04:05"))
-			go func() {
-				time.Sleep(time.Until(*broadcastData.ScheduledAt))
-				broadcastData.Status = "PROCESSING"
-				err := erpContext.DB.First(&broadcastData, "id = ?", broadcastData.ID).Error
-				if err != nil {
-					log.Println("ERROR", err)
-					return
-				}
-				erpContext.DB.Save(&broadcastData)
-				broadcastSrv.StartBroadcast(&broadcastData)
-			}()
+			// go func() {
+			time.Sleep(time.Until(*broadcastData.ScheduledAt))
+			broadcastData.Status = "PROCESSING"
+			err = erpContext.DB.First(&broadcastData, "id = ?", broadcastData.ID).Error
+			if err != nil {
+				log.Println("ERROR", err)
+				return
+			}
+			erpContext.DB.Save(&broadcastData)
+			broadcastSrv.StartBroadcast(&broadcastData)
+			// }()
 
 		}
 	}
