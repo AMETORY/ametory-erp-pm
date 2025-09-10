@@ -197,15 +197,17 @@ func (h *ConnectionHandler) CreateConnectionHandler(c *gin.Context) {
 	}
 	companyID := c.GetHeader("ID-Company")
 
-	ok, err := h.appService.ConnectionService.CheckConnectionBySession(connection.Session, companyID, string(connection.Type))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	if connection.Type == "whatsapp" {
+		ok, err := h.appService.ConnectionService.CheckConnectionBySession(connection.Session, companyID, string(connection.Type))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-	if ok {
-		c.JSON(http.StatusOK, gin.H{"data": connection, "message": "Connection already exists"})
-		return
+		if ok {
+			c.JSON(http.StatusOK, gin.H{"data": connection, "message": "Connection already exists"})
+			return
+		}
 	}
 	connection.APIKey = utils.RandString(32, true)
 	connection.Status = "PENDING"
