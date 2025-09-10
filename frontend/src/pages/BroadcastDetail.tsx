@@ -503,7 +503,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             )}
 
             <div className="flex gap-2">
-              {broadcast?.status === "DRAFT" && (
+              {(broadcast?.status === "DRAFT" || broadcast?.status === "NOT_STARTED") && (
                 <Button
                   color="success"
                   onClick={() => {
@@ -604,39 +604,39 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 </Button>
               )}
               <div className="flex flex-row gap-2">
-              {broadcast?.status === "DRAFT" && (
-                <Button onClick={() => update()}>Save</Button>
-              )}
-              {broadcast?.status === "SCHEDULED" && (
-                <Button color="purple" onClick={() => {}}>
-                  <GoClock className="mr-2" /> {countdown}
-                </Button>
-              )}
-              {broadcast?.status === "SCHEDULED" &&
-                scheduledTimeDistance < 0 && (
-                  <Button
-                    color="yellow"
-                    onClick={() => {
-                      setLoading(true);
-                      updateBroadcast(broadcast?.id!, {
-                        ...broadcast,
-                        status: "DRAFT",
-                      })
-                        .then(() => {
-                          getDetail();
-                        })
-                        .catch((error) => {
-                          toast.error(`${error}`);
-                        })
-                        .finally(() => {
-                          setLoading(false);
-                        });
-                    }}
-                  >
-                    <AiOutlineEdit className="mr-2" /> Edit Broadcast
+                {broadcast?.status === "DRAFT" && (
+                  <Button onClick={() => update()}>Save</Button>
+                )}
+                {broadcast?.status === "SCHEDULED" && (
+                  <Button color="purple" onClick={() => {}}>
+                    <GoClock className="mr-2" /> {countdown}
                   </Button>
                 )}
-                </div>
+                {broadcast?.status === "SCHEDULED" &&
+                  scheduledTimeDistance < 0 && (
+                    <Button
+                      color="yellow"
+                      onClick={() => {
+                        setLoading(true);
+                        updateBroadcast(broadcast?.id!, {
+                          ...broadcast,
+                          status: "DRAFT",
+                        })
+                          .then(() => {
+                            getDetail();
+                          })
+                          .catch((error) => {
+                            toast.error(`${error}`);
+                          })
+                          .finally(() => {
+                            setLoading(false);
+                          });
+                      }}
+                    >
+                      <AiOutlineEdit className="mr-2" /> Edit Broadcast
+                    </Button>
+                  )}
+              </div>
             </div>
           </div>
           <div className="bg-white border rounded p-6 flex flex-col space-y-4">
@@ -647,6 +647,12 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   color={
                     broadcast?.status === "DRAFT"
                       ? "warning"
+                      : broadcast?.status === "EXPIRED"
+                      ? "red"
+                      : broadcast?.status === "STOPPED"
+                      ? "yellow"
+                      : broadcast?.status === "NOT_STARTED"
+                      ? "yellow"
                       : broadcast?.status === "PROCESSING"
                       ? "blue"
                       : broadcast?.status === "SCHEDULED"
@@ -707,6 +713,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               {isEditable ? (
                 <TextInput
                   type="number"
+                  min={1}
                   disabled={!isEditable}
                   value={broadcast?.delay_time ?? 0}
                   onChange={(val) => {

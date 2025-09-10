@@ -277,6 +277,13 @@ func main() {
 		c.Start()
 	}()
 
+	go func() {
+		c := cron.New()
+		c.AddFunc("@every 5m", func() { worker.GetStoppedBroadcasts(erpContext) })
+		worker.GetStoppedBroadcasts(erpContext)
+		c.Start()
+	}()
+
 	r.Run(":" + config.App.Server.Port)
 }
 

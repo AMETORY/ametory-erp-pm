@@ -403,6 +403,33 @@ func (b *BroadcastService) sendWithRetryHandling(
 	var success bool
 	var isNotOnWhatsapp bool
 
+	var bc models.BroadcastContacts
+	err = b.ctx.DB.Model(&models.BroadcastContacts{}).
+		Where("contact_model_id = ? AND broadcast_model_id = ?", contact.ID, broadcastID).
+		First(&bc).Error
+	if err != nil {
+		log.Println("ERROR GET BROADCAST CONTACTS", err)
+		return
+	}
+
+	if bc.IsCompleted && bc.IsSuccess {
+		return
+	}
+
+	var totalRetries int64
+	err = b.ctx.DB.Model(&models.MessageRetry{}).
+		Where("contact_id = ? AND broadcast_id = ?", contact.ID, broadcastID).
+		Count(&totalRetries).Error
+	if err != nil {
+		log.Println("ERROR GET RETRIES", err)
+		return
+	}
+
+	if totalRetries >= int64(4) {
+		log.Println("MAX RETRIES REACHED", totalRetries, ">", 4)
+		return
+	}
+
 	// USE SIMULATION
 	if config.App.Server.SimulateBroadcast {
 		if broadcast.TemplateID == nil {

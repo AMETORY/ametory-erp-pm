@@ -177,6 +177,12 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                         color={
                           broadcast?.status === "DRAFT"
                             ? "warning"
+                            : broadcast?.status === "EXPIRED"
+                            ? "red"
+                            : broadcast?.status === "STOPPED"
+                            ? "yellow"
+                            : broadcast?.status === "NOT_STARTED"
+                            ? "yellow"
                             : broadcast?.status === "PROCESSING"
                             ? "blue"
                             : broadcast?.status === "SCHEDULED"

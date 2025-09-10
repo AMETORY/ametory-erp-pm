@@ -1351,6 +1351,10 @@ func (h *WhatsappHandler) WhatsappWebhookHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if body.Sender == "status" {
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+		return
+	}
 
 	isGroup, ok := body.Info["IsGroup"].(bool)
 	if !ok {

@@ -2,6 +2,7 @@ package models
 
 import (
 	"ametory-pm/models/connection"
+	"fmt"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/shared"
@@ -35,6 +36,7 @@ type BroadcastModel struct {
 	SequenceDelayTime   int                          `json:"sequence_delay_time" gorm:"default:0"`
 	Files               []models.FileModel           `json:"files,omitempty" gorm:"-"`
 	Products            []models.ProductModel        `gorm:"many2many:broadcast_products;" json:"products,omitempty"`
+	LastBroadcastAt     *time.Time                   `json:"last_broadcast_at,omitempty" gorm:"-"`
 }
 
 func (b *BroadcastModel) BeforeCreate(tx *gorm.DB) error {
@@ -75,6 +77,63 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 	var files []models.FileModel
 	tx.Model(&models.FileModel{}).Where("ref_id = ? and ref_type = 'broadcast'", b.ID).Find(&files)
 	b.Files = files
+
+	var lastBroadcastAt time.Time
+	tx.Model(&MessageLog{}).
+		Where("broadcast_id = ?", b.ID).
+		Order("created_at DESC").
+		Limit(1).
+		Select("created_at").
+		Scan(&lastBroadcastAt)
+
+	if lastBroadcastAt.IsZero() {
+		b.LastBroadcastAt = nil
+	} else {
+		b.LastBroadcastAt = &lastBroadcastAt
+	}
+
+	var countLog int64
+	tx.Model(&MessageLog{}).Where("broadcast_id = ?", b.ID).Count(&countLog)
+
+	var contactCount int64
+	tx.Model(&BroadcastContacts{}).Where("broadcast_model_id = ?", b.ID).Count(&contactCount)
+	b.ContactCount = int(contactCount)
+	fmt.Println("b.LastBroadcastAt", b.LastBroadcastAt)
+
+	if countLog == 0 && b.ContactCount > 0 && time.Now().After(b.UpdatedAt.Add(time.Duration(b.DelayTime)*time.Second)) {
+		b.Status = "NOT_STARTED"
+	}
+	if b.Status == "PROCESSING" && b.LastBroadcastAt != nil {
+		if b.ContactCount > 0 && b.DelayTime > 0 {
+			var expectedTime time.Time
+			if b.LastBroadcastAt != nil {
+				expectedTime = time.Date(
+					b.LastBroadcastAt.Year(),
+					b.LastBroadcastAt.Month(),
+					b.LastBroadcastAt.Day(),
+					b.LastBroadcastAt.Hour(),
+					b.LastBroadcastAt.Minute(),
+					b.LastBroadcastAt.Second(),
+					0,
+					b.LastBroadcastAt.Location()).Add(time.Duration(b.DelayTime) * time.Second)
+			}
+
+			fmt.Printf("EXPECTED TIME[%v] %v, NOW %v, \n", b.Description, expectedTime, time.Now())
+			expectedTimeStr := fmt.Sprintf("atau %v hari %v jam %v menit",
+				int(time.Since(expectedTime).Hours()/24),
+				int(time.Since(expectedTime).Hours())%24,
+				int(time.Since(expectedTime).Minutes())%60)
+			fmt.Println(expectedTimeStr)
+			if time.Since(expectedTime) > 3*24*time.Hour {
+				b.Status = "EXPIRED"
+				tx.Save(b)
+			} else if time.Now().After(expectedTime) {
+				b.Status = "STOPPED"
+				// tx.Save(b)
+			}
+
+		}
+	}
 
 	return nil
 }
