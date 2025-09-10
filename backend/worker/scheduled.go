@@ -45,7 +45,7 @@ func ScheduledBroadcastWorker(erpContext *context.ERPContext) {
 			}
 			broadcastData.Status = "PROCESSING"
 			erpContext.DB.Save(&broadcastData)
-			broadcastSrv.StartBroadcast(&broadcastData)
+			broadcastSrv.StartBroadcast(&broadcastData, false)
 			// }()
 
 		}
@@ -80,7 +80,7 @@ func BroadcastWorker(erpContext *context.ERPContext) {
 					return
 				}
 				erpContext.DB.Save(&broadcastData)
-				broadcastSrv.StartBroadcast(&broadcastData)
+				broadcastSrv.StartBroadcast(&broadcastData, false)
 			}()
 
 		}

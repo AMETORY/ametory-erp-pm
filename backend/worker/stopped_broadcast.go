@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/context"
+	"gorm.io/gorm/clause"
 )
 
 func GetStoppedBroadcasts(erpContext *context.ERPContext) ([]models.BroadcastModel, error) {
@@ -22,15 +23,11 @@ func GetStoppedBroadcasts(erpContext *context.ERPContext) ([]models.BroadcastMod
 		for _, v := range broadcasts {
 			if v.Status == "STOPPED" || v.Status == "NOT_STARTED" {
 
-				broadcast, err := broadcastSrv.GetBroadcastByID(v.ID)
-				if err != nil {
-					log.Println("ERROR", err)
-					continue
-				}
-				log.Println("START RESTARTING BROADCAST", broadcast.ID, broadcast.Description)
-				broadcast.Status = "RESTARTING"
-				erpContext.DB.Save(broadcast)
-				broadcastSrv.StartBroadcast(broadcast)
+				erpContext.DB.Preload(clause.Associations).Find(&v)
+				log.Println("START RESTARTING BROADCAST", v.ID, v.Description)
+				v.Status = "RESTARTING"
+				erpContext.DB.Save(v)
+				broadcastSrv.StartBroadcast(&v, true)
 			}
 		}
 	}

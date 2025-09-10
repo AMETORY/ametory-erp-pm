@@ -230,7 +230,7 @@ func (s *BroadcastService) Send(b *models.BroadcastModel) {
 	}
 }
 
-func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel) {
+func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel, isRestarting bool) {
 	log.Println("📢 Starting broadcast", b.ID)
 
 	batches := chunkContacts(b.Contacts, b.MaxContactsPerBatch)
@@ -238,18 +238,21 @@ func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel) {
 	// utils.LogJson((batches))
 	for i, batch := range batches {
 		sender := b.Connections[i%len(b.Connections)]
-		var group = models.BroadcastGrouping{
-			BaseModel:   shared.BaseModel{ID: uuid.New().String()},
-			BroadcastID: b.ID,
-			Code:        utils.GenerateRandomNumber(6),
+		if !isRestarting {
+			var group = models.BroadcastGrouping{
+				BaseModel:   shared.BaseModel{ID: uuid.New().String()},
+				BroadcastID: b.ID,
+				Code:        utils.GenerateRandomNumber(6),
+			}
+			s.ctx.DB.Create(&group)
+			for _, v := range batch {
+				s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Updates(map[string]any{
+					"broadcast_grouping_id": group.ID,
+					"connection_model_id":   sender.ID,
+				})
+			}
 		}
-		s.ctx.DB.Create(&group)
-		for _, v := range batch {
-			s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Updates(map[string]any{
-				"broadcast_grouping_id": group.ID,
-				"connection_model_id":   sender.ID,
-			})
-		}
+
 		if (b.SequenceDelayTime > 0) && (i > 0) {
 			time.Sleep(time.Duration(b.SequenceDelayTime) * time.Second)
 		}
