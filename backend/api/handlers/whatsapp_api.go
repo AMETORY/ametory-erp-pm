@@ -348,11 +348,12 @@ func (h *WhatsappApiHandler) getMessageData(phoneNumberID string, waMsg *models.
 func (h *WhatsappApiHandler) getContact(phoneNumber string, displayName string, companyID *string) (*models.ContactModel, error) {
 	contact, err := h.contactService.GetContactByPhone(phoneNumber, *companyID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if err.Error() == "contact not found" {
 			contact = &mdl.ContactModel{
-				CompanyID: companyID,
-				Name:      displayName,
-				Phone:     &phoneNumber,
+				CompanyID:  companyID,
+				Name:       displayName,
+				Phone:      &phoneNumber,
+				IsCustomer: true,
 			}
 			if err := h.erpContext.DB.Create(contact).Error; err != nil {
 				fmt.Println("ERROR CREATE CONTACT", err)
@@ -365,7 +366,7 @@ func (h *WhatsappApiHandler) getContact(phoneNumber string, displayName string, 
 	}
 	return contact, nil
 }
-func (h *WhatsappApiHandler) getSession(phoneNumberID string, phoneNumber string, lastMessage string, companyID *string) (*objects.WhatsappApiSession, error) {
+func (h *WhatsappApiHandler) getSession(phoneNumberID string, phoneNumber string, displayName string, lastMessage string, companyID *string) (*objects.WhatsappApiSession, error) {
 	conn := connection.ConnectionModel{}
 	now := time.Now()
 	err := h.erpContext.DB.First(&conn, "session = ?", phoneNumberID).Error
@@ -374,16 +375,32 @@ func (h *WhatsappApiHandler) getSession(phoneNumberID string, phoneNumber string
 	}
 	var session mdl.WhatsappMessageSession
 	sessionName := fmt.Sprintf("%s@%s", phoneNumber, phoneNumberID)
+	var sessionContact *models.ContactModel
 	err = h.erpContext.DB.Where("session = ?", sessionName).First(&session).Error
 	if err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			var contactID *string
 			contact, err := h.contactService.GetContactByPhone(phoneNumber, *conn.CompanyID)
-			if err == nil {
-				contactID = &contact.ID
+			if err != nil {
+				if err.Error() == "contact not found" {
+					contact = &mdl.ContactModel{
+						CompanyID:  companyID,
+						Name:       displayName,
+						Phone:      &phoneNumber,
+						IsCustomer: true,
+					}
+					if err := h.erpContext.DB.Create(contact).Error; err != nil {
+						fmt.Println("ERROR CREATE CONTACT", err)
+						return nil, err
+					}
+				} else {
+					fmt.Println("ERROR GET CONTACT BY PHONE NUMBER ID", err)
+					return nil, err
+				}
 			}
 			refType := "connection"
+			sessionContact = contact
 
 			session = mdl.WhatsappMessageSession{
 				Session:      sessionName,
@@ -395,6 +412,7 @@ func (h *WhatsappApiHandler) getSession(phoneNumberID string, phoneNumber string
 				LastOnlineAt: &now,
 				LastMessage:  lastMessage,
 				ContactID:    contactID,
+				Contact:      sessionContact,
 			}
 			if err := h.erpContext.DB.Create(&session).Error; err != nil {
 				fmt.Println("ERROR CREATE WHATSAPP MESSAGE SESSION", err)

@@ -2141,19 +2141,21 @@ func (h *WhatsappHandler) GetSessionsHandler(c *gin.Context) {
 				if err == nil {
 					v.Ref = &conn
 				} else {
-					// GET EXIST CONNECTION
-					err := h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "session_name = ?", v.SessionName).Error
-					if err == nil {
-						fmt.Println("NEW CONNECTION", conn)
-						v.SessionName = conn.SessionName
-						resp, err := h.waService.GetJIDBySessionName(conn.SessionName)
+					if conn.Type == "whatsapp" {
+						// GET EXIST CONNECTION
+						err := h.erpContext.DB.Select("id, session_name, name, color").First(&conn, "session_name = ?", v.SessionName).Error
 						if err == nil {
-							v.JID = resp["jid"].(string)
+							fmt.Println("NEW CONNECTION", conn)
+							v.SessionName = conn.SessionName
+							resp, err := h.waService.GetJIDBySessionName(conn.SessionName)
+							if err == nil {
+								v.JID = resp["jid"].(string)
+							}
+							// v.JID = conn.
+							v.RefID = &conn.ID
+							v.Ref = &conn
+							h.erpContext.DB.Save(&v)
 						}
-						// v.JID = conn.
-						v.RefID = &conn.ID
-						v.Ref = &conn
-						h.erpContext.DB.Save(&v)
 					}
 
 				}
