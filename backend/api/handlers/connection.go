@@ -279,7 +279,7 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		utils.LogJson(resp)
+		// utils.LogJson(resp)
 
 		expAt := time.Now().Add(time.Duration(resp.ExpireIn) * time.Second)
 		conn.Username = requestBody["shop_id"].(string)
@@ -296,7 +296,7 @@ func (h *ConnectionHandler) AuthorizeConnectionHandler(c *gin.Context) {
 		info, err := h.shopeeService.GetShopInfo(resp.AccessToken, conn.Username)
 		if err == nil {
 			fmt.Println("INFO")
-			utils.LogJson(info)
+			// utils.LogJson(info)
 			b, err := json.Marshal(info)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -389,7 +389,7 @@ func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
 		}
 
 	}
-	utils.LogJson(input)
+	// utils.LogJson(input)
 	c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully"})
 }
 func (h *ConnectionHandler) GetQRDeviceHandler(c *gin.Context) {

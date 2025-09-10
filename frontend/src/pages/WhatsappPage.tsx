@@ -663,7 +663,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 )}
                 options={[
                   ...connections.filter(
-                    (e) => e.type === "whatsapp" && e.status === "ACTIVE"
+                    (e) => e.type === "whatsapp" || e.type === "whatsapp-api" && e.status === "ACTIVE"
                   ),
                   { id: "all", name: "Clear", session: "" },
                 ].map((e) => ({

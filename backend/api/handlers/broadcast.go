@@ -234,7 +234,7 @@ func (h *BroadcastHandler) AddContactFromFileHandler(c *gin.Context) {
 		return
 	}
 
-	utils.LogJson(contacts)
+	// utils.LogJson(contacts)
 	fmt.Println("contacts", len(contacts))
 	if err := h.broadcastServ.AddContact(id, contacts); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

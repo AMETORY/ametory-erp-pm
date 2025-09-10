@@ -2395,6 +2395,7 @@ func (h *WhatsappHandler) GetSessionMessagesHandler(c *gin.Context) {
 		return
 	}
 
+	utils.LogJson(session)
 	messages, err := h.cacheService.Remember("wa-msg-"+sessionId, 3*time.Second, func() (paginate.Page, error) {
 		return h.customerRelationshipService.WhatsappService.GetMessageSessionChatBySessionName(session.Session, "", session.ContactID, *c.Request)
 	})
