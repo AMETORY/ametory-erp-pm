@@ -10,12 +10,15 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"net/mail"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/auth"
@@ -41,6 +44,8 @@ import (
 
 	tiktok "tiktokshop/open/sdk_golang/service"
 
+	mdl "ametory-pm/models"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,7 +64,7 @@ func main() {
 		}
 	}
 
-	ctx := ctx.Background()
+	golangCtx := ctx.Background()
 	t := time.Now()
 	filename := t.Format("2006-01-02")
 	logDir := "log"
@@ -117,7 +122,7 @@ func main() {
 	if os.Getenv("MIGRATION") != "" {
 		skipMigration = false
 	}
-	erpContext := context.NewERPContext(db, nil, &ctx, skipMigration)
+	erpContext := context.NewERPContext(db, nil, &golangCtx, skipMigration)
 	authService := auth.NewAuthService(erpContext)
 	erpContext.AuthService = authService
 
@@ -278,13 +283,53 @@ func main() {
 	}()
 
 	go func() {
-		c := cron.New()
-		c.AddFunc("@every 5m", func() { worker.GetStoppedBroadcasts(erpContext) })
+		// c := cron.New()
+		// c.AddFunc("@every 5m", func() { worker.GetStoppedBroadcasts(erpContext, false) })
 		worker.GetStoppedBroadcasts(erpContext)
-		c.Start()
+		// c.Start()
 	}()
 
-	r.Run(":" + config.App.Server.Port)
+	// Jalankan server di goroutine agar tidak memblokir
+	srv := &http.Server{
+		Addr:    ":" + config.App.Server.Port,
+		Handler: r,
+	}
+
+	go func() {
+		// Service connections
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	// Tunggu sinyal interrupt untuk graceful shutdown.
+	quit := make(chan os.Signal, 1)
+	// Menerima sinyal SIGINT dan SIGTERM
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Di sini Anda bisa menambahkan perintah atau logika yang ingin dijalankan sebelum server mati.
+	// Contoh: menutup koneksi database, menyelesaikan worker, dll.
+	log.Println("Running cleanup tasks before shutdown...")
+	// erpContext.DB.Close() // Contoh: menutup koneksi DB jika diperlukan
+
+	// Set all PROCESSING broadcasts to STOPPED on startup
+	log.Println("Updating all PROCESSING broadcasts to STOPPED status...")
+	if err := erpContext.DB.Model(&mdl.BroadcastModel{}).Where("status IN (?)", []string{"PROCESSING", "RESTARTING"}).Debug().Updates(map[string]interface{}{"status": "STOPPED"}).Error; err != nil {
+		log.Printf("Error updating broadcast statuses: %v\n", err)
+	} else {
+		log.Println("Successfully updated broadcast statuses.")
+	}
+
+	// Batas waktu 5 detik untuk server menyelesaikan request yang sedang berjalan.
+	shutdownCtx, cancel := ctx.WithTimeout(ctx.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatal("Server forced to shutdown: ", err)
+	}
+
+	log.Println("Server exiting")
 }
 
 func getCurrentMachineID() string {

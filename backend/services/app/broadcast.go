@@ -252,7 +252,7 @@ func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel, isRestarting
 				})
 			}
 		}
-
+		log.Println("📢 Sending batch", i+1, "of", len(batch))
 		if (b.SequenceDelayTime > 0) && (i > 0) {
 			time.Sleep(time.Duration(b.SequenceDelayTime) * time.Second)
 		}
@@ -264,6 +264,9 @@ func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel, isRestarting
 
 func (s *BroadcastService) sendBatchWithDelay(sender connection.ConnectionModel, broadcastID string, contacts []mdl.ContactModel, delay time.Duration) {
 	for _, contact := range contacts {
+		if contact.Phone != nil {
+			log.Println("READY TO SEND BROADCAST TO", contact.Name, *contact.Phone)
+		}
 		s.sendWithRetryHandling(
 			sender,
 			broadcastID,
@@ -402,9 +405,6 @@ func (b *BroadcastService) sendWithRetryHandling(
 		fmt.Println("ERROR GET BROADCAST", err)
 		return
 	}
-	time.Sleep(delay)
-	var success bool
-	var isNotOnWhatsapp bool
 
 	var bc models.BroadcastContacts
 	err = b.ctx.DB.Model(&models.BroadcastContacts{}).
@@ -416,6 +416,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 	}
 
 	if bc.IsCompleted && bc.IsSuccess {
+		log.Println(contact.ID, "[NOT SENT]", contact.Name, "ALREADY COMPLETED")
 		return
 	}
 
@@ -432,6 +433,13 @@ func (b *BroadcastService) sendWithRetryHandling(
 		log.Println("MAX RETRIES REACHED", totalRetries, ">", 4)
 		return
 	}
+	if delay > 0 {
+		log.Printf("📢 Sending batch  @%v at %v\n", contact.Name, time.Now().Add(delay).Format("2006-01-02 15:04:05"))
+	}
+
+	time.Sleep(delay)
+	var success bool
+	var isNotOnWhatsapp bool
 
 	// USE SIMULATION
 	if config.App.Server.SimulateBroadcast {
@@ -454,12 +462,14 @@ func (b *BroadcastService) sendWithRetryHandling(
 	} else {
 
 		fmt.Println("PREPARE TO SEND BROADCAST", contact.Name)
+		log.Println("PREPARE TO SEND BROADCAST", contact.Name)
 
 		// USE REAL API
 		if contact.Phone != nil {
 			// GET SESSION
 
 			fmt.Println("WITH PHONE NUMBER", *contact.Phone)
+			log.Println("WITH PHONE NUMBER", *contact.Phone)
 			if sender.Type != "whatsapp-api" {
 				resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
 				if err != nil {
@@ -825,7 +835,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ? and is_completed = ?", broadcastID, true).Count(&completedCount)
 	var contactCount int64
 	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ?", broadcastID).Count(&contactCount)
-	fmt.Println("COUNT", completedCount, contactCount)
+	log.Println("COUNT", completedCount, contactCount)
+	log.Printf("COUNT COMPLETED :%d, \n TOTAL CONTACT : %d\n", completedCount, contactCount)
 	if completedCount == contactCount {
 		b.ctx.DB.Where("id = ?", broadcastID).Model(&broadcast).Update("status", "COMPLETED")
 		msg := map[string]any{
