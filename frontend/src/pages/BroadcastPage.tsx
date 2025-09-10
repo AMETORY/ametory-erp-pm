@@ -185,6 +185,8 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
                             ? "yellow"
                             : broadcast?.status === "PROCESSING"
                             ? "blue"
+                            : broadcast?.status === "RESTARTING"
+                            ? "blue"
                             : broadcast?.status === "SCHEDULED"
                             ? "purple"
                             : broadcast?.status === "FAILED"

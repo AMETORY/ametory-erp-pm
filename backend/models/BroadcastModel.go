@@ -103,7 +103,7 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 	if countLog == 0 && b.ContactCount > 0 && time.Now().After(b.UpdatedAt.Add(time.Duration(b.DelayTime)*time.Second)) {
 		b.Status = "NOT_STARTED"
 	}
-	if b.Status == "PROCESSING" && b.LastBroadcastAt != nil {
+	if (b.Status == "PROCESSING" || b.Status == "RESTARTING" || b.Status == "STOPPED") && b.LastBroadcastAt != nil {
 		if b.ContactCount > 0 && b.DelayTime > 0 {
 			var expectedTime time.Time
 			if b.LastBroadcastAt != nil {
@@ -127,7 +127,7 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 			if time.Since(expectedTime) > 3*24*time.Hour {
 				b.Status = "EXPIRED"
 				tx.Save(b)
-			} else if time.Now().After(expectedTime) {
+			} else if time.Now().After(expectedTime) && b.Status != "RESTARTING" {
 				b.Status = "STOPPED"
 				// tx.Save(b)
 			}

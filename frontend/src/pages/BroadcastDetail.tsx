@@ -655,6 +655,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                       ? "yellow"
                       : broadcast?.status === "PROCESSING"
                       ? "blue"
+                      : broadcast?.status === "RESTARTING"
+                      ? "blue"
                       : broadcast?.status === "SCHEDULED"
                       ? "purple"
                       : broadcast?.status === "FAILED"
@@ -892,7 +894,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 }}
               />
             )}
-            {broadcast?.status === "PROCESSING" && (
+            {(broadcast?.status === "PROCESSING" || broadcast?.status === "STOPPED" || broadcast?.status === "RESTARTING") && (
               <Chart
                 chartType="PieChart"
                 width="100%"
@@ -1079,7 +1081,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   </Table.Cell>
                   <Table.Cell className="w-32">
                     {(broadcast?.status === "COMPLETED" ||
-                      broadcast?.status === "PROCESSING") && (
+                      broadcast?.status === "PROCESSING"  || broadcast?.status === "STOPPED" || broadcast?.status === "RESTARTING") && (
                       <div className="flex gap-2">
                         <ul>
                           <li className="flex gap-2 w-full justify-between">
