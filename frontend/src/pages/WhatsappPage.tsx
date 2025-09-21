@@ -59,6 +59,7 @@ import moment from "moment";
 import { PiExport } from "react-icons/pi";
 import { SearchContext } from "../contexts/SearchContext";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import WhatsappSessionList from "../components/WhatsappSessionList";
 interface WhatsappPageProps {}
 
 const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
@@ -87,9 +88,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
   const [message, setMessage] = useState("");
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
   const [tags, setTags] = useState<TagModel[]>([]);
-  const [selectedSession, setSelectedSession] =
-    useState<WhatsappMessageSessionModel>();
-  const [modalInfo, setModalInfo] = useState(false);
+  
   const [downloadModal, setDownloadModal] = useState(false);
   const [modalDateOpen, setModalDateOpen] = useState(false);
   const { search, setSearch } = useContext(SearchContext);
@@ -156,7 +155,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
 
   useEffect(() => {
     if (mounted) {
-      getAllSessions();
+      // getAllSessions();
     }
   }, [
     mounted,
@@ -195,56 +194,56 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     }
   };
 
-  useEffect(() => {
-    if (timeout.current) {
-      window.clearTimeout(timeout.current);
-    }
+  // useEffect(() => {
+  //   if (timeout.current) {
+  //     window.clearTimeout(timeout.current);
+  //   }
 
-    timeout.current = window.setTimeout(() => {
-      if (wsMsg?.command === "WHATSAPP_CLEAR_MESSAGE") {
-        getAllSessions();
-      } else if (
-        wsMsg?.command === "WHATSAPP_RECEIVED" ||
-        wsMsg?.command === "WHATSAPP_MESSAGE_READ" ||
-        wsMsg?.command === "UPDATE_SESSION"
-      ) {
-        if (wsMsg?.session_id) {
-          getWhatsappSessionDetail(wsMsg?.session_id).then((resp: any) => {
-            // console.log("SESSION DATA", resp.data);
-            if (sessions.length === 0) {
-              setSessions([resp.data]);
-              return;
-            }
+  //   timeout.current = window.setTimeout(() => {
+  //     if (wsMsg?.command === "WHATSAPP_CLEAR_MESSAGE") {
+  //       getAllSessions();
+  //     } else if (
+  //       wsMsg?.command === "WHATSAPP_RECEIVED" ||
+  //       wsMsg?.command === "WHATSAPP_MESSAGE_READ" ||
+  //       wsMsg?.command === "UPDATE_SESSION"
+  //     ) {
+  //       if (wsMsg?.session_id) {
+  //         getWhatsappSessionDetail(wsMsg?.session_id).then((resp: any) => {
+  //           // console.log("SESSION DATA", resp.data);
+  //           if (sessions.length === 0) {
+  //             setSessions([resp.data]);
+  //             return;
+  //           }
 
-            let sessionData: WhatsappMessageSessionModel[] = sessions.map(
-              (s) => {
-                if (s.id === resp.data.id) {
-                  return resp.data;
-                }
-                return s;
-              }
-            );
-            sessionData.sort(
-              (a, b) =>
-                moment(b.last_online_at ?? new Date()).unix() -
-                moment(a.last_online_at ?? new Date()).unix()
-            );
+  //           let sessionData: WhatsappMessageSessionModel[] = sessions.map(
+  //             (s) => {
+  //               if (s.id === resp.data.id) {
+  //                 return resp.data;
+  //               }
+  //               return s;
+  //             }
+  //           );
+  //           sessionData.sort(
+  //             (a, b) =>
+  //               moment(b.last_online_at ?? new Date()).unix() -
+  //               moment(a.last_online_at ?? new Date()).unix()
+  //           );
 
-            // for (const element of sessionData) {
-            //   console.log(
-            //     element.contact?.name,
-            //     element.contact?.phone,
-            //     element.last_message
-            //   );
-            // }
-            setSessions(sessionData);
-          });
-        } else {
-          getAllSessions();
-        }
-      }
-    }, 500);
-  }, [wsMsg, profile, sessionId]);
+  //           // for (const element of sessionData) {
+  //           //   console.log(
+  //           //     element.contact?.name,
+  //           //     element.contact?.phone,
+  //           //     element.last_message
+  //           //   );
+  //           // }
+  //           setSessions(sessionData);
+  //         });
+  //       } else {
+  //         getAllSessions();
+  //       }
+  //     }
+  //   }, 500);
+  // }, [wsMsg, profile, sessionId]);
 
   const getAllContact = async (s: string) => {
     try {
@@ -260,41 +259,41 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
     }
   };
 
-  const getAllSessions = async (p?: number) => {
-    try {
-      setIsLoading(true);
-      // console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
-      // console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
-      // setLoading(true);
-      let params: PaginationRequest = {
-        page: p ?? (search == "" ? 1 : page),
-        size,
-        search,
-        tag_ids: selectedTags.map((t) => t.id).join(","),
-        is_unread: selectedFilters.some((f) => f.value == "unread")
-          ? true
-          : null,
-        is_unreplied: selectedFilters.some((f) => f.value == "unreplied")
-          ? true
-          : null,
-      };
-      if (sessionTypeSelected != "") {
-        params["type"] = sessionTypeSelected;
-      }
-      if (selectedFilterConnection) {
-        params["connection_session"] = selectedFilterConnection.session_name;
-      }
+  // const getAllSessions = async (p?: number) => {
+  //   try {
+  //     setIsLoading(true);
+  //     // console.log("unread", selectedFilters.some((f) => f.value == "unread") && null);
+  //     // console.log("unreplied", selectedFilters.some((f) => f.value == "unreplied") && null);
+  //     // setLoading(true);
+  //     let params: PaginationRequest = {
+  //       page: p ?? (search == "" ? 1 : page),
+  //       size,
+  //       search,
+  //       tag_ids: selectedTags.map((t) => t.id).join(","),
+  //       is_unread: selectedFilters.some((f) => f.value == "unread")
+  //         ? true
+  //         : null,
+  //       is_unreplied: selectedFilters.some((f) => f.value == "unreplied")
+  //         ? true
+  //         : null,
+  //     };
+  //     if (sessionTypeSelected != "") {
+  //       params["type"] = sessionTypeSelected;
+  //     }
+  //     if (selectedFilterConnection) {
+  //       params["connection_session"] = selectedFilterConnection.session_name;
+  //     }
 
-      const resp: any = await getWhatsappSessions(sessionId ?? "", params);
-      setSessions(p ? [...sessions, ...resp.data.items] : resp.data.items);
-      setPagination(getPagination(resp.data));
-    } catch (error) {
-      toast.error(`${error}`);
-    } finally {
-      // setLoading(false);
-      setIsLoading(false);
-    }
-  };
+  //     const resp: any = await getWhatsappSessions(sessionId ?? "", params);
+  //     setSessions(p ? [...sessions, ...resp.data.items] : resp.data.items);
+  //     setPagination(getPagination(resp.data));
+  //   } catch (error) {
+  //     toast.error(`${error}`);
+  //   } finally {
+  //     // setLoading(false);
+  //     setIsLoading(false);
+  //   }
+  // };
   return (
     <AdminLayout>
       <div className="p-4 flex flex-col h-full ">
@@ -336,7 +335,15 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </div>
         <div className="flex flex-row w-full h-full flex-1 gap-2">
-          <div
+          <WhatsappSessionList
+            sessionId={sessionId}
+            selectedTags={selectedTags}
+            selectedFilters={selectedFilters}
+            sessionTypeSelected={sessionTypeSelected}
+            selectedFilterConnection={selectedFilterConnection}
+            
+          />
+          {/* <div
             className="w-[300px]"
             style={{
               height: "calc(100vh - 160px)",
@@ -512,7 +519,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 </div>
               )}
             </ul>
-          </div>
+          </div> */}
           <div className="w-full border-l relative">
             {sessionId && <WhatsappMessages sessionId={sessionId} />}
           </div>
@@ -663,7 +670,9 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
                 )}
                 options={[
                   ...connections.filter(
-                    (e) => e.type === "whatsapp" || e.type === "whatsapp-api" && e.status === "ACTIVE"
+                    (e) =>
+                      e.type === "whatsapp" ||
+                      (e.type === "whatsapp-api" && e.status === "ACTIVE")
                   ),
                   { id: "all", name: "Clear", session: "" },
                 ].map((e) => ({
@@ -752,21 +761,7 @@ const WhatsappPage: FC<WhatsappPageProps> = ({}) => {
           </div>
         </Drawer.Items>
       </Drawer>
-      <ModalSession
-        type="whatsapp"
-        show={modalInfo}
-        onClose={() => setModalInfo(false)}
-        onSave={async (val) => {
-          console.log(val);
-          try {
-            await updateContact(val?.contact!.id!, val?.contact);
-            await updateWhatsappSession(val?.id!, val);
-            getAllSessions();
-            setModalInfo(false);
-          } catch (error) {}
-        }}
-        session={selectedSession}
-      />
+      
       <Modal show={downloadModal} onClose={() => setDownloadModal(false)}>
         <Modal.Header>
           <h3 className="text-lg font-semibold">Export</h3>

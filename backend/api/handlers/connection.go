@@ -389,6 +389,12 @@ func (h *ConnectionHandler) UpdateConnectionHandler(c *gin.Context) {
 		}
 
 	}
+	if !input.IsAutoPilot {
+		h.ctx.DB.Model(&input).Where("id = ?", id).Update("is_auto_pilot", false)
+	}
+	if input.AiAgentID == nil {
+		h.ctx.DB.Model(&input).Where("id = ?", id).Update("ai_agent_id", nil)
+	}
 	// utils.LogJson(input)
 	c.JSON(http.StatusOK, gin.H{"message": "Connection updated successfully"})
 }

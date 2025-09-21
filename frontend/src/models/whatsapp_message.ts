@@ -50,6 +50,9 @@ export interface WhatsappMessageSessionModel {
   is_human_agent?: boolean;
   count_unread?: number;
   ref?: ConnectionModel;
+  is_group?: boolean;
+  ref_id?: string;
+  ref_type?: string;
 }
 
 

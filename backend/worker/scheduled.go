@@ -35,18 +35,18 @@ func ScheduledBroadcastWorker(erpContext *context.ERPContext) {
 				continue
 			}
 			log.Println("BROADCAST SCHEDULED", broadcastData.Description, broadcastData.ScheduledAt.Format("2006-01-02 15:04:05"))
-			// go func() {
-			time.Sleep(time.Until(*broadcastData.ScheduledAt))
+			go func(b models.BroadcastModel) {
+				time.Sleep(time.Until(*b.ScheduledAt))
 
-			err = erpContext.DB.First(&broadcastData, "id = ?", broadcastData.ID).Error
-			if err != nil {
-				log.Println("ERROR", err)
-				return
-			}
-			broadcastData.Status = "PROCESSING"
-			erpContext.DB.Save(&broadcastData)
-			broadcastSrv.StartBroadcast(&broadcastData, false)
-			// }()
+				err = erpContext.DB.First(&b, "id = ?", b.ID).Error
+				if err != nil {
+					log.Println("ERROR", err)
+					return
+				}
+				b.Status = "PROCESSING"
+				erpContext.DB.Save(&b)
+				broadcastSrv.StartBroadcast(&b, false, nil) // Melewatkan nil untuk WaitGroup
+			}(broadcastData)
 
 		}
 	}
@@ -72,16 +72,16 @@ func BroadcastWorker(erpContext *context.ERPContext) {
 				continue
 			}
 			log.Println("BROADCAST NOW", broadcastData.Description, time.Now().Format("2006-01-02 15:04:05"))
-			go func() {
-				broadcastData.Status = "PROCESSING"
-				err := erpContext.DB.First(&broadcastData, "id = ?", broadcastData.ID).Error
+			go func(b models.BroadcastModel) {
+				b.Status = "PROCESSING"
+				err := erpContext.DB.First(&b, "id = ?", b.ID).Error
 				if err != nil {
 					log.Println("ERROR", err)
 					return
 				}
-				erpContext.DB.Save(&broadcastData)
-				broadcastSrv.StartBroadcast(&broadcastData, false)
-			}()
+				erpContext.DB.Save(&b)
+				broadcastSrv.StartBroadcast(&b, false, nil) // Melewatkan nil untuk WaitGroup
+			}(broadcastData)
 
 		}
 	}

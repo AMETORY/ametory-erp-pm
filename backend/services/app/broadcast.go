@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net/http"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
@@ -230,35 +231,45 @@ func (s *BroadcastService) Send(b *models.BroadcastModel) {
 	}
 }
 
-func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel, isRestarting bool) {
+func (s *BroadcastService) StartBroadcast(b *models.BroadcastModel, isRestarting bool, parentWg *sync.WaitGroup) {
+	if parentWg != nil {
+		defer func() {
+			log.Println("📢 Done with broadcast", b.ID)
+			parentWg.Done() // Pastikan Done() dipanggil saat seluruh proses broadcast ini selesai
+		}()
+	}
+
 	log.Println("📢 Starting broadcast", b.ID)
 
 	batches := chunkContacts(b.Contacts, b.MaxContactsPerBatch)
 	log.Println("📢 Number of batches", len(batches), "<>", b.MaxContactsPerBatch)
-	// utils.LogJson((batches))
+
+	var batchWg sync.WaitGroup // WaitGroup untuk menunggu semua batch dalam broadcast ini selesai
+
 	for i, batch := range batches {
 		sender := b.Connections[i%len(b.Connections)]
 		if !isRestarting {
+			// ... (logika grouping tetap di sini)
 			var group = models.BroadcastGrouping{
 				BaseModel:   shared.BaseModel{ID: uuid.New().String()},
 				BroadcastID: b.ID,
 				Code:        utils.GenerateRandomNumber(6),
 			}
 			s.ctx.DB.Create(&group)
-			for _, v := range batch {
-				s.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ?", v.ID).Updates(map[string]any{
-					"broadcast_grouping_id": group.ID,
-					"connection_model_id":   sender.ID,
-				})
-			}
 		}
 		log.Println("📢 Sending batch", i+1, "of", len(batch))
 		if (b.SequenceDelayTime > 0) && (i > 0) {
 			time.Sleep(time.Duration(b.SequenceDelayTime) * time.Second)
 		}
 
-		s.sendBatchWithDelay(sender, b.ID, batch, time.Duration(b.DelayTime)*time.Second)
+		batchWg.Add(1)
+		go func(currentBatch []mdl.ContactModel, currentSender connection.ConnectionModel) {
+			defer batchWg.Done()
+			s.sendBatchWithDelay(currentSender, b.ID, currentBatch, time.Duration(b.DelayTime)*time.Second)
+		}(batch, sender)
 	}
+
+	batchWg.Wait() // Tunggu semua batch selesai
 	s.StartRetrySchedulers(*b)
 }
 
@@ -402,8 +413,13 @@ func (b *BroadcastService) sendWithRetryHandling(
 
 	broadcast, err := b.GetBroadcastByID(broadcastID)
 	if err != nil {
-		fmt.Println("ERROR GET BROADCAST", err)
+		fmt.Println(broadcast.Description, "ERROR GET BROADCAST", err)
 		return
+	}
+
+	phoneNumber := ""
+	if contact.Phone != nil {
+		phoneNumber = *contact.Phone
 	}
 
 	var bc models.BroadcastContacts
@@ -411,12 +427,12 @@ func (b *BroadcastService) sendWithRetryHandling(
 		Where("contact_model_id = ? AND broadcast_model_id = ?", contact.ID, broadcastID).
 		First(&bc).Error
 	if err != nil {
-		log.Println("ERROR GET BROADCAST CONTACTS", err)
+		log.Println(broadcast.Description, "ERROR GET BROADCAST CONTACTS", err)
 		return
 	}
 
 	if bc.IsCompleted && bc.IsSuccess {
-		log.Println(contact.ID, "[NOT SENT]", contact.Name, "ALREADY COMPLETED")
+		log.Println(broadcast.Description, contact.Name, phoneNumber, "[NOT SENT]", contact.Name, "ALREADY COMPLETED")
 		return
 	}
 
@@ -425,16 +441,19 @@ func (b *BroadcastService) sendWithRetryHandling(
 		Where("contact_id = ? AND broadcast_id = ?", contact.ID, broadcastID).
 		Count(&totalRetries).Error
 	if err != nil {
-		log.Println("ERROR GET RETRIES", err)
+		log.Println(broadcast.Description, contact.Name, phoneNumber, "ERROR GET RETRIES", err)
 		return
 	}
 
 	if totalRetries >= int64(4) {
-		log.Println("MAX RETRIES REACHED", totalRetries, ">", 4)
+		log.Println(broadcast.Description, contact.Name, phoneNumber, "MAX RETRIES REACHED", totalRetries, ">", 4)
 		return
 	}
+
 	if delay > 0 {
-		log.Printf("📢 Sending batch  @%v at %v\n", contact.Name, time.Now().Add(delay).Format("2006-01-02 15:04:05"))
+		log.Printf("[%v] 📢 Sending batch  %v@%v at %v\n", broadcast.Description, contact.Name, phoneNumber, time.Now().Add(delay).Format("2006-01-02 15:04:05"))
+	} else {
+		log.Printf("[%v] 📢 Sending batch  %v@%v at %v\n", broadcast.Description, contact.Name, phoneNumber, time.Now().Format("2006-01-02 15:04:05"))
 	}
 
 	time.Sleep(delay)
@@ -461,15 +480,12 @@ func (b *BroadcastService) sendWithRetryHandling(
 		}
 	} else {
 
-		fmt.Println("PREPARE TO SEND BROADCAST", contact.Name)
-		log.Println("PREPARE TO SEND BROADCAST", contact.Name)
-
 		// USE REAL API
 		if contact.Phone != nil {
 			// GET SESSION
 
-			fmt.Println("WITH PHONE NUMBER", *contact.Phone)
-			log.Println("WITH PHONE NUMBER", *contact.Phone)
+			fmt.Println(broadcast.Description, "PREPARE TO SEND BROADCAST", contact.Name, "WITH PHONE NUMBER", *contact.Phone)
+			log.Println(broadcast.Description, "PREPARE TO SEND BROADCAST", contact.Name, "WITH PHONE NUMBER", *contact.Phone, "WITH CONNECTION", sender.Name)
 			if sender.Type != "whatsapp-api" {
 				resp, err := b.whatsmeowService.CheckNumber(sender.Session, *contact.Phone)
 				if err != nil {
@@ -553,7 +569,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 							err := b.appService.SendTemplateMessageWhatsappAPI(b.customerRelationshipService, b.metaService, &sender, msgData, session, broadcast.Member, broadcast.Files, broadcast.Products, intData)
 							// err := SendWhatsappApiContactMessage(sender, contact, parsedMsg, nil, broadcast.Files)
 							if err != nil {
-								log.Println("ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
+								log.Println(broadcast.Description, "ERROR SEND MESSAGE REGULAR (WHATSAPP API)", err)
 								success = false
 							}
 						} else {
@@ -566,7 +582,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 							b.customerRelationshipService.WhatsappService.SetMsgData(b.whatsmeowService, &msgData, *contact.Phone, v.Files, v.Products, false, nil)
 							_, err := customer_relationship.SendCustomerServiceMessage(b.customerRelationshipService.WhatsappService)
 							if err != nil {
-								log.Println("ERROR SEND MESSAGE REGULAR", err)
+								log.Println(broadcast.Description, "ERROR SEND MESSAGE REGULAR", err)
 								success = false
 							}
 						}
@@ -799,7 +815,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 		logHandler(msgLog)
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", true)
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
-		log.Println("Message sent successfully to", contact.Name, *contact.Phone, "with message \n", convMsg)
+		log.Println(broadcast.Description, "Message sent successfully to", contact.Name, *contact.Phone, "with message \n", convMsg)
 
 	} else {
 		b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_success", false)
@@ -808,18 +824,18 @@ func (b *BroadcastService) sendWithRetryHandling(
 			msgLog.ErrorMessage = "number is not registered on whatsapp"
 			logHandler(msgLog)
 			b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
-			log.Println("Message  error (number is not registered on whatsapp)", contact.Name, *contact.Phone, "with message \n", convMsg)
+			log.Println(broadcast.Description, "Message  error (number is not registered on whatsapp)", contact.Name, *contact.Phone, "with message \n", convMsg)
 		} else if attempt >= 3 {
 			msgLog.Status = "undeliverable"
 			msgLog.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
 			logHandler(msgLog)
 			b.ctx.DB.Model(&models.BroadcastContacts{}).Where("contact_model_id = ? and broadcast_model_id = ?", contact.ID, broadcastID).Update("is_completed", true)
-			log.Println("Message  error (undeliverable)", contact.Name, *contact.Phone, "with message \n", convMsg)
+			log.Println(broadcast.Description, "Message  error (undeliverable)", contact.Name, *contact.Phone, "with message \n", convMsg)
 		} else {
 			msgLog.Status = "failed"
 			msgLog.ErrorMessage = fmt.Sprintf("attempt %d failed", attempt)
 			logHandler(msgLog)
-			log.Println("Message  error (try to send)", contact.Name, *contact.Phone, "with message \n", convMsg)
+			log.Println(broadcast.Description, "Message  error (try to send)", contact.Name, *contact.Phone, "with message \n", convMsg)
 			retryHandler(models.MessageRetry{
 				BroadcastID: broadcastID,
 				Contact:     contact,
@@ -835,7 +851,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ? and is_completed = ?", broadcastID, true).Count(&completedCount)
 	var contactCount int64
 	b.ctx.DB.Model(&models.BroadcastContacts{}).Where(" broadcast_model_id = ?", broadcastID).Count(&contactCount)
-	log.Println("COUNT", completedCount, contactCount)
+	log.Println(broadcast.Description, "COUNT", completedCount, contactCount)
 	log.Printf("COUNT COMPLETED :%d, \n TOTAL CONTACT : %d\n", completedCount, contactCount)
 	if completedCount == contactCount {
 		b.ctx.DB.Where("id = ?", broadcastID).Model(&broadcast).Update("status", "COMPLETED")

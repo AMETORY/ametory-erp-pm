@@ -24,14 +24,14 @@ func GetStoppedBroadcasts(erpContext *context.ERPContext) ([]models.BroadcastMod
 		var wg sync.WaitGroup // 1. Inisialisasi WaitGroup
 		for _, v := range broadcasts {
 			broadcast := v // Buat salinan dari v untuk setiap iterasi
-			wg.Add(1)      // 2. Tambah hitungan untuk setiap goroutine
+			log.Println("ADD WAIT GROUP FOR BROADCAST", broadcast.ID, broadcast.Description)
+			wg.Add(1) // 2. Tambah hitungan untuk setiap goroutine
 			go func(b models.BroadcastModel) {
-				defer wg.Done() // 3. Pastikan Done() dipanggil saat goroutine selesai
 				erpContext.DB.Preload(clause.Associations).Find(&b)
 				log.Println("START RESTARTING BROADCAST", b.ID, b.Description)
 				b.Status = "PROCESSING"
 				erpContext.DB.Save(&b)
-				broadcastSrv.StartBroadcast(&b, true)
+				broadcastSrv.StartBroadcast(&b, true, &wg)
 			}(broadcast) // Lewatkan salinan ke goroutine
 		}
 		wg.Wait() // 4. Tunggu semua goroutine selesai
