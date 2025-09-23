@@ -1,5 +1,5 @@
-import { Button } from "flowbite-react";
-import { useEffect, useState, type FC } from "react";
+import { Button, Label } from "flowbite-react";
+import { useEffect, useRef, useState, type FC } from "react";
 import { BsCamera, BsCart, BsTrash } from "react-icons/bs";
 import { HiOutlineDocumentAdd } from "react-icons/hi";
 import { IoDocumentsOutline } from "react-icons/io5";
@@ -22,11 +22,19 @@ import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { AiOutlineFile, AiOutlineLink } from "react-icons/ai";
 import { interactiveTypes } from "../utils/constants";
+import { ConnectionModel } from "../models/connection";
+import { getConnections } from "../services/api/connectionApi";
+import { getAllMessageTemplates } from "../services/api/whatsappApi";
+import { WhatsappAPITemplate } from "../models/whatsapp_api_template";
+import Markdown from "react-markdown";
+import WhatsappTemplateViewer from "./WhatsappTemplateViewer";
 
 interface MessageTemplateFieldProps {
   index: number;
   title: string;
   body: string;
+  templateType: string;
+  onChangeTemplateType?: (val: string) => void;
   onChangeBody: (val: string) => void;
   onClickEmoji: () => void;
   files: FileModel[];
@@ -46,12 +54,22 @@ interface MessageTemplateFieldProps {
   disableInteractive?: boolean;
   msgId?: string;
   templateId?: string;
+  businessID?: string;
+  onBusinessIDChange?: (id: string) => void;
+  whatsappTemplateID?: string;
+  onWhatsappTemplateChange?: (id: string) => void;
+  whatsappTemplateMappingParams?: any[];
+  onChangeWhatsappTemplateMappingParams?: (params: any[]) => void;
+  headerImageUrl?: string;
+  onChangeHeaderImageUrl?: (url: string) => void;
 }
 
 const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
   index,
   title,
   body,
+  templateType,
+  onChangeTemplateType,
   onChangeBody,
   onClickEmoji,
   onUploadImage,
@@ -69,8 +87,30 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
   onEditInteractive,
   interactive,
   msgId,
+  businessID,
   templateId,
+  onBusinessIDChange,
+  whatsappTemplateID,
+  onWhatsappTemplateChange,
+  whatsappTemplateMappingParams = [],
+  onChangeWhatsappTemplateMappingParams,
+  headerImageUrl,
+  onChangeHeaderImageUrl,
 }) => {
+  const [connections, setConnections] = useState<ConnectionModel[]>([]);
+  const [waTemplates, setWaTemplates] = useState<WhatsappAPITemplate[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!templateId) return;
+    getConnections({
+      page: 1,
+      size: 10,
+      search: "",
+      type: "whatsapp-api",
+    }).then((res: any) => {
+      setConnections(res.data);
+    });
+  }, [templateId]);
   const [selectedInteractive, setSelectedInteractive] =
     useState<WhatsappInteractiveModel>();
   useEffect(() => {
@@ -78,337 +118,425 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
     if (!msgId) return;
     getInteractiveTemplate(templateId!, msgId)
       .then((res: any) => {
-        console.log(res);
+        // console.log(res);
         setSelectedInteractive(res.data);
       })
       .catch(toast.error);
   }, [msgId]);
+
+  useEffect(() => {
+    if (businessID) {
+      getAllMessageTemplates(businessID).then((res: any) => {
+        setWaTemplates(res.data);
+      });
+    }
+  }, [businessID]);
+
+  const msgParams = [
+    { id: "{{user}}", display: "Full Name" },
+    { id: "{{phone}}", display: "Phone Number" },
+    { id: "{{agent}}", display: "Agent Name" },
+    { id: "{{product}}", display: "Product" },
+  ];
   return (
     <div className="bg-gray-50 rounded-lg p-4 flex flex-col mb-8">
-      <h4 className="font-semibold">{title}</h4>
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-semibold">{title}</h4>
+        <select
+          name="templateType"
+          id="templateType"
+          className="p-2 select border rounded-md border-gray-400"
+          value={templateType}
+          onChange={(e) => onChangeTemplateType?.(e.target.value)}
+        >
+          <option value="whatsapp">Whatsapp</option>
+          <option value="whatsapp-api">Whatsapp API</option>
+        </select>
+      </div>
 
-      {!selectedInteractive && (
-        <>
-          {readonly ? (
-            <div className="p-4 bg-white">
-              {parseMentions(body ?? "", (type, id) => {})}
-            </div>
-          ) : (
-            <MessageMention
-              msg={body}
-              onChange={(val: any) => {
-                onChangeBody(val.target.value);
-              }}
-              onClickEmoji={onClickEmoji}
-              onSelectEmoji={(emoji: string) => {
-                onChangeBody(`${body}${emoji}`);
-              }}
-            />
-          )}
-          <div className="mt-8">
-            <h4 className="font-semibold">Files</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col justify-center items-center p-2 rounded-lg bg-white relative">
-                <div
-                  className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 w-full h-full flex justify-center items-center p-16"
-                  onClick={() => {
-                    if (readonly) return;
-                    document.getElementById(`image-${index}`)?.click();
-                  }}
-                >
-                  {files.filter((f) => f.mime_type.includes("image")).length ===
-                  0 ? (
-                    <div className="flex flex-col items-center text-center">
-                      <span>
-                        {" "}
-                        {readonly ? "No Photo" : "Add Photo to message"}{" "}
-                      </span>
-                      {readonly ? null : <BsCamera />}
-                    </div>
-                  ) : (
-                    <img
-                      className="w-32 h-32 object-cover"
-                      src={
-                        files.find((f) => f.mime_type.includes("image"))?.url
-                      }
-                    />
-                  )}
+      {templateType == "whatsapp" && (
+        <div>
+          {!selectedInteractive && (
+            <>
+              {readonly ? (
+                <div className="p-4 bg-white">
+                  {parseMentions(body ?? "", (type, id) => {})}
                 </div>
-
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  id={`image-${index}`}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      uploadFile(file, {}, () => {}).then((resp: any) => {
-                        onUploadImage(resp.data, index);
-                      });
-                    }
+              ) : (
+                <MessageMention
+                  msg={body}
+                  onChange={(val: any) => {
+                    onChangeBody(val.target.value);
+                  }}
+                  onClickEmoji={onClickEmoji}
+                  onSelectEmoji={(emoji: string) => {
+                    onChangeBody(`${body}${emoji}`);
                   }}
                 />
-                {files.find((f) => f.mime_type.includes("image")) && (
-                  <BsTrash
-                    size={20}
-                    className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
-                    onClick={() => {
-                      onDeleteImage?.(
-                        files.find((f) => f.mime_type.includes("image"))!
-                      );
-                    }}
-                  />
-                )}
-              </div>
-              <div className="flex flex-col justify-center items-center p-2 rounded-lg bg-white relative">
-                <div
-                  className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 w-full h-full flex justify-center items-center p-16"
-                  onClick={() => {
-                    if (readonly) return;
-                    document.getElementById(`image-${index}-file`)?.click();
-                  }}
-                >
-                  {files.filter((f) => !f.mime_type.includes("image"))
-                    .length === 0 ? (
-                    <div className="flex flex-col items-center text-center">
-                      <span>
-                        {readonly ? "No File" : "Add File to message"}{" "}
-                      </span>
-                      {readonly ? null : <HiOutlineDocumentAdd size={32} />}
-                    </div>
-                  ) : (
-                    // <IoAttach className="rotate-[30deg]" size={32}/>
-                    <div className="flex items-center flex-col px-8">
-                      <IoDocumentsOutline size={32} />
-                      <small className="text-center mt-4">
-                        {
-                          files.find((f) => !f.mime_type.includes("image"))
-                            ?.file_name
-                        }
-                      </small>
-                    </div>
-                  )}
-                </div>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".doc,.docx,.pdf,.xls,.xlsx,.txt"
-                  id={`image-${index}-file`}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      uploadFile(file, {}, () => {}).then((resp: any) => {
-                        onUploadFile(resp.data, index);
-                      });
-                    }
-                  }}
-                />
-                {files.find((f) => !f.mime_type.includes("image")) && (
-                  <BsTrash
-                    size={20}
-                    className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
-                    onClick={() => {
-                      onDeleteFile?.(
-                        files.find((f) => !f.mime_type.includes("image"))!
-                      );
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-          {!disableProduct && (
-            <div className="mt-8">
-              <h4 className="font-semibold">Product</h4>
-              <div className="grid grid-cols-2 gap-4 ">
-                <div
-                  className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100"
-                  onClick={() => {
-                    if (readonly) return;
-                    onTapProduct?.();
-                  }}
-                >
-                  {!product ? (
-                    <div className="flex flex-col items-center text-center">
-                      <span> {readonly ? "No Product" : "Add Product"} </span>
-                      {readonly ? null : <BsCart size={32} />}
-                    </div>
-                  ) : (
-                    <div className="flex items-center flex-col  px-8">
-                      {(product?.product_images ?? []).length > 0 && (
+              )}
+              <div className="mt-8">
+                <h4 className="font-semibold">Files</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col justify-center items-center p-2 rounded-lg bg-white relative">
+                    <div
+                      className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 w-full h-full flex justify-center items-center p-16"
+                      onClick={() => {
+                        if (readonly) return;
+                        document.getElementById(`image-${index}`)?.click();
+                      }}
+                    >
+                      {files.filter((f) => f.mime_type.includes("image"))
+                        .length === 0 ? (
+                        <div className="flex flex-col items-center text-center">
+                          <span>
+                            {" "}
+                            {readonly
+                              ? "No Photo"
+                              : "Add Photo to message"}{" "}
+                          </span>
+                          {readonly ? null : <BsCamera />}
+                        </div>
+                      ) : (
                         <img
-                          src={product?.product_images![0].url}
-                          alt="product"
-                          className="w-32 h-32 rounded-lg"
-                        />
-                      )}
-                      <h3 className="font-semibold mt-2 text-center">
-                        {product?.name}
-                      </h3>
-                      <small>{money(product?.price)}</small>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-      {!disableInteractive && (
-        <div className="mt-8">
-          <h4 className="font-semibold">Interactive</h4>
-          <small className="italic">
-            Interactive message only available on WhatsApp API Business
-          </small>
-          <div className="flex flex-col justify-center items-center p-4 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100">
-            {!selectedInteractive ? (
-              <div
-                className="flex flex-col items-center text-center cursor-pointer"
-                onClick={() => {
-                  if (readonly) return;
-                  onTapInteractive?.();
-                }}
-              >
-                <span>
-                  {" "}
-                  {readonly
-                    ? "No Interactive Message"
-                    : "Add Interactive Message"}{" "}
-                </span>
-                {readonly ? null : <CiBoxList size={32} />}
-              </div>
-            ) : (
-              <div
-                className="w-full"
-                onClick={() => {
-                  onEditInteractive?.(selectedInteractive);
-                }}
-              >
-                <table className="w-full">
-                  <tr>
-                    <td className="font-semibold w-1/4 py-2">Title</td>
-                    <td>{selectedInteractive?.title}</td>
-                  </tr>
-                  <tr>
-                    <td className="font-semibold w-1/4 py-2">Description</td>
-                    <td>{selectedInteractive?.description}</td>
-                  </tr>
-                  <tr>
-                    <td className="font-semibold w-1/4 py-2">Type</td>
-                    <td>
-                      {interactiveTypes.find(
-                        (i) => i.value == selectedInteractive?.type
-                      )?.label ?? selectedInteractive?.type}
-                    </td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="font-semibold w-1/4 py-2">Data</td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td className="font-semibold w-1/4 py-2">Header</td>
-                    <td>
-                      {selectedInteractive?.data?.header?.type == "image" && (
-                        <img
-                          src={selectedInteractive?.data?.header?.image?.link}
-                          alt="header"
-                          className="w-32 h-32 rounded-lg object-cover"
-                        />
-                      )}
-                      {selectedInteractive?.data?.header?.type == "video" && (
-                        <video
-                          src={selectedInteractive?.data?.header?.video?.link}
-                          controls
-                        />
-                      )}
-                      {selectedInteractive?.data?.header?.type ==
-                        "document" && (
-                        <Link
-                          to={selectedInteractive?.data?.header?.document?.link}
-                        >
-                          <AiOutlineFile size={32} />
-                        </Link>
-                      )}
-                      {selectedInteractive?.data?.header?.type == "text" && (
-                        <span>{selectedInteractive?.data?.header?.text}</span>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="font-semibold w-1/4 py-2">Body</td>
-                    <td>{selectedInteractive?.data?.body?.text}</td>
-                  </tr>
-                  <tr>
-                    <td className="font-semibold w-1/4 py-2">Footer</td>
-                    <td>{selectedInteractive?.data?.footer?.text}</td>
-                  </tr>
-                  {selectedInteractive?.data?.type == "list" && (
-                    <tr>
-                      <td className="font-semibold w-1/4 py-2">Action</td>
-                      <td>{selectedInteractive?.data?.action?.button}</td>
-                    </tr>
-                  )}
-                  {selectedInteractive?.data?.type == "cta_url" && (
-                    <tr>
-                      <td className="font-semibold w-1/4 py-2">Action</td>
-                      <td className="flex">
-                        {
-                          selectedInteractive?.data?.action?.parameters
-                            ?.display_text
-                        }{" "}
-                        <AiOutlineLink
-                          size={16}
-                          onClick={() =>
-                            window.open(
-                              selectedInteractive?.data?.action?.parameters
-                                ?.url,
-                              "_blank"
-                            )
+                          className="w-32 h-32 object-cover"
+                          src={
+                            files.find((f) => f.mime_type.includes("image"))
+                              ?.url
                           }
                         />
-                      </td>
-                    </tr>
-                  )}
-                  {selectedInteractive?.type == "list" && (
-                    <tr className="border-b">
-                      <td className="font-semibold w-1/4 py-2">Sections</td>
-                      <td></td>
-                    </tr>
-                  )}
-                </table>
-                {selectedInteractive?.type == "list" &&
-                  selectedInteractive?.data?.action?.sections?.map(
-                    (
-                      section: WhatsappInteractiveListSection,
-                      index: number
-                    ) => (
-                      <div key={index} className="w-full mt-4">
-                        <h4 className="font-semibold">{section.title}</h4>
+                      )}
+                    </div>
+
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      id={`image-${index}`}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          uploadFile(file, {}, () => {}).then((resp: any) => {
+                            onUploadImage(resp.data, index);
+                          });
+                        }
+                      }}
+                    />
+                    {files.find((f) => f.mime_type.includes("image")) && (
+                      <BsTrash
+                        size={20}
+                        className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
+                        onClick={() => {
+                          onDeleteImage?.(
+                            files.find((f) => f.mime_type.includes("image"))!
+                          );
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center items-center p-2 rounded-lg bg-white relative">
+                    <div
+                      className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100 w-full h-full flex justify-center items-center p-16"
+                      onClick={() => {
+                        if (readonly) return;
+                        document.getElementById(`image-${index}-file`)?.click();
+                      }}
+                    >
+                      {files.filter((f) => !f.mime_type.includes("image"))
+                        .length === 0 ? (
+                        <div className="flex flex-col items-center text-center">
+                          <span>
+                            {readonly ? "No File" : "Add File to message"}{" "}
+                          </span>
+                          {readonly ? null : <HiOutlineDocumentAdd size={32} />}
+                        </div>
+                      ) : (
+                        // <IoAttach className="rotate-[30deg]" size={32}/>
+                        <div className="flex items-center flex-col px-8">
+                          <IoDocumentsOutline size={32} />
+                          <small className="text-center mt-4">
+                            {
+                              files.find((f) => !f.mime_type.includes("image"))
+                                ?.file_name
+                            }
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".doc,.docx,.pdf,.xls,.xlsx,.txt"
+                      id={`image-${index}-file`}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          uploadFile(file, {}, () => {}).then((resp: any) => {
+                            onUploadFile(resp.data, index);
+                          });
+                        }
+                      }}
+                    />
+                    {files.find((f) => !f.mime_type.includes("image")) && (
+                      <BsTrash
+                        size={20}
+                        className="absolute bottom-2 right-2 cursor-pointer text-red-400 hover:text-red-600"
+                        onClick={() => {
+                          onDeleteFile?.(
+                            files.find((f) => !f.mime_type.includes("image"))!
+                          );
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+              {!disableProduct && (
+                <div className="mt-8">
+                  <h4 className="font-semibold">Product</h4>
+                  <div className="grid grid-cols-2 gap-4 ">
+                    <div
+                      className="flex flex-col justify-center items-center p-16 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100"
+                      onClick={() => {
+                        if (readonly) return;
+                        onTapProduct?.();
+                      }}
+                    >
+                      {!product ? (
+                        <div className="flex flex-col items-center text-center">
+                          <span>
+                            {" "}
+                            {readonly ? "No Product" : "Add Product"}{" "}
+                          </span>
+                          {readonly ? null : <BsCart size={32} />}
+                        </div>
+                      ) : (
+                        <div className="flex items-center flex-col  px-8">
+                          {(product?.product_images ?? []).length > 0 && (
+                            <img
+                              src={product?.product_images![0].url}
+                              alt="product"
+                              className="w-32 h-32 rounded-lg"
+                            />
+                          )}
+                          <h3 className="font-semibold mt-2 text-center">
+                            {product?.name}
+                          </h3>
+                          <small>{money(product?.price)}</small>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          {!disableInteractive && (
+            <div className="mt-8">
+              <h4 className="font-semibold">Interactive</h4>
+              <small className="italic">
+                Interactive message only available on WhatsApp API Business
+              </small>
+              <div className="flex flex-col justify-center items-center p-4 rounded-lg bg-white cursor-pointer transition duration-300 ease-in-out hover:bg-gray-100">
+                {!selectedInteractive ? (
+                  <div
+                    className="flex flex-col items-center text-center cursor-pointer"
+                    onClick={() => {
+                      if (readonly) return;
+                      onTapInteractive?.();
+                    }}
+                  >
+                    <span>
+                      {" "}
+                      {readonly
+                        ? "No Interactive Message"
+                        : "Add Interactive Message"}{" "}
+                    </span>
+                    {readonly ? null : <CiBoxList size={32} />}
+                  </div>
+                ) : (
+                  <div
+                    className="w-full"
+                    onClick={() => {
+                      onEditInteractive?.(selectedInteractive);
+                    }}
+                  >
+                    <table className="w-full">
+                      <tr>
+                        <td className="font-semibold w-1/4 py-2">Title</td>
+                        <td>{selectedInteractive?.title}</td>
+                      </tr>
+                      <tr>
+                        <td className="font-semibold w-1/4 py-2">
+                          Description
+                        </td>
+                        <td>{selectedInteractive?.description}</td>
+                      </tr>
+                      <tr>
+                        <td className="font-semibold w-1/4 py-2">Type</td>
+                        <td>
+                          {interactiveTypes.find(
+                            (i) => i.value == selectedInteractive?.type
+                          )?.label ?? selectedInteractive?.type}
+                        </td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="font-semibold w-1/4 py-2">Data</td>
+                        <td></td>
+                      </tr>
+                      <tr>
+                        <td className="font-semibold w-1/4 py-2">Header</td>
+                        <td>
+                          {selectedInteractive?.data?.header?.type ==
+                            "image" && (
+                            <img
+                              src={
+                                selectedInteractive?.data?.header?.image?.link
+                              }
+                              alt="header"
+                              className="w-32 h-32 rounded-lg object-cover"
+                            />
+                          )}
+                          {selectedInteractive?.data?.header?.type ==
+                            "video" && (
+                            <video
+                              src={
+                                selectedInteractive?.data?.header?.video?.link
+                              }
+                              controls
+                            />
+                          )}
+                          {selectedInteractive?.data?.header?.type ==
+                            "document" && (
+                            <Link
+                              to={
+                                selectedInteractive?.data?.header?.document
+                                  ?.link
+                              }
+                            >
+                              <AiOutlineFile size={32} />
+                            </Link>
+                          )}
+                          {selectedInteractive?.data?.header?.type ==
+                            "text" && (
+                            <span>
+                              {selectedInteractive?.data?.header?.text}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="font-semibold w-1/4 py-2">Body</td>
+                        <td>{selectedInteractive?.data?.body?.text}</td>
+                      </tr>
+                      <tr>
+                        <td className="font-semibold w-1/4 py-2">Footer</td>
+                        <td>{selectedInteractive?.data?.footer?.text}</td>
+                      </tr>
+                      {selectedInteractive?.data?.type == "list" && (
+                        <tr>
+                          <td className="font-semibold w-1/4 py-2">Action</td>
+                          <td>{selectedInteractive?.data?.action?.button}</td>
+                        </tr>
+                      )}
+                      {selectedInteractive?.data?.type == "cta_url" && (
+                        <tr>
+                          <td className="font-semibold w-1/4 py-2">Action</td>
+                          <td className="flex">
+                            {
+                              selectedInteractive?.data?.action?.parameters
+                                ?.display_text
+                            }{" "}
+                            <AiOutlineLink
+                              size={16}
+                              onClick={() =>
+                                window.open(
+                                  selectedInteractive?.data?.action?.parameters
+                                    ?.url,
+                                  "_blank"
+                                )
+                              }
+                            />
+                          </td>
+                        </tr>
+                      )}
+                      {selectedInteractive?.type == "list" && (
+                        <tr className="border-b">
+                          <td className="font-semibold w-1/4 py-2">Sections</td>
+                          <td></td>
+                        </tr>
+                      )}
+                    </table>
+                    {selectedInteractive?.type == "list" &&
+                      selectedInteractive?.data?.action?.sections?.map(
+                        (
+                          section: WhatsappInteractiveListSection,
+                          index: number
+                        ) => (
+                          <div key={index} className="w-full mt-4">
+                            <h4 className="font-semibold">{section.title}</h4>
+                            <table className="w-full ">
+                              <thead>
+                                <tr>
+                                  <th
+                                    className="p-2 border border-gray-100"
+                                    style={{ width: "200px" }}
+                                  >
+                                    ID
+                                  </th>
+                                  <th className="p-2 border border-gray-100">
+                                    Title
+                                  </th>
+                                  <th className="p-2 border border-gray-100">
+                                    Description
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {section.rows.map(
+                                  (row: WhatsappInteractiveListRow) => (
+                                    <tr key={row.id}>
+                                      <td className="p-2 border border-gray-100">
+                                        {row.id}
+                                      </td>
+                                      <td className="p-2 border border-gray-100">
+                                        {row.title}
+                                      </td>
+                                      <td className="p-2 border border-gray-100">
+                                        {row.description}
+                                      </td>
+                                    </tr>
+                                  )
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      )}
+                    {selectedInteractive?.type == "button" && (
+                      <div className="w-full mt-4">
                         <table className="w-full ">
                           <thead>
                             <tr>
-                              <th className="p-2 border border-gray-100" style={{ width: "200px" }}>ID</th>
-                              <th className="p-2 border border-gray-100">
-                                Title
+                              <th
+                                className="p-2 border border-gray-100"
+                                style={{ width: "200px" }}
+                              >
+                                ID
                               </th>
                               <th className="p-2 border border-gray-100">
-                                Description
+                                Title
                               </th>
                             </tr>
                           </thead>
                           <tbody>
-                            {section.rows.map(
-                              (row: WhatsappInteractiveListRow) => (
-                                <tr key={row.id}>
+                            {selectedInteractive?.data?.action?.buttons?.map(
+                              (row: WhatsappInteractiveReplyButton) => (
+                                <tr key={row.reply?.id}>
                                   <td className="p-2 border border-gray-100">
-                                    {row.id}
+                                    {row.reply?.id}
                                   </td>
                                   <td className="p-2 border border-gray-100">
-                                    {row.title}
-                                  </td>
-                                  <td className="p-2 border border-gray-100">
-                                    {row.description}
+                                    {row.reply?.title}
                                   </td>
                                 </tr>
                               )
@@ -416,52 +544,90 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
                           </tbody>
                         </table>
                       </div>
-                    )
-                  )}
-                {selectedInteractive?.type == "button" && (
-                  <div className="w-full mt-4">
-                    <table className="w-full ">
-                      <thead>
-                        <tr>
-                          <th className="p-2 border border-gray-100" style={{ width: "200px" }}>ID</th>
-                          <th className="p-2 border border-gray-100">Title</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedInteractive?.data?.action?.buttons?.map(
-                          (row: WhatsappInteractiveReplyButton) => (
-                            <tr key={row.reply?.id}>
-                              <td className="p-2 border border-gray-100">
-                                {row.reply?.id}
-                              </td>
-                              <td className="p-2 border border-gray-100">
-                                {row.reply?.title}
-                              </td>
-                            </tr>
-                          )
-                        )}
-                      </tbody>
-                    </table>
+                    )}
                   </div>
                 )}
               </div>
+            </div>
+          )}
+          <div className="mt-4">
+            {onDelete && (
+              <Button
+                className=""
+                color="red"
+                onClick={() => {
+                  onDelete();
+                }}
+              >
+                + Delete Message
+              </Button>
             )}
           </div>
         </div>
       )}
-      <div className="mt-4">
-        {onDelete && (
-          <Button
-            className=""
-            color="red"
-            onClick={() => {
-              onDelete();
+      {templateType == "whatsapp-api" && (
+        <div className="flex flex-col space-y-4">
+          <div className="flex flex-row gap-2 justify-between items-center">
+            <Label>Connection</Label>
+            <div>
+              <select
+                name="connection"
+                id="connection"
+                className="p-2 select border rounded-md border-gray-400"
+                value={businessID}
+                onChange={(e) => onBusinessIDChange?.(e.target.value)}
+              >
+                <option value="">Pilih WABA ID</option>
+                {connections
+                  ?.filter((c) => c.session_name)
+                  .map((connection: ConnectionModel) => (
+                    <option
+                      key={connection.session_name}
+                      value={connection.session_name}
+                    >
+                      {connection.name} ({connection.session_name})
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-row gap-2 justify-between items-center">
+            <Label>Template</Label>
+            <div></div>
+          </div>
+          <div className="grid gap-4 gap-y-4 xl:grid-cols-3 grid-cols-2">
+            {waTemplates.map((template: WhatsappAPITemplate) => (
+              <WhatsappTemplateViewer
+                key={template.id}
+                template={template}
+                whatsappTemplateMappingParams={whatsappTemplateMappingParams}
+                onChangeWhatsappTemplateMappingParams={
+                  onChangeWhatsappTemplateMappingParams
+                }
+                headerImageUrl={headerImageUrl}
+                onChangeHeaderImageUrl={onChangeHeaderImageUrl}
+                whatsappTemplateID={whatsappTemplateID}
+                onWhatsappTemplateChange={onWhatsappTemplateChange}
+              />
+            ))}
+          </div>
+
+          {/* <input
+            accept=".png, .jpg, .jpeg"
+            type="file"
+            name="file"
+            id=""
+            ref={fileRef}
+            className="hidden"
+            onChange={async (e) => {
+              uploadFile(e.target.files![0], {},(p) => {}).then((v: any) => {
+                // console.log(v.data.url);
+                onChangeHeaderImageUrl?.(v.data.url);
+              });
             }}
-          >
-            + Delete Message
-          </Button>
-        )}
-      </div>
+          /> */}
+        </div>
+      )}
     </div>
   );
 };

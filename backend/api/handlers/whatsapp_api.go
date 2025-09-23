@@ -434,6 +434,46 @@ func (h *WhatsappApiHandler) getSession(phoneNumberID string, phoneNumber string
 	return &resp, nil
 }
 
+func (h *WhatsappApiHandler) GetAllMessageTemplates(c *gin.Context) {
+	wabaID := c.Params.ByName("waba_id")
+
+	conn := connection.ConnectionModel{}
+	err := h.erpContext.DB.First(&conn, "session_name = ?", wabaID).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
+	templates, err := h.metaService.WhatsappApiService.GetAllMessageTemplates(wabaID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, templates)
+}
+
+func (h *WhatsappApiHandler) GetMessageTemplateByName(c *gin.Context) {
+	wabaID := c.Params.ByName("waba_id")
+	templateID := c.Params.ByName("template_id")
+	conn := connection.ConnectionModel{}
+	err := h.erpContext.DB.First(&conn, "session_name = ?", wabaID).Error
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	h.metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
+	resp, err := h.metaService.WhatsappApiService.GetMessageTemplateByName(wabaID, templateID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, resp)
+}
+
 func (h *WhatsappApiHandler) WhatsappApiWebhookHandler(c *gin.Context) {
 	if c.Request.Method == http.MethodGet {
 		resp, err := h.metaService.VerifyFacebook(c.Request, config.App.Facebook.FacebookVerifyToken)

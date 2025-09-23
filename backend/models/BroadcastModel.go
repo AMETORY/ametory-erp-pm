@@ -100,7 +100,7 @@ func (b *BroadcastModel) AfterFind(tx *gorm.DB) error {
 	b.ContactCount = int(contactCount)
 	fmt.Println("b.LastBroadcastAt", b.LastBroadcastAt)
 
-	if countLog == 0 && b.ContactCount > 0 && time.Now().After(b.UpdatedAt.Add(time.Duration(b.DelayTime)*time.Second)) {
+	if b.Status != "DRAFT" && countLog == 0 && b.ContactCount > 0 && time.Now().After(b.UpdatedAt.Add(time.Duration(b.DelayTime)*time.Second)) {
 		b.Status = "NOT_STARTED"
 		tx.Save(b)
 	}

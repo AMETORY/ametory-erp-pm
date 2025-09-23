@@ -54,6 +54,11 @@ import { parseMentions } from "../utils/helper-ui";
 import { IoDocumentsOutline } from "react-icons/io5";
 import { GoClock } from "react-icons/go";
 import { AiOutlineEdit } from "react-icons/ai";
+import { getMessageTemplateByName } from "../services/api/whatsappApi";
+import { get } from "http";
+import { WhatsappAPITemplate } from "../models/whatsapp_api_template";
+import WhatsappTemplateViewer from "../components/WhatsappTemplateViewer";
+import { MessageTemplate } from "../models/template";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -85,6 +90,10 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     ContactModel[]
   >([]);
   const [scheduledTimeDistance, setScheduledTimeDistance] = useState(0);
+  const [selectedWATemplate, setSelectedWATemplate] =
+    useState<WhatsappAPITemplate>();
+  const [selectedMessageTemplate, setSelectedMessageTemplate] =
+    useState<MessageTemplate>();
 
   const [countdown, setCountdown] = useState("");
 
@@ -152,6 +161,35 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
       });
     }
   }, [wsMsg]);
+
+  useEffect(() => {
+    if (broadcast?.template?.messages) {
+      for (const msg of broadcast?.template?.messages) {
+        if (msg.type === "whatsapp-api") {
+          // console.log("msg", msg);
+
+          getMessageTemplateByName(msg?.business_id!, msg.whatsapp_template_id!)
+            .then((res: any) => {
+              // msg.template = res.data;
+              if (res.data.length > 0) {
+                // console.log("res.data[0]", res.data[0]);
+                setSelectedWATemplate(res.data[0]);
+                setSelectedMessageTemplate(msg);
+              }
+            })
+            .catch((error) => {
+              console.log("error", error);
+            });
+        }
+      }
+    }
+  }, [broadcast?.template?.messages]);
+
+  useEffect(() => {
+    if (selectedMessageTemplate) {
+      // console.log("selectedMessageTemplate", selectedMessageTemplate);
+    }
+  }, [selectedMessageTemplate]);
 
   const update = (connections?: ConnectionModel[]) => {
     setLoading(true);
@@ -234,70 +272,88 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             {broadcast?.template_id ? (
               <div>
                 <Label>Template</Label>
-                <div className="mb-4">{broadcast?.template?.title}</div>
+
                 {(broadcast?.template?.messages ?? []).map(
-                  (msg: any, index: number) => (
-                    <div className="" key={index}>
-                      <div className="p-4 border rounded-lg mb-4">
-                        {parseMentions(msg.body, () => {})}
+                  (msg: any, index: number) => {
+                    if (msg.type == "whatsapp-api" && selectedWATemplate) {
+                      return (
+                        <WhatsappTemplateViewer
+                          key={selectedWATemplate.id}
+                          template={selectedWATemplate}
+                          whatsappTemplateMappingParams={
+                            msg.whatsapp_template_mapping_params
+                          }
+                          headerImageUrl={msg.header_image_url}
+                          whatsappTemplateID={msg.whatsapp_template_id}
+                          isView
+                        />
+                      );
+                    }
+                    return (
+                      <div className="" key={index}>
+                        <div className="p-4 border rounded-lg mb-4">
+                          {parseMentions(msg.body, () => {})}
+                        </div>
+                        <div className="mb-4">
+                          {(msg.files ?? []).length > 0 && (
+                            <h3 className="text-lg font-semibold">Files</h3>
+                          )}
+                          {(msg.files ?? []).length > 0 && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {msg.files
+                                .filter((f: any) =>
+                                  f.mime_type.includes("image")
+                                )
+                                .map((file: any, index: number) => (
+                                  <div key={index}>
+                                    <img
+                                      src={file.url}
+                                      className="w-full aspect-square rounded-lg object-cover"
+                                    />
+                                  </div>
+                                ))}
+                              {msg.files
+                                .filter(
+                                  (f: any) => !f.mime_type.includes("image")
+                                )
+                                .map((file: any, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="flex flex-col justify-center items-center text-center w-full aspect-square rounded-lg border p-4"
+                                  >
+                                    <IoDocumentsOutline size={32} />
+                                    <small className="text-center mt-4">
+                                      {file?.file_name}
+                                    </small>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mb-4">
+                          {(msg.products ?? []).length > 0 && (
+                            <h3 className="text-lg font-semibold">Product</h3>
+                          )}
+                          {(msg.products ?? []).length > 0 && (
+                            <div className="flex items-center flex-col  px-8">
+                              {(msg.products[0].product_images ?? []).length >
+                                0 && (
+                                <img
+                                  src={msg.products[0].product_images![0].url}
+                                  alt="product"
+                                  className="w-32 h-32 rounded-lg"
+                                />
+                              )}
+                              <h3 className="font-semibold mt-2 text-center">
+                                {msg.products[0].name}
+                              </h3>
+                              <small>{money(msg.products[0].price)}</small>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="mb-4">
-                        {(msg.files ?? []).length > 0 && (
-                          <h3 className="text-lg font-semibold">Files</h3>
-                        )}
-                        {(msg.files ?? []).length > 0 && (
-                          <div className="grid grid-cols-2 gap-2">
-                            {msg.files
-                              .filter((f: any) => f.mime_type.includes("image"))
-                              .map((file: any, index: number) => (
-                                <div key={index}>
-                                  <img
-                                    src={file.url}
-                                    className="w-full aspect-square rounded-lg object-cover"
-                                  />
-                                </div>
-                              ))}
-                            {msg.files
-                              .filter(
-                                (f: any) => !f.mime_type.includes("image")
-                              )
-                              .map((file: any, index: number) => (
-                                <div
-                                  key={index}
-                                  className="flex flex-col justify-center items-center text-center w-full aspect-square rounded-lg border p-4"
-                                >
-                                  <IoDocumentsOutline size={32} />
-                                  <small className="text-center mt-4">
-                                    {file?.file_name}
-                                  </small>
-                                </div>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="mb-4">
-                        {(msg.products ?? []).length > 0 && (
-                          <h3 className="text-lg font-semibold">Product</h3>
-                        )}
-                        {(msg.products ?? []).length > 0 && (
-                          <div className="flex items-center flex-col  px-8">
-                            {(msg.products[0].product_images ?? []).length >
-                              0 && (
-                              <img
-                                src={msg.products[0].product_images![0].url}
-                                alt="product"
-                                className="w-32 h-32 rounded-lg"
-                              />
-                            )}
-                            <h3 className="font-semibold mt-2 text-center">
-                              {msg.products[0].name}
-                            </h3>
-                            <small>{money(msg.products[0].price)}</small>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
+                    );
+                  }
                 )}
               </div>
             ) : (
@@ -307,6 +363,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     readonly={!isEditable}
                     index={0}
                     title={"Message"}
+                    templateType={"whatsapp"}
                     body={broadcast?.message ?? ""}
                     onChangeBody={(val) => {
                       setBroadcast({
@@ -503,7 +560,8 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
             )}
 
             <div className="flex gap-2">
-              {(broadcast?.status === "DRAFT" || broadcast?.status === "NOT_STARTED") && (
+              {(broadcast?.status === "DRAFT" ||
+                broadcast?.status === "NOT_STARTED") && (
                 <Button
                   color="success"
                   onClick={() => {
@@ -815,12 +873,22 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               <p className="">
                 {isEditable ? (
                   <Select
-                    options={connections.filter(
-                      (item: any) =>
+                    options={connections.filter((item: any) => {
+                      let valid = true
+                      if (selectedMessageTemplate && item.type === "whatsapp-api") {
+                        if (selectedMessageTemplate.business_id !== item.session_name) {
+                          valid = false
+                        }
+                      }
+                      if (selectedMessageTemplate && item.type !== "whatsapp-api") {
+                          valid = false
+                      }
+                      return (
                         item.status === "ACTIVE" &&
                         (item.type === "whatsapp" ||
-                          item.type === "whatsapp-api")
-                    )}
+                          item.type === "whatsapp-api")  && valid
+                      );
+                    })}
                     value={broadcast?.connections ?? []}
                     isMulti
                     onChange={(val) => {
@@ -894,7 +962,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 }}
               />
             )}
-            {(broadcast?.status === "PROCESSING" || broadcast?.status === "STOPPED" || broadcast?.status === "RESTARTING") && (
+            {(broadcast?.status === "PROCESSING" ||
+              broadcast?.status === "STOPPED" ||
+              broadcast?.status === "RESTARTING") && (
               <Chart
                 chartType="PieChart"
                 width="100%"
@@ -1081,7 +1151,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                   </Table.Cell>
                   <Table.Cell className="w-32">
                     {(broadcast?.status === "COMPLETED" ||
-                      broadcast?.status === "PROCESSING"  || broadcast?.status === "STOPPED" || broadcast?.status === "RESTARTING") && (
+                      broadcast?.status === "PROCESSING" ||
+                      broadcast?.status === "STOPPED" ||
+                      broadcast?.status === "RESTARTING") && (
                       <div className="flex gap-2">
                         <ul>
                           <li className="flex gap-2 w-full justify-between">

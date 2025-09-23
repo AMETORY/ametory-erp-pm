@@ -26,4 +26,8 @@ export interface MessageTemplate {
   button_url?: string;
   files?: FileModel[];
   products?: ProductModel[];
+  business_id?: string;
+  whatsapp_template_id?: string;
+  whatsapp_template_mapping_params: any[];
+  header_image_url?: string;
 }

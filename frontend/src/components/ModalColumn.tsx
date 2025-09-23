@@ -395,6 +395,7 @@ const ModalColumn: FC<ModalColumnProps> = ({
                   <MessageTemplateField
                     disableProduct
                     disableInteractive
+                    templateType={"whatsapp"}
                     index={0}
                     title={"Message"}
                     body={selectedAction?.action_data?.message ?? ""}

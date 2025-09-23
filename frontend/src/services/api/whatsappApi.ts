@@ -80,3 +80,15 @@ export const exportXls = async (data: any) => {
   });
   
 };
+
+
+export const getAllMessageTemplates = async (businessID: string) => {
+  return await customFetch(`api/v1/whatsapp-api/message-templates/${businessID}`, {
+    method: "GET",
+  });
+};
+export const getMessageTemplateByName = async (businessID: string, templateID: string) => {
+  return await customFetch(`api/v1/whatsapp-api/message-templates/${businessID}/${templateID}`, {
+    method: "GET",
+  });
+};

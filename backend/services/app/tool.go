@@ -15,6 +15,23 @@ import (
 	"gopkg.in/olahol/melody.v1"
 )
 
+func (a *AppService) SendMessageWithTemplate(contact *models.ContactModel, metaService *meta.MetaService, conn *connection.ConnectionModel, template *models.MessageTemplate) error {
+	metaService.WhatsappApiService.SetAccessToken(&conn.AccessToken)
+
+	resp, err := metaService.WhatsappApiService.GetMessageTemplateByName(*template.BusinessID, *template.WhatsappTemplateID)
+	if err != nil {
+		return err
+	}
+
+	waResp, err := metaService.WhatsappApiService.SendTemplateMessage(conn.Session, contact, &resp.Data[0], template)
+	if err != nil {
+		return err
+	}
+	fmt.Println(waResp)
+
+	return nil
+}
+
 func (a *AppService) SendTemplateMessageWhatsappAPI(
 	customerRelationshipService *customer_relationship.CustomerRelationshipService,
 	metaService *meta.MetaService,

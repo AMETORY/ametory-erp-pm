@@ -138,6 +138,83 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
                     });
                   }}
                   index={i}
+                  templateType={message.type ?? "whatsapp"}
+                  onChangeTemplateType={(val: string) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          return {
+                            ...m,
+                            type: val,
+                          };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  businessID={message.business_id}
+                  onBusinessIDChange={(id: string) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          return {
+                            ...m,
+                            business_id: id,
+                          };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  whatsappTemplateID={message.whatsapp_template_id}
+                  onWhatsappTemplateChange={(id: string) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          return {
+                            ...m,
+                            whatsapp_template_id: id,
+                          };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  whatsappTemplateMappingParams={
+                    message?.whatsapp_template_mapping_params ?? []
+                  }
+                  onChangeWhatsappTemplateMappingParams={(params: any[]) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          return {
+                            ...m,
+                            whatsapp_template_mapping_params: params,
+                          };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
+                  headerImageUrl={message.header_image_url}
+                  onChangeHeaderImageUrl={(url: string) => {
+                    setTemplate({
+                      ...template!,
+                      messages: (template?.messages ?? []).map((m, index) => {
+                        if (index === i) {
+                          return {
+                            ...m,
+                            header_image_url: url,
+                          };
+                        }
+                        return m;
+                      }),
+                    });
+                  }}
                   body={message.body ?? ""}
                   onClickEmoji={() => {
                     setSelectedMessage(template?.messages?.[i]);

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"github.com/AMETORY/ametory-erp-modules/context"
 	"github.com/AMETORY/ametory-erp-modules/customer_relationship"
 	"github.com/AMETORY/ametory-erp-modules/shared/models"
@@ -150,7 +152,15 @@ func (h *TemplateHandler) UpdateTemplateHandler(c *gin.Context) {
 			file.RefID = v.ID
 			h.ctx.DB.Save(&file)
 		}
+		var params = "[]"
+		b, err := json.Marshal(v.WhatsappTemplateMappingParams)
+		if err == nil {
+			params = string(b)
+		}
+		v.WhatsappTemplateMappingParams = nil
+		// fmt.Println("PARAMS", string(b))
 		h.ctx.DB.Save(&v)
+		h.ctx.DB.Model(&models.MessageTemplate{}).Where("id = ?", v.ID).Update("whatsapp_template_mapping_params", params)
 	}
 
 	c.JSON(200, gin.H{"message": "Template updated successfully"})

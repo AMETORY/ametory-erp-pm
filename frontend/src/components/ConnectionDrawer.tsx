@@ -273,7 +273,20 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
               }}
             />
           </div>
-           {connection?.status != "ACTIVE" && (
+          <div className="mt-4">
+            <Label className="font-bold">Whatsapp Business ID</Label>
+            <TextInput
+              placeholder="Whatsapp Business ID"
+              value={connection?.session_name}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  session_name: e.target.value,
+                });
+              }}
+            />
+          </div>
+
             <div>
               <Button
                 className="mt-4"
@@ -284,7 +297,6 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
                 SAVE
               </Button>
             </div>
-          )}
         </>
       )}
       {connection.type == "instagram" && (
@@ -342,111 +354,121 @@ const ConnectionDrawer: FC<ConnectionDrawerProps> = ({
         </>
       )}
 
-      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
-        <div className="mt-4">
-          <Label className="font-bold">Session Auth</Label>
-          <ToggleSwitch
-            checked={connection?.session_auth ?? false}
-            onChange={(e) => {
-              onUpdate({
-                ...connection!,
-                session_auth: e,
-              });
-            }}
-          />
-        </div>
-      )}
-
-      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
-        <div className="mt-4">
-          <Label className="font-bold">Auto Pilot</Label>
-          <ToggleSwitch
-            checked={connection?.is_auto_pilot ?? false}
-            onChange={(e) => {
-              onUpdate({
-                ...connection!,
-                is_auto_pilot: e,
-              });
-            }}
-          />
-        </div>
-      )}
-      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
-        <div className="mt-4">
-          <Label className="font-bold">Auto Response Time</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <TextInput
-              type="time"
-              value={connection?.auto_response_start_time}
+      {connection?.status == "ACTIVE" &&
+        (connection.type == "whatsapp" ||
+          connection.type == "whatsapp-api") && (
+          <div className="mt-4">
+            <Label className="font-bold">Session Auth</Label>
+            <ToggleSwitch
+              checked={connection?.session_auth ?? false}
               onChange={(e) => {
                 onUpdate({
                   ...connection!,
-                  auto_response_start_time: e.target.value,
-                });
-              }}
-            />
-            <TextInput
-              type="time"
-              value={connection?.auto_response_end_time}
-              onChange={(e) => {
-                onUpdate({
-                  ...connection!,
-                  auto_response_end_time: e.target.value,
+                  session_auth: e,
                 });
               }}
             />
           </div>
-        </div>
-      )}
+        )}
 
-      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api")  && (
-        <div className="mt-4">
-          <Label className="font-bold">Auto Response Message</Label>
-          <Textarea
-            value={connection?.auto_response_message}
-            onChange={(e) => {
-              onUpdate({
-                ...connection!,
-                auto_response_message: e.target.value,
-              });
-            }}
-            placeholder="Enter auto response message"
-          />
-          <small className="" style={{ lineHeight: "0.8" }}>
-            if you don't set any ai agent auto response message will be sent
-            to user during the time frame.
-          </small>
-        </div>
-      )}
+      {connection?.status == "ACTIVE" &&
+        (connection.type == "whatsapp" ||
+          connection.type == "whatsapp-api") && (
+          <div className="mt-4">
+            <Label className="font-bold">Auto Pilot</Label>
+            <ToggleSwitch
+              checked={connection?.is_auto_pilot ?? false}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  is_auto_pilot: e,
+                });
+              }}
+            />
+          </div>
+        )}
+      {connection?.status == "ACTIVE" &&
+        (connection.type == "whatsapp" ||
+          connection.type == "whatsapp-api") && (
+          <div className="mt-4">
+            <Label className="font-bold">Auto Response Time</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <TextInput
+                type="time"
+                value={connection?.auto_response_start_time}
+                onChange={(e) => {
+                  onUpdate({
+                    ...connection!,
+                    auto_response_start_time: e.target.value,
+                  });
+                }}
+              />
+              <TextInput
+                type="time"
+                value={connection?.auto_response_end_time}
+                onChange={(e) => {
+                  onUpdate({
+                    ...connection!,
+                    auto_response_end_time: e.target.value,
+                  });
+                }}
+              />
+            </div>
+          </div>
+        )}
 
-      {connection?.status == "ACTIVE" && (connection.type == "whatsapp" || connection.type == "whatsapp-api") && (
-        <div className="mt-4">
-          <Label className="font-bold">Ai Agent</Label>
-          <Select
-            isClearable
-            options={aiAgents.map((e) => ({ label: e.name, value: e.id }))}
-            value={{
-              label: connection?.ai_agent?.name,
-              value: connection?.ai_agent?.id,
-            }}
-            styles={{
-              container: (provided) => ({
-                ...provided,
-                width: "100%",
-                borderRadius: "5px",
-              }),
-            }}
-            onChange={(e) => {
-              let selected = aiAgents.find((agent) => agent.id == e?.value!);
-              onUpdate({
-                ...connection!,
-                ai_agent_id: selected?.id,
-                ai_agent: selected!,
-              });
-            }}
-          />
-        </div>
-      )}
+      {connection?.status == "ACTIVE" &&
+        (connection.type == "whatsapp" ||
+          connection.type == "whatsapp-api") && (
+          <div className="mt-4">
+            <Label className="font-bold">Auto Response Message</Label>
+            <Textarea
+              value={connection?.auto_response_message}
+              onChange={(e) => {
+                onUpdate({
+                  ...connection!,
+                  auto_response_message: e.target.value,
+                });
+              }}
+              placeholder="Enter auto response message"
+            />
+            <small className="" style={{ lineHeight: "0.8" }}>
+              if you don't set any ai agent auto response message will be sent
+              to user during the time frame.
+            </small>
+          </div>
+        )}
+
+      {connection?.status == "ACTIVE" &&
+        (connection.type == "whatsapp" ||
+          connection.type == "whatsapp-api") && (
+          <div className="mt-4">
+            <Label className="font-bold">Ai Agent</Label>
+            <Select
+              isClearable
+              options={aiAgents.map((e) => ({ label: e.name, value: e.id }))}
+              value={{
+                label: connection?.ai_agent?.name,
+                value: connection?.ai_agent?.id,
+              }}
+              styles={{
+                container: (provided) => ({
+                  ...provided,
+                  width: "100%",
+                  borderRadius: "5px",
+                }),
+              }}
+              onChange={(e) => {
+                let selected = aiAgents.find((agent) => agent.id == e?.value!);
+                onUpdate({
+                  ...connection!,
+                  ai_agent_id: selected?.id,
+                  ai_agent: selected!,
+                });
+              }}
+            />
+          </div>
+        )}
       {/* {connection?.status == "ACTIVE" && connection.type == "whatsapp" && (
         <div className="mt-4">
           <Label className="font-bold">Gemini Agent</Label>
