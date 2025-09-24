@@ -874,19 +874,29 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 {isEditable ? (
                   <Select
                     options={connections.filter((item: any) => {
-                      let valid = true
-                      if (selectedMessageTemplate && item.type === "whatsapp-api") {
-                        if (selectedMessageTemplate.business_id !== item.session_name) {
-                          valid = false
+                      let valid = true;
+                      if (
+                        selectedMessageTemplate &&
+                        item.type === "whatsapp-api"
+                      ) {
+                        if (
+                          selectedMessageTemplate.business_id !==
+                          item.session_name
+                        ) {
+                          valid = false;
                         }
                       }
-                      if (selectedMessageTemplate && item.type !== "whatsapp-api") {
-                          valid = false
+                      if (
+                        selectedMessageTemplate &&
+                        item.type !== "whatsapp-api"
+                      ) {
+                        valid = false;
                       }
                       return (
                         item.status === "ACTIVE" &&
                         (item.type === "whatsapp" ||
-                          item.type === "whatsapp-api")  && valid
+                          item.type === "whatsapp-api") &&
+                        valid
                       );
                     })}
                     value={broadcast?.connections ?? []}
@@ -1145,9 +1155,12 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     {(contact.tags ?? []).map((tag) => tag.name).join(", ")}
                   </Table.Cell>
                   <Table.Cell>
-                    {Object.keys(contact.custom_data).map(
-                      (key) => `${key}: ${contact.custom_data[key]}`
-                    )}
+
+                    <div dangerouslySetInnerHTML={{ __html: Object.keys(contact.custom_data).map(
+                      (key) => `<strong>${key}:</strong> ${contact.custom_data[key]}`
+                    ).join("<br />") }}>
+                    
+                    </div>
                   </Table.Cell>
                   <Table.Cell className="w-32">
                     {(broadcast?.status === "COMPLETED" ||
@@ -1353,6 +1366,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <FileInput
                   id="file"
                   name="file"
+                  accept=".xls, .xlsx"
                   onChange={async (e) => {
                     const file = e.target.files![0];
                     if (file) {
@@ -1383,6 +1397,20 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     }
                   }}
                 />
+                <div className="flex justify-end w-full gap-2">
+                  <div
+                    onClick={async () => {
+                      const url = `/sample.xlsx`;
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.setAttribute("download", "sample.xlsx");
+                      link.click();
+                    }}
+                    className="text-blue-500 hover:underline text-sm py-2 px-4"
+                  >
+                    Download Sample File
+                  </div>
+                </div>
               </div>
             </TabItem>
           </Tabs>

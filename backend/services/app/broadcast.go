@@ -555,6 +555,7 @@ func (b *BroadcastService) sendWithRetryHandling(
 					for _, v := range template.Messages {
 						if sender.Type == "whatsapp-api" {
 							// USE WHATSAPP TEMPLATE
+							success = true
 							err := b.appService.SendMessageWithTemplate(&contact, b.metaService, &sender, &v)
 							if err != nil {
 								log.Println(broadcast.Description, "ERROR SEND MESSAGE WITH TEMPLATE", err)
@@ -815,6 +816,8 @@ func (b *BroadcastService) sendWithRetryHandling(
 		SenderID:    sender.ID,
 		SentAt:      time.Now(),
 	}
+
+	log.Println("📢 Sending message to", contact.Name, *contact.Phone, "IS SUCCESS \n", success)
 
 	if success {
 		msgLog.Status = "success"

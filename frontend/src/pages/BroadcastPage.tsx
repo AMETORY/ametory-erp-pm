@@ -68,6 +68,7 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
 
   useEffect(() => {
     if (mounted) {
+      
       getAllBroadcast();
       getTemplates({ page: 1, size: 100 }).then((res: any) => {
         setTemplates(res.data.items);
@@ -76,9 +77,12 @@ const BroadcastPage: FC<BroadcastPageProps> = ({}) => {
   }, [mounted, page, size, search]);
 
   const getAllBroadcast = () => {
+    setLoading(true);
     getBroadcasts({ page, size, search }).then((res: any) => {
       setBroadcasts(res.data);
       setPagination(res.pagination);
+    }).finally(() => {
+      setLoading(false);
     });
   };
   useEffect(() => {

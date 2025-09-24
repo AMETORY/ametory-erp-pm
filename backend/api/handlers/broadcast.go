@@ -325,13 +325,13 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 
 	var contacts []mdl.ContactModel
 
-	var customDataKey = ""
+	// var customDataKey = ""
 	for i, row := range rows {
 		if i == 0 {
 			if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" {
 				fmt.Println("------------------------------------------------")
 				fmt.Println(rows[i])
-				customDataKey = strings.ToLower(cleanString(rows[i][5]))
+				// customDataKey = strings.ToLower(cleanString(rows[i][5]))
 			}
 			continue
 		}
@@ -392,8 +392,15 @@ func (h *BroadcastHandler) importFile(data map[string]string) ([]mdl.ContactMode
 		// 	}
 		// }
 		var customData = make(map[string]string)
-		if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" && customDataKey != "" {
-			customData[customDataKey] = cleanString(rows[i][5])
+		// if len(rows[i]) > 5 && cleanString(rows[i][5]) != "" && customDataKey != "" {
+		// 	customData[customDataKey] = cleanString(rows[i][5])
+
+		// }
+
+		if len(rows[i]) > 5 {
+			for j := 5; j < len(rows[i]); j++ {
+				customData[rows[0][j]] = cleanString(rows[i][j])
+			}
 		}
 
 		b, _ := json.Marshal(customData)
