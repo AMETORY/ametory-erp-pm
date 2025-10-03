@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -196,6 +197,7 @@ func (s *BroadcastService) GetContacts(id string, pagination *Pagination, search
 }
 
 func (s *BroadcastService) UpdateBroadcast(id string, broadcast *models.BroadcastModel) error {
+
 	return s.ctx.DB.Where("id = ?", id).Updates(broadcast).Error
 }
 
@@ -916,36 +918,97 @@ func (s BroadcastService) logHandler(log models.MessageLog) {
 func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg string) string {
 	re := regexp.MustCompile(`@\[([^\]]+)\]|\(\{\{([^}]+)\}\}\)`)
 
-	// Replace
+	// Lakukan parse JSON sekali di awal untuk efisiensi
+	var customData map[string]string
+	if contact.CustomData != nil {
+		json.Unmarshal([]byte(contact.CustomData), &customData)
+	}
+
 	result := re.ReplaceAllStringFunc(msg, func(s string) string {
 		matches := re.FindStringSubmatch(s)
 
-		fmt.Println("MATCHES", matches)
+		// Abaikan jika ini adalah format mention @[...]
 		re2 := regexp.MustCompile(`@\[([^\]]+)\]`)
 		if re2.MatchString(s) {
 			return ""
 		}
 
-		if matches[0] == "({{user}})" {
-			return contact.Name
-		}
-		if matches[0] == "({{phone}})" {
-			return *contact.Phone
+		// Pastikan ada grup yang tertangkap (teks di dalam {{...}})
+		if len(matches) > 2 && matches[2] != "" {
+			variableName := strings.ToLower(matches[2])
+
+			// Handle variabel standar
+			switch variableName {
+			case "user":
+				return contact.Name
+			case "phone":
+				if contact.Phone != nil {
+					return *contact.Phone
+				}
+				return "" // Kembalikan string kosong jika phone nil
+			case "agent":
+				if member != nil && member.User.FullName != "" {
+					return member.User.FullName
+				}
+				return "" // Kembalikan string kosong jika agent tidak ada
+			default:
+				// Handle variabel dinamis dari CustomData
+				if customData != nil {
+					for key, value := range customData {
+						if strings.ToLower(key) == variableName {
+							return value
+						}
+					}
+				}
+			}
 		}
 
-		if matches[0] == "({{agent}})" && member != nil {
-			return member.User.FullName
-		}
-		if matches[0] == "({{product}})" {
-			var customData map[string]string
-			json.Unmarshal([]byte(contact.CustomData), &customData)
-			return customData["product"]
-		}
-		return s // Kalau tidak ada datanya, biarkan
+		// Jika variabel tidak ditemukan atau format tidak cocok, kembalikan placeholder aslinya
+		return s
 	})
 
 	return result
 }
+
+// func parseMsgTemplate(contact mdl.ContactModel, member *mdl.MemberModel, msg string) string {
+// 	re := regexp.MustCompile(`@\[([^\]]+)\]|\(\{\{([^}]+)\}\}\)`)
+
+// 	// Replace
+// 	result := re.ReplaceAllStringFunc(msg, func(s string) string {
+// 		matches := re.FindStringSubmatch(s)
+
+// 		fmt.Println("MATCHES", matches)
+// 		re2 := regexp.MustCompile(`@\[([^\]]+)\]`)
+// 		if re2.MatchString(s) {
+// 			return ""
+// 		}
+
+// 		if matches[0] == "({{user}})" {
+// 			return contact.Name
+// 		}
+// 		if matches[0] == "({{phone}})" {
+// 			return *contact.Phone
+// 		}
+
+// 		if matches[0] == "({{agent}})" && member != nil {
+// 			return member.User.FullName
+// 		}
+// 		if matches[0] == "({{product}})" {
+// 			var customData map[string]string
+// 			json.Unmarshal([]byte(contact.CustomData), &customData)
+
+// 			// Cari nilai dengan kunci 'product' secara case-insensitive
+// 			for key, value := range customData {
+// 				if strings.ToLower(key) == "product" {
+// 					return value
+// 				}
+// 			}
+// 		}
+// 		return s // Kalau tidak ada datanya, biarkan
+// 	})
+
+// 	return result
+// }
 
 type QueryJID struct {
 	Query        string `json:"Query"`

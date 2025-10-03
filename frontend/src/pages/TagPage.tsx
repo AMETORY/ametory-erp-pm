@@ -186,14 +186,16 @@ const TagPage: FC<TagPageProps> = ({}) => {
 
             <div>
               <Label htmlFor="color" value="Color" className="mb-1" />
-              <TextInput
-                id="color"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                placeholder="Color"
-                className="mb-4"
-              />
+              <div className="border border-gray-300 rounded p-2">
+                <input
+                  id="color"
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  placeholder="Color"
+                  className="  w-6 h-6"
+                />
+              </div>
             </div>
           </div>
         </Modal.Body>

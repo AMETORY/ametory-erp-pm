@@ -52,6 +52,10 @@ const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
         console.log("Disconnected from the web socket");
         setWsConnected(false);
       },
+      shouldReconnect: (closeEvent) => {
+        console.log("WebSocket connection closed, attempting to reconnect...");
+        return true; // Selalu coba untuk reconnect
+      },
       queryParams: {
         token: token,
       },

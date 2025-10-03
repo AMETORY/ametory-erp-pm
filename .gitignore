@@ -29,16 +29,20 @@ yarn-error.log*
 
 build
 build-respiro
+build-respiro-staging
 build-senandika
 crm-senandika
+crm-senandika-staging
 crm-respiro
 respiro.sh
 senandika.sh
 config.yaml
 frontend/.env.staging
 frontend/.env.respiro
+frontend/.env.respiro-staging
 ametory-pm.zip
 backend/log
 senandika.sh
 ulum.sh
 frontend/.env.ulum
+respiro-staging.sh

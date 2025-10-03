@@ -158,6 +158,12 @@ func (h *BroadcastHandler) UpdateBroadcastHandler(c *gin.Context) {
 		return
 	}
 
+	var clearBroadcast bool
+
+	if input.ScheduledAt == nil {
+		clearBroadcast = true
+	}
+
 	err := h.broadcastServ.UpdateBroadcast(id, &input)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -183,6 +189,14 @@ func (h *BroadcastHandler) UpdateBroadcastHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+
+	if clearBroadcast {
+		err = h.ctx.DB.Exec("UPDATE broadcasts set scheduled_at = null where id = ?", id).Error
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	c.JSON(200, gin.H{"message": "Broadcast updated successfully"})
