@@ -107,6 +107,7 @@ const TemplatePage: FC<TemplatePageProps> = ({}) => {
             <Table.Head>
               <Table.HeadCell>Title</Table.HeadCell>
               <Table.HeadCell>Description</Table.HeadCell>
+              <Table.HeadCell>Type</Table.HeadCell>
               <Table.HeadCell></Table.HeadCell>
             </Table.Head>
             <Table.Body className="bg-white">
@@ -148,6 +149,9 @@ const TemplatePage: FC<TemplatePageProps> = ({}) => {
                         {template.description}
                       </span>
                     </div>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className="font-medium">{template.messages?.length && template.messages?.[0]?.type}</span>
                   </Table.Cell>
 
                   <Table.Cell>

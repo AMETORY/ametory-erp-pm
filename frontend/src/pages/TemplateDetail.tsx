@@ -107,8 +107,15 @@ const TemplateDetail: FC<TemplateDetailProps> = ({}) => {
     <AdminLayout>
       <div className="p-8 h-[calc(100vh-80px)] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold">/{template?.title}</h1>
+          <div className="">
+            <div className="flex flex-row">
+              <span className="text-4xl font-bold">/</span>
+            <input
+              value={template?.title}
+              onChange={(e) => setTemplate({ ...template, title: e.target.value })}
+              className="text-4xl font-bold "
+            />
+            </div>
             <div className="text-sm">{template?.description}</div>
           </div>
           <Button onClick={save}>Save</Button>

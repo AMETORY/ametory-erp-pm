@@ -6,6 +6,7 @@ export interface TemplateModel {
   id?: string;
   title?: string;
   description?: string;
+  type?: string;
   company_id?: string;
   user_id?: string;
   member_id?: string | null;
