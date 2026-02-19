@@ -62,6 +62,7 @@ interface MessageTemplateFieldProps {
   onChangeWhatsappTemplateMappingParams?: (params: any[]) => void;
   headerImageUrl?: string;
   onChangeHeaderImageUrl?: (url: string) => void;
+  showType?: boolean;
 }
 
 const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
@@ -96,6 +97,7 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
   onChangeWhatsappTemplateMappingParams,
   headerImageUrl,
   onChangeHeaderImageUrl,
+  showType = true,
 }) => {
   const [connections, setConnections] = useState<ConnectionModel[]>([]);
   const [waTemplates, setWaTemplates] = useState<WhatsappAPITemplate[]>([]);
@@ -142,16 +144,18 @@ const MessageTemplateField: FC<MessageTemplateFieldProps> = ({
     <div className="bg-gray-50 rounded-lg p-4 flex flex-col mb-8">
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-semibold">{title}</h4>
-        <select
-          name="templateType"
-          id="templateType"
-          className="p-2 select border rounded-md border-gray-400"
-          value={templateType}
-          onChange={(e) => onChangeTemplateType?.(e.target.value)}
-        >
-          <option value="whatsapp">Whatsapp</option>
-          <option value="whatsapp-api">Whatsapp API</option>
-        </select>
+        {showType && (
+          <select
+            name="templateType"
+            id="templateType"
+            className="p-2 select border rounded-md border-gray-400"
+            value={templateType}
+            onChange={(e) => onChangeTemplateType?.(e.target.value)}
+          >
+            <option value="whatsapp">Whatsapp</option>
+            <option value="whatsapp-api">Whatsapp API</option>
+          </select>
+        )}
       </div>
 
       {templateType == "whatsapp" && (

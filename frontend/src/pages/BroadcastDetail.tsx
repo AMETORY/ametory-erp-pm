@@ -58,7 +58,8 @@ import { getMessageTemplateByName } from "../services/api/whatsappApi";
 import { get } from "http";
 import { WhatsappAPITemplate } from "../models/whatsapp_api_template";
 import WhatsappTemplateViewer from "../components/WhatsappTemplateViewer";
-import { MessageTemplate } from "../models/template";
+import { MessageTemplate, TemplateModel } from "../models/template";
+import { getTemplates } from "../services/api/templateApi";
 
 interface BroadcastDetailProps {}
 const neverMatchingRegex = /($a)/;
@@ -86,6 +87,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
   const [selectedProducts, setSelectedProducts] = useState<ProductModel[]>([]);
   const [files, setFiles] = useState<FileModel[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [useTemplate, setUseTemplate] = useState(false);
   const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<
     ContactModel[]
   >([]);
@@ -94,7 +96,7 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     useState<WhatsappAPITemplate>();
   const [selectedMessageTemplate, setSelectedMessageTemplate] =
     useState<MessageTemplate>();
-
+  const [templates, setTemplates] = useState<TemplateModel[]>([]);
   const [countdown, setCountdown] = useState("");
 
   const countdownToScheduledAt = (scheduledAt: string) => {
@@ -119,6 +121,25 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
     setMounted(true);
   }, []);
 
+  const getAllTemplates = async () => {
+    try {
+      setLoading(true);
+      let resp: any = await getTemplates({ page, size, search });
+      setTemplates(resp.data.items);
+      // setPagination(getPagination(resp.data));
+    } catch (error) {
+      toast.error(`${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (useTemplate) {
+      getAllTemplates();
+    }
+    return () => {};
+  }, [useTemplate]);
   // useEffect(() => {
   //   fetch(process.env.REACT_APP_BASE_URL + "/assets/static/emojis.json")
   //     .then((response) => {
@@ -239,6 +260,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
           }, 1000);
           return () => clearInterval(intervalId);
         }
+        if (res.data.template_id) {
+          setUseTemplate(true);
+        }
       })
       .catch((error) => {
         toast.error(`${error}`);
@@ -269,6 +293,56 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                 <p className="">{broadcast?.description}</p>
               )}
             </div>
+            {isEditable && (
+              <>
+                <div>
+                  <ToggleSwitch
+                    checked={useTemplate}
+                    onChange={(e) => {
+                      if (!isEditable) {
+                        return;
+                      }
+                      setUseTemplate(e);
+                      if (e) {
+                        setBroadcast({
+                          ...broadcast!,
+                          message: "",
+                        });
+                      } else {
+                        setBroadcast({
+                          ...broadcast!,
+                          template_id: undefined,
+                          template: undefined,
+                        });
+                      }
+                    }}
+                    label="Use Template"
+                  />
+                </div>
+                {useTemplate && (
+                  <div>
+                    <Label>Template</Label>
+                    <Select
+                      options={templates.map((t: any) => ({
+                        value: t.id,
+                        label: t.title,
+                      }))}
+                      value={{
+                        value: broadcast?.template?.id,
+                        label: broadcast?.template?.title,
+                      }}
+                      onChange={(val) =>
+                        setBroadcast({
+                          ...broadcast!,
+                          template: templates.find((t) => t.id === val?.value),
+                          template_id: val?.value,
+                        })
+                      }
+                    />
+                  </div>
+                )}
+              </>
+            )}
             {broadcast?.template_id ? (
               <div>
                 <Label>Template</Label>
@@ -286,6 +360,9 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                           headerImageUrl={msg.header_image_url}
                           whatsappTemplateID={msg.whatsapp_template_id}
                           isView
+                          onWhatsappTemplateChange={(templateID) => {
+                            console.log("templateID", templateID);
+                          }}
                         />
                       );
                     }
@@ -358,204 +435,74 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
               </div>
             ) : (
               <>
-                <div className="relative">
-                  <MessageTemplateField
-                    readonly={!isEditable}
-                    index={0}
-                    title={"Message"}
-                    templateType={"whatsapp"}
-                    body={broadcast?.message ?? ""}
-                    onChangeBody={(val) => {
-                      setBroadcast({
-                        ...broadcast!,
-                        message: val,
-                      });
-                    }}
-                    onClickEmoji={() => {}}
-                    files={files}
-                    onUploadFile={(file) => {
-                      if (
-                        (files ?? []).filter(
-                          (f) => !f.mime_type.includes("image")
-                        ).length === 0
-                      ) {
-                        // files = [file];
-                        setFiles((prev) => [...prev, file]);
-                      } else {
-                        setFiles([
-                          ...files.map((f) => {
-                            if (!f.mime_type.includes("image")) {
-                              return file;
-                            }
-                            return f;
-                          }),
-                        ]);
-                      }
-                    }}
-                    onUploadImage={(file: FileModel, index?: number) => {
-                      if (
-                        (files ?? []).filter((f) =>
-                          f.mime_type.includes("image")
-                        ).length === 0
-                      ) {
-                        // files = [file];
-                        setFiles((prev) => [...prev, file]);
-                      } else {
-                        setFiles([
-                          ...files.map((f) => {
-                            if (f.mime_type.includes("image")) {
-                              return file;
-                            }
-                            return f;
-                          }),
-                        ]);
-                      }
-                    }}
-                    onTapProduct={() => {
-                      setModalProduct(true);
-                    }}
-                    product={selectedProducts && selectedProducts[0]}
-                    onDeleteImage={(file: FileModel) => {
-                      setFiles(files.filter((f) => f.id !== file.id));
-                    }}
-                    onDeleteFile={(file: FileModel) => {
-                      setFiles(files.filter((f) => f.id !== file.id));
-                    }}
-                  />
-                  {/* <Label>Message</Label>
-                  <p className="">
-                    {isEditable ? (
-                      <MessageMention
-                        msg={broadcast?.message ?? ""}
-                        onChange={(val: any) => {
-                          setBroadcast({
-                            ...broadcast!,
-                            message: val.target.value,
-                          });
-                        }}
-                        onClickEmoji={() => {}}
-                        onSelectEmoji={(emoji: any) => {}}
-                      />
-                    ) : (
-                      parseMentions(broadcast?.message ?? "", (type, id) => {})
-                    )}
-                  </p>
-                  {isEditable && (
-                    <div className="absolute bottom-2 right-2 z-50">
-                      <Dropdown
-                        label={<BsPlusCircle />}
-                        inline
-                        placement="top"
-                        arrowIcon={false}
-                      >
-                        <Dropdown.Item
-                          className="flex gap-2"
-                          onClick={() => {
-                            fileRef.current?.click();
-                          }}
-                          icon={BsFileEarmark}
-                        >
-                          File
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          className="flex gap-2"
-                          onClick={() => {
-                            getProducts({ page: 1, size: 10 }).then(
-                              (res: any) => {
-                                setProducts(res.data.items);
+                {!useTemplate && (
+                  <div className="relative">
+                    <MessageTemplateField
+                      readonly={!isEditable}
+                      index={0}
+                      title={"Message"}
+                      templateType={"whatsapp"}
+                      body={broadcast?.message ?? ""}
+                      onChangeBody={(val) => {
+                        setBroadcast({
+                          ...broadcast!,
+                          message: val,
+                        });
+                      }}
+                      onClickEmoji={() => {}}
+                      files={files}
+                      onUploadFile={(file) => {
+                        if (
+                          (files ?? []).filter(
+                            (f) => !f.mime_type.includes("image")
+                          ).length === 0
+                        ) {
+                          // files = [file];
+                          setFiles((prev) => [...prev, file]);
+                        } else {
+                          setFiles([
+                            ...files.map((f) => {
+                              if (!f.mime_type.includes("image")) {
+                                return file;
                               }
-                            );
-                            setModalProduct(true);
-                          }}
-                          icon={BsTag}
-                        >
-                          Product
-                        </Dropdown.Item>
-                      </Dropdown>
-                    </div>
-                  )} */}
-                </div>
-                {/* {((broadcast?.products ?? []).length > 0 ||
-                  (broadcast?.files ?? []).length > 0) && (
-                  <div className="flex flex-col gap-2 bg-gray-100 rounded-lg p-2">
-                    {(broadcast?.files ?? []).length > 0 && (
-                      <div className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2">
-                        {" "}
-                        <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
-                          <BsFileEarmark className="w-4 h-4 " />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-semibold">
-                            {(broadcast?.files ?? []).length} Files
-                          </span>
-                          <small>
-                            {(broadcast?.files ?? [])
-                              .slice(0, 3)
-                              .map((e) => e.path.split("/").pop())
-                              .join(", ")}
-                            {(broadcast?.files ?? []).length > 3 ? "..." : ""}
-                          </small>
-                        </div>
-                      </div>
-                    )}
-                    {(broadcast?.products ?? []).map(
-                      (product: any, index: number) => (
-                        <div
-                          key={product.id}
-                          className="flex flex-row gap-2 items-center cursor-pointer hover:bg-gray-200 p-2"
-                          onClick={() => {
-                            setSelectedProducts((prev) => [...prev, product]);
-                            setModalProduct(false);
-                          }}
-                        >
-                          {" "}
-                          {(product.product_images ?? []).length !== 0 ? (
-                            <img
-                              src={product.product_images![0].url}
-                              className="w-10 h-10 rounded-full"
-                            />
-                          ) : (
-                            <div className="rounded-full w-10 h-10 bg-gray-200 flex justify-center items-center">
-                              <BsImage className="w-4 h-4 " />
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            <span className="font-semibold">
-                              {product.name}
-                            </span>
-                            <small>{product.description}</small>
-                          </div>
-                        </div>
-                      )
-                    )}
+                              return f;
+                            }),
+                          ]);
+                        }
+                      }}
+                      onUploadImage={(file: FileModel, index?: number) => {
+                        if (
+                          (files ?? []).filter((f) =>
+                            f.mime_type.includes("image")
+                          ).length === 0
+                        ) {
+                          // files = [file];
+                          setFiles((prev) => [...prev, file]);
+                        } else {
+                          setFiles([
+                            ...files.map((f) => {
+                              if (f.mime_type.includes("image")) {
+                                return file;
+                              }
+                              return f;
+                            }),
+                          ]);
+                        }
+                      }}
+                      onTapProduct={() => {
+                        setModalProduct(true);
+                      }}
+                      product={selectedProducts && selectedProducts[0]}
+                      onDeleteImage={(file: FileModel) => {
+                        setFiles(files.filter((f) => f.id !== file.id));
+                      }}
+                      onDeleteFile={(file: FileModel) => {
+                        setFiles(files.filter((f) => f.id !== file.id));
+                      }}
+                      showType={false}
+                    />
                   </div>
                 )}
-                {(files.length > 0 || selectedProducts.length > 0) && (
-                  <div className=" flex w-full bg-red-50 p-4 justify-between z-0">
-                    <div className="flex flex-col">
-                      {files.length > 0 && (
-                        <span>{files.length} Attachments</span>
-                      )}
-                      {selectedProducts.length > 0 && (
-                        <>
-                          <span>{selectedProducts.length} Products</span>
-                          <small>
-                            {selectedProducts.map((e) => e.name).join(", ")}{" "}
-                          </small>
-                        </>
-                      )}
-                    </div>
-                    <button
-                      className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                      onClick={() => {
-                        setFiles([]);
-                        setSelectedProducts([]);
-                      }}
-                    >
-                      <FaXmark />
-                    </button>
-                  </div>
-                )} */}
               </>
             )}
 
@@ -1155,12 +1102,16 @@ const BroadcastDetail: FC<BroadcastDetailProps> = ({}) => {
                     {(contact.tags ?? []).map((tag) => tag.name).join(", ")}
                   </Table.Cell>
                   <Table.Cell>
-
-                    <div dangerouslySetInnerHTML={{ __html: Object.keys(contact.custom_data).map(
-                      (key) => `<strong>${key}:</strong> ${contact.custom_data[key]}`
-                    ).join("<br />") }}>
-                    
-                    </div>
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: Object.keys(contact.custom_data)
+                          .map(
+                            (key) =>
+                              `<strong>${key}:</strong> ${contact.custom_data[key]}`
+                          )
+                          .join("<br />"),
+                      }}
+                    ></div>
                   </Table.Cell>
                   <Table.Cell className="w-32">
                     {(broadcast?.status === "COMPLETED" ||

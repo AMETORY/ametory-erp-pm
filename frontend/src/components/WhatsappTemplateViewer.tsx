@@ -38,7 +38,7 @@ const WhatsappTemplateViewer: FC<WhatsappTemplateViewerProps> = ({
   let textHeader = null;
   let imageHeader = null;
   if (header && header.format == "IMAGE") {
-    imageHeader = header!.example!.header_handle![0];
+    // imageHeader = header!.example!.header_handle![0];
     if (headerImageUrl) {
       imageHeader = headerImageUrl;
     }
@@ -95,7 +95,7 @@ const WhatsappTemplateViewer: FC<WhatsappTemplateViewerProps> = ({
         onWhatsappTemplateChange?.(template.name);
       }}
     >
-      {imageHeader && (
+      {imageHeader ? (
         <div className="relative">
           <img
             src={imageHeader}
@@ -112,7 +112,17 @@ const WhatsappTemplateViewer: FC<WhatsappTemplateViewerProps> = ({
             </div>
           )}
         </div>
-      )}
+      ) : (<div>
+        {template.components.find((c) => c.type == "HEADER" && c.format == "IMAGE") && !isView && (
+          <div
+            className="w-full h-32 bg-gray-100 rounded-t flex flex-col justify-center items-center cursor-pointer hover:bg-gray-200"
+            onClick={() => fileRef.current?.click()}
+          >
+            <BsCamera className="w-8 h-8 text-gray-400" />
+            <span className="text-sm text-gray-400">Upload Image</span>
+          </div>
+        )}
+      </div>)}
 
       <div className="p-4">
         {textHeader && (
