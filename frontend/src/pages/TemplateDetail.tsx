@@ -41,7 +41,6 @@ import { HiOutlineTableCells } from "react-icons/hi2";
 import { randomString } from "../utils/helper";
 import { BsTrash } from "react-icons/bs";
 import { title } from "process";
-import { Header } from "react-native/Libraries/NewAppScreen";
 
 interface TemplateDetailProps {}
 
